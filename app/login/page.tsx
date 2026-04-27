@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 
-export default function LoginPage() {
-    const router = useRouter();
+function LoginForm() {
     const searchParams = useSearchParams();
     const redirectPath = searchParams.get("redirect") || "/";
 
@@ -36,7 +34,6 @@ export default function LoginPage() {
             window.location.href = redirectPath;
         }
     };
-
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-[#f8fbfb] to-[#eef5f5] flex items-center justify-center px-6">
@@ -143,5 +140,17 @@ export default function LoginPage() {
                 </div>
             </div>
         </main>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }
