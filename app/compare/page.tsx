@@ -28,15 +28,15 @@ export default function ComparePage() {
     }
 
     const attributes: Attribute[] = [
-        { label: "Price", key: "price", icon: CircleDollarSign, format: (v: number) => `₹${v.toLocaleString()}` },
-        { label: "Location", key: "locality", icon: MapPin, format: (v: string, p: any) => `${v}, ${p.city}` },
+        { label: "Price", key: "price", icon: CircleDollarSign, format: (v: any) => `₹${v.toLocaleString()}` },
+        { label: "Location", key: "locality", icon: MapPin, format: (v: any, p: any) => `${v}, ${p.city}` },
         { label: "Property Type", key: "propertyType", icon: Home },
-        { label: "Total Area", key: "size", icon: Maximize, format: (v: number, p: any) => `${v} ${p.sizeUnit}` },
+        { label: "Total Area", key: "size", icon: Maximize, format: (v: any, p: any) => `${v} ${p.sizeUnit}` },
         { label: "Price per Unit", key: "pricePerUnit", icon: CircleDollarSign, format: (v: any, p: any) => `₹${Math.round(p.price / p.size).toLocaleString()} / ${p.sizeUnit}` },
         { label: "Bedrooms", key: "bedrooms", icon: Info },
         { label: "Bathrooms", key: "bathrooms", icon: Info },
         { label: "Ownership", key: "ownershipType", icon: ShieldCheck },
-        { label: "Amenities", key: "amenities", icon: Check, format: (v: string[]) => v?.join(", ") || "Parking, Security, Power Backup" }
+        { label: "Amenities", key: "amenities", icon: Check, format: (v: any) => v?.join(", ") || "Parking, Security, Power Backup" }
     ];
 
     if (compareList.length === 0) {
