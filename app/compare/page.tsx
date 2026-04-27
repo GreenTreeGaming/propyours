@@ -20,7 +20,14 @@ import { motion } from "framer-motion";
 export default function ComparePage() {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
 
-    const attributes = [
+    interface Attribute {
+        label: string;
+        key: string;
+        icon: React.ComponentType<any>;
+        format?: (value: any, property: any) => string;
+    }
+
+    const attributes: Attribute[] = [
         { label: "Price", key: "price", icon: CircleDollarSign, format: (v: number) => `₹${v.toLocaleString()}` },
         { label: "Location", key: "locality", icon: MapPin, format: (v: string, p: any) => `${v}, ${p.city}` },
         { label: "Property Type", key: "propertyType", icon: Home },
