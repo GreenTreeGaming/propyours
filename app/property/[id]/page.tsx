@@ -154,7 +154,7 @@ export default function PropertyDetailsPage() {
 
     useEffect(() => {
         if (!id || !property) return;
-        const normalizedId = Array.isArray(id) ? id[0] : id;
+        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
 
         // Single view per session recording is handled on the backend check if needed,
         // but for now we simple-track every load
@@ -175,7 +175,7 @@ export default function PropertyDetailsPage() {
     useEffect(() => {
         if (!id) return;
 
-        const normalizedId = Array.isArray(id) ? id[0] : id;
+        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
         const storedUser = getStoredUser();
 
         if (storedUser?.favorites?.includes(normalizedId)) {
@@ -204,18 +204,21 @@ export default function PropertyDetailsPage() {
 
     useEffect(() => {
         if (typeof window === "undefined" || !id) return;
-        const normalizedId = Array.isArray(id) ? id[0] : id;
+        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
         setShareUrl(`${window.location.origin}/property/${normalizedId}`);
     }, [id]);
 
     const handleFavoriteToggle = async () => {
         const userId = getStoredUserId();
-        const normalizedId = Array.isArray(id) ? id[0] : id;
+        const rawId = Array.isArray(id) ? id[0] : id;
 
         if (!userId) {
             window.location.href = "/login";
             return;
         }
+
+        if (!rawId) return;
+        const normalizedId: string = rawId;
 
         setFavoriteLoading(true);
         setFavoriteError("");
