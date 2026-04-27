@@ -3,6 +3,8 @@
 export type StoredUser = {
     id?: string;
     _id?: string;
+    name?: string;
+    email?: string;
     favorites?: string[];
     [key: string]: unknown;
 };
