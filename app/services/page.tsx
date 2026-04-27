@@ -122,7 +122,7 @@ export default function ServicesPage() {
             {/* --- Services Loop --- */}
             {services.map((section, sidx) => (
                 <section key={sidx} className={`py-40 px-6 ${sidx % 2 === 1 ? "bg-zinc-900" : "bg-white"} overflow-hidden`}>
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 60 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: "-100px" }}
@@ -156,11 +156,11 @@ export default function ServicesPage() {
 
                             <div className={`relative ${sidx % 2 === 1 ? "lg:order-1" : ""}`}>
                                 <div className="relative aspect-[4/5] rounded-[4rem] overflow-hidden shadow-2xl">
-                                    <Image 
-                                        src={section.image} 
-                                        fill 
-                                        className="object-cover group-hover:scale-105 transition-transform duration-700" 
-                                        alt={section.category} 
+                                    <Image
+                                        src={section.image}
+                                        fill
+                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                        alt={section.category}
                                     />
                                     <div className="absolute inset-0 bg-primary/10 mix-blend-multiply" />
                                 </div>
@@ -175,8 +175,8 @@ export default function ServicesPage() {
                 <div className="absolute inset-0 opacity-10">
                     <Globe size={600} className="absolute -right-20 -bottom-20 text-white" />
                 </div>
-                
-                <motion.div 
+
+                <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
@@ -193,14 +193,14 @@ export default function ServicesPage() {
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                          { title: language === "ta" ? "வாங்குதல்" : "Acquisition", icon: <Building2 /> },
-                          { title: language === "ta" ? "மேலாண்மை" : "Management", icon: <Users /> },
-                          { title: language === "ta" ? "விற்பனை" : "Sale", icon: <TrendingUp /> }
+                            { title: language === "ta" ? "வாங்குதல்" : "Acquisition", icon: <Building2 /> },
+                            { title: language === "ta" ? "மேலாண்மை" : "Management", icon: <Users /> },
+                            { title: language === "ta" ? "விற்பனை" : "Sale", icon: <TrendingUp /> }
                         ].map((item, idx) => (
-                           <div key={idx} className="bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/10">
-                              <div className="mb-4 flex justify-center">{item.icon}</div>
-                              <h4 className={`font-black text-sm uppercase tracking-widest ${language === "ta" ? "font-tamil" : ""}`}>{item.title}</h4>
-                           </div>
+                            <div key={idx} className="bg-white/10 p-8 rounded-3xl backdrop-blur-md border border-white/10">
+                                <div className="mb-4 flex justify-center">{item.icon}</div>
+                                <h4 className={`font-black text-sm uppercase tracking-widest ${language === "ta" ? "font-tamil" : ""}`}>{item.title}</h4>
+                            </div>
                         ))}
                     </div>
                 </motion.div>

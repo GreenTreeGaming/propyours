@@ -61,7 +61,7 @@ export default function AboutPage() {
 
             {/* --- The Story Section (Asymmetrical & Bespoke) --- */}
             <section className="py-40 px-6 max-w-7xl mx-auto overflow-hidden">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 60 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
@@ -131,7 +131,7 @@ export default function AboutPage() {
 
             {/* --- RERA Compliance Section --- */}
             <section className="py-24 px-6 max-w-7xl mx-auto">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 50 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -184,7 +184,7 @@ export default function AboutPage() {
             {/* --- Mission & Values --- */}
             <section className="bg-zinc-900 py-40">
                 <div className="max-w-7xl mx-auto px-6">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
@@ -219,7 +219,7 @@ export default function AboutPage() {
             {/* --- Channel Partners --- */}
             <section className="py-40 px-6">
                 <div className="max-w-7xl mx-auto">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}

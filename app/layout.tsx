@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Outfit, Plus_Jakarta_Sans, Noto_Sans_Tamil } from "next/font/google";
+import { Space_Grotesk, Inter, Noto_Sans_Tamil } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
+const headingFont = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-heading",
   display: "swap",
 });
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const bodyFont = Inter({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
+  variable: "--font-body",
   display: "swap",
 });
 
@@ -21,6 +21,8 @@ const notoTamil = Noto_Sans_Tamil({
 });
 
 import { LanguageProvider } from "@/context/LanguageContext";
+import { CompareProvider } from "@/components/CompareContext";
+import CompareFloatingBar from "@/components/CompareFloatingBar";
 
 export const metadata: Metadata = {
   title: "PROPYOURS | Premium Real Estate & Legal Services",
@@ -37,11 +39,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} ${plusJakartaSans.variable} ${notoTamil.variable} antialiased font-sans flex flex-col min-h-screen`}>
+      <body className={`${headingFont.variable} ${bodyFont.variable} ${notoTamil.variable} antialiased font-body flex flex-col min-h-screen`}>
         <LanguageProvider>
-          <Navbar />
-          {children}
-          <Footer />
+          <CompareProvider>
+            <Navbar />
+            {children}
+            <CompareFloatingBar />
+            <Footer />
+          </CompareProvider>
         </LanguageProvider>
       </body>
     </html>

@@ -1,70 +1,104 @@
 "use client"
 
 import { useLanguage } from "@/context/LanguageContext";
-import { Home as HomeIcon, ArrowRight } from "lucide-react";
+import { Home as HomeIcon } from "lucide-react";
+import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin } from "react-icons/fa";
+import Image from "next/image";
 
 export default function Footer() {
   const { language, t } = useLanguage();
 
   return (
-    <footer className="bg-white pt-24 pb-12 border-t border-zinc-100">
-      <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
-        <div className="col-span-1 md:col-span-1">
-          <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => window.location.href = "/"}>
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-              <HomeIcon size={18} strokeWidth={2.5} />
+    <footer className="bg-white pt-20 pb-10 border-t border-gray-100">
+      <div className="container-wide px-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-12 mb-16">
+
+          {/* Logo & Info */}
+          <div className="max-w-xs">
+            <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => window.location.href = "/"}>
+              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+                <HomeIcon size={18} strokeWidth={2.5} />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-primary-dark uppercase">PROPYOURS</span>
             </div>
-            <span className="text-xl font-black tracking-tight text-primary">PROPYOURS</span>
+            <div className="flex items-center gap-2 text-gray-400 text-sm mb-4">
+              <span className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">101</span>
+              <span>PropYours Premium Real Estate</span>
+            </div>
           </div>
-          <p className={`text-zinc-500 max-w-xs leading-relaxed ${language === "ta" ? "font-tamil" : ""}`}>
-            {language === "ta" ? "வெளிப்படைத்தன்மை மற்றும் பிரீமியம் அனுபவங்களுக்காகக் கட்டப்பட்ட இந்தியாவின் மிகவும் நம்பகமான ரியல் எஸ்டேட் தளம்." : "India's most trusted real estate platform built for transparency and premium experiences."}
-          </p>
-        </div>
-        <div>
-          <h5 className={`font-black mb-6 uppercase tracking-widest text-xs text-zinc-400 ${language === "ta" ? "font-tamil" : ""}`}>
-            {language === "ta" ? "விரைவு இணைப்புகள்" : "Quick Links"}
-          </h5>
-          <ul className="flex flex-col gap-4 text-zinc-600 font-medium">
-            <li><a href="/" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.home")}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.buying")}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.renting")}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.selling")}</a></li>
-            <li><a href="/services" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.services")}</a></li>
-            <li><a href="/about" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.about")}</a></li>
-            <li><a href="/contact" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{t("nav.contact")}</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5 className={`font-black mb-6 uppercase tracking-widest text-xs text-zinc-400 ${language === "ta" ? "font-tamil" : ""}`}>
-            {t("nav.services")}
-          </h5>
-          <ul className="flex flex-col gap-4 text-zinc-600 font-medium">
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{language === "ta" ? "வீட்டுக் கடன்" : "Home Loans"}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{language === "ta" ? "சட்ட சேவைகள்" : "Property Legal"}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{language === "ta" ? "உட்புற வடிவமைப்பு" : "Interior Design"}</a></li>
-            <li><a href="#" className={`hover:text-primary ${language === "ta" ? "font-tamil" : ""}`}>{language === "ta" ? "இடமாற்ற சேவைகள்" : "Moving Services"}</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5 className={`font-black mb-6 uppercase tracking-widest text-xs text-zinc-400 ${language === "ta" ? "font-tamil" : ""}`}>
-            {language === "ta" ? "செய்தி மடல்" : "Newsletter"}
-          </h5>
-          <p className={`text-zinc-500 mb-6 text-sm ${language === "ta" ? "font-tamil" : ""}`}>
-            {language === "ta" ? "புதிய சொத்துக்கள் மற்றும் சந்தை நுண்ணறிவுகளைப் பற்றி தெரிந்து கொள்ளுங்கள்." : "Stay updated with fresh properties and market insights."}
-          </p>
-          <div className="flex gap-2">
-            <input className={`bg-zinc-100 rounded-full px-5 py-3 text-sm focus:outline-none flex-1 font-sans ${language === "ta" ? "font-tamil" : ""}`} placeholder={language === "ta" ? "மின்னஞ்சல் முகவரி" : "Email address"} />
-            <button className="bg-primary text-white p-3 rounded-full hover:scale-105 transition-transform">
-              <ArrowRight size={20} />
-            </button>
+
+          {/* Links Columns */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 flex-1">
+            <div className="space-y-4">
+              <h5 className="font-bold text-gray-900 text-sm">Company</h5>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-primary">About Us</a></li>
+                <li><a href="#" className="hover:text-primary">Careers</a></li>
+                <li><a href="#" className="hover:text-primary">Contact</a></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h5 className="font-bold text-gray-900 text-sm">Services</h5>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-primary">Buy Home</a></li>
+                <li><a href="#" className="hover:text-primary">Sell Property</a></li>
+                <li><a href="#" className="hover:text-primary">Designers</a></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h5 className="font-bold text-gray-900 text-sm">Quick Links</h5>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-primary">Chennai</a></li>
+                <li><a href="#" className="hover:text-primary">OMR</a></li>
+                <li><a href="#" className="hover:text-primary">ECR</a></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h5 className="font-bold text-gray-900 text-sm">Quick Links</h5>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><a href="#" className="hover:text-primary">Featured</a></li>
+                <li><a href="#" className="hover:text-primary">New Launch</a></li>
+                <li><a href="#" className="hover:text-primary">Popular</a></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h5 className="font-bold text-gray-900 text-sm">Connect</h5>
+              <div className="flex items-center gap-4 text-gray-400">
+                <FaFacebook size={20} className="hover:text-primary cursor-pointer transition-colors" />
+                <FaInstagram size={20} className="hover:text-primary cursor-pointer transition-colors" />
+                <FaTwitter size={20} className="hover:text-primary cursor-pointer transition-colors" />
+                <FaLinkedin size={20} className="hover:text-primary cursor-pointer transition-colors" />
+              </div>
+            </div>
+          </div>
+
+          {/* App Store Buttons */}
+          <div className="flex flex-col gap-3">
+            <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-zinc-800 transition-colors w-44 h-12 relative overflow-hidden group border border-zinc-800">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+                alt="Google Play"
+                fill
+                className="object-contain p-2"
+              />
+            </div>
+            <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-zinc-800 transition-colors w-44 h-12 relative overflow-hidden group border border-zinc-800">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
+                alt="App Store"
+                fill
+                className="object-contain p-2"
+              />
+            </div>
           </div>
         </div>
-      </div>
-      <div className="max-w-7xl mx-auto px-6 py-12 border-t border-zinc-100 flex flex-col md:flex-row justify-between items-center gap-6">
-        <p className={`text-zinc-400 text-sm ${language === "ta" ? "font-tamil" : ""}`}>© 2026 Propyours Real Estate Solutions. {language === "ta" ? "அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை." : "All rights reserved."}</p>
-        <div className="flex items-center gap-8 text-sm font-bold text-zinc-400">
-          <a href="#" className={language === "ta" ? "font-tamil" : ""}>{language === "ta" ? "தனியுரிமை கொள்கை" : "Privacy Policy"}</a>
-          <a href="#" className={language === "ta" ? "font-tamil" : ""}>{language === "ta" ? "சேவை விதிமுறைகள்" : "Terms of Service"}</a>
+
+        <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
+          <p>© 2026 Propyours Real Estate Solutions India Pvt Ltd. All rights reserved.</p>
+          <div className="flex items-center gap-6 font-medium">
+            <a href="#" className="hover:text-gray-600">Privacy Policy</a>
+            <a href="#" className="hover:text-gray-600">Terms of Service</a>
+          </div>
         </div>
       </div>
     </footer>
