@@ -2,10 +2,6 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
-if (!MONGODB_URI) {
-    throw new Error("Missing MONGODB_URI");
-}
-
 interface MongooseCache {
     conn: typeof mongoose | null;
     promise: Promise<typeof mongoose> | null;
@@ -26,6 +22,9 @@ if (!cached) {
 }
 
 export async function connectDB() {
+    if (!MONGODB_URI) {
+        throw new Error("Missing MONGODB_URI");
+    }
     if (cached!.conn) return cached!.conn;
 
     if (!cached!.promise) {
