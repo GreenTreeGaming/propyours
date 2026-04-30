@@ -68,6 +68,7 @@ h6 {
 
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -82,6 +83,7 @@ h6 {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
+
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;

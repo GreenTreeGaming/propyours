@@ -111,7 +111,7 @@ export default function SharePropertyModal({
 
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center px-4">
             <button
                 aria-label="Close share modal"
                 className="absolute inset-0 bg-gray-950/40 backdrop-blur-sm"

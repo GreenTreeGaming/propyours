@@ -11,6 +11,7 @@ import {
     Plus,
     Check,
     ChevronRight,
+    ChevronDown,
     Info,
     LayoutGrid,
     MapPin,
@@ -27,6 +28,7 @@ import {
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { TAMIL_NADU_LOCATIONS } from "@/lib/locations";
+import { getStoredUser, getStoredUserId } from "@/lib/browser-user";
 
 const STEPS = [
     { id: 1, title: "Property Details", icon: Check },
@@ -190,12 +192,27 @@ export default function PostPropertyPage() {
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
+        const syncUser = () => {
+            const currentUser = getStoredUser();
+            setUser(currentUser);
+            if (!currentUser && currentStep > 1) {
+                // If user logs out, ProtectedRoute will handle redirect, 
+                // but we also clear local state here
+                setUser(null);
+            }
+        };
+
+        syncUser();
+        window.addEventListener("storage", syncUser);
+
         const savedForm = localStorage.getItem("post-property-form");
         const savedStep = localStorage.getItem("post-property-step");
 
         if (savedForm) {
             try {
-                setForm(prev => ({ ...prev, ...JSON.parse(savedForm) }));
+                const parsed = JSON.parse(savedForm);
+                // Ensure state remains Tamil Nadu even if saved data is old
+                setForm(prev => ({ ...prev, ...parsed, state: "Tamil Nadu" }));
             } catch (e) {
                 console.error("Failed to load saved form", e);
             }
@@ -205,18 +222,16 @@ export default function PostPropertyPage() {
             setCurrentStep(parseInt(savedStep));
         }
 
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
+        return () => window.removeEventListener("storage", syncUser);
     }, []);
 
     useEffect(() => {
-        if (user) {
+        const userId = getStoredUserId();
+        if (userId) {
             localStorage.setItem("post-property-form", JSON.stringify(form));
             localStorage.setItem("post-property-step", currentStep.toString());
         }
-    }, [form, currentStep, user]);
+    }, [form, currentStep]);
 
     const handleNext = () => {
         if (currentStep < 5) setCurrentStep(currentStep + 1);
@@ -241,9 +256,11 @@ export default function PostPropertyPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const userId = user?.id || user?._id;
+        const userId = getStoredUserId();
         if (!userId) {
-            setMessage("Please login to post a property.");
+            setMessage("Your session has expired. Please login again.");
+            // Force redirect to login if session lost during multi-step process
+            setTimeout(() => window.location.href = "/login", 2000);
             return;
         }
 
@@ -400,23 +417,32 @@ export default function PostPropertyPage() {
                                         <div className="grid md:grid-cols-3 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-gray-500">State <span className="text-red-500">*</span></label>
-                                                <select className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-not-allowed font-bold text-gray-500" value={form.state} disabled>
-                                                    <option value="Tamil Nadu">Tamil Nadu</option>
-                                                </select>
+                                                <div className="relative">
+                                                    <select className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-not-allowed font-bold text-gray-500 pr-10" value={form.state} disabled>
+                                                        <option value="Tamil Nadu">Tamil Nadu</option>
+                                                    </select>
+                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-gray-500">City <span className="text-red-500">*</span></label>
-                                                <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold ${!form.state && "opacity-50 cursor-not-allowed"}`} value={form.city} disabled={!form.state} onChange={(e) => handleCityChange(e.target.value)}>
-                                                    <option value="">Select City</option>
-                                                    {form.state && Object.keys(LOCATION_DATA[form.state] || {}).map(city => (<option key={city} value={city}>{city}</option>))}
-                                                </select>
+                                                <div className="relative">
+                                                    <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold pr-10 ${!form.state && "opacity-50 cursor-not-allowed"}`} value={form.city} disabled={!form.state} onChange={(e) => handleCityChange(e.target.value)}>
+                                                        <option value="">Select City</option>
+                                                        {form.state && Object.keys(LOCATION_DATA[form.state] || {}).map(city => (<option key={city} value={city}>{city}</option>))}
+                                                    </select>
+                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-gray-500">Locality / Area <span className="text-red-500">*</span></label>
-                                                <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold ${!form.city && "opacity-50 cursor-not-allowed"}`} value={form.locality} disabled={!form.city} onChange={(e) => handleLocalityChange(e.target.value)}>
-                                                    <option value="">Select Locality</option>
-                                                    {form.state && form.city && (LOCATION_DATA[form.state][form.city] || []).map(loc => (<option key={loc} value={loc}>{loc}</option>))}
-                                                </select>
+                                                <div className="relative">
+                                                    <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold pr-10 ${!form.city && "opacity-50 cursor-not-allowed"}`} value={form.locality} disabled={!form.city} onChange={(e) => handleLocalityChange(e.target.value)}>
+                                                        <option value="">Select Locality</option>
+                                                        {form.state && form.city && (LOCATION_DATA[form.state][form.city] || []).map(loc => (<option key={loc} value={loc}>{loc}</option>))}
+                                                    </select>
+                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
@@ -469,8 +495,37 @@ export default function PostPropertyPage() {
                                         {currentStep === 2 && (
                                             <div className="grid md:grid-cols-2 gap-6">
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">Bedrooms</label>
-                                                    <input type="number" placeholder="e.g. 3 (0 for Studio)" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} />
+                                                    <label className="text-sm font-semibold text-gray-600">
+                                                        {form.propertyType === "Apartment" ? "BHK / Type" : "Bedrooms"}
+                                                    </label>
+                                                    {form.propertyType === "Apartment" ? (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {["Studio", "1", "2", "3", "4+"].map((val) => {
+                                                                const numericVal = val === "Studio" ? "0" : (val === "4+" ? "4" : val);
+                                                                const isActive = form.bedrooms === numericVal;
+                                                                return (
+                                                                    <button
+                                                                        key={val}
+                                                                        type="button"
+                                                                        onClick={() => setForm({ ...form, bedrooms: numericVal })}
+                                                                        className={`px-4 py-2 rounded-xl border-2 font-bold transition-all ${isActive
+                                                                            ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+                                                                            : "border-gray-100 text-gray-500 hover:border-primary/20 bg-gray-50/50"}`}
+                                                                    >
+                                                                        {val === "4+" ? "4+ BHK" : (val === "Studio" ? "Studio" : `${val} BHK`)}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        <input
+                                                            type="number"
+                                                            placeholder="e.g. 3"
+                                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                                            value={form.bedrooms}
+                                                            onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
+                                                        />
+                                                    )}
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-gray-600">Bathrooms</label>

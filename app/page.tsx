@@ -435,7 +435,7 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Explore Properties in Chennai</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Explore Properties in Tamil Nadu</h2>
             <div className="flex items-center gap-2 border border-gray-200 rounded-full p-1 bg-white inline-flex">
               {propertyTabs.map((tab) => (
                 <button

@@ -99,7 +99,9 @@ function BuyPageContent() {
     const matchesType = normalizedSelectedType === "All" || prop.propertyType === normalizedSelectedType;
 
     const matchesBHK = selectedBHK === "All" ||
-      (selectedBHK === "Studio" ? prop.bedrooms === 0 : (selectedBHK === "5+" ? prop.bedrooms >= 5 : prop.bedrooms === parseInt(selectedBHK)));
+      (selectedBHK === "Studio" ? prop.bedrooms === 0 :
+        (selectedBHK === "4+" || selectedBHK === "5+" ? prop.bedrooms >= 4 :
+          prop.bedrooms === parseInt(selectedBHK)));
 
     const matchesMinPrice = minPrice === "" || prop.price >= parseInt(minPrice);
     const matchesMaxPrice = maxPrice === "" || prop.price <= parseInt(maxPrice);
@@ -203,7 +205,12 @@ function BuyPageContent() {
                 <select
                   className="w-full appearance-none bg-gray-50 border-none rounded-2xl px-4 py-3.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer pr-10"
                   value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedType(e.target.value);
+                    if (e.target.value !== "Apartment") {
+                      setSelectedBHK("All");
+                    }
+                  }}
                 >
                   {propertyTypes.map(type => (
                     <option key={type} value={type}>{type}</option>
@@ -213,27 +220,29 @@ function BuyPageContent() {
               </div>
             </div>
 
-            {/* BHK */}
-            <div className="lg:col-span-2 space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">BHK</label>
-              <div className="flex gap-1 p-1 bg-gray-50 rounded-2xl overflow-x-auto custom-scrollbar no-scrollbar">
-                {["All", "1", "2", "3", "4+", "Studio"].map(bhk => (
-                  <button
-                    key={bhk}
-                    onClick={() => setSelectedBHK(bhk === "4+" ? "5+" : bhk)}
-                    className={`flex-shrink-0 min-w-[36px] px-3 py-2 text-[10px] font-black rounded-xl transition-all ${(selectedBHK === bhk || (bhk === "4+" && selectedBHK === "5+"))
-                      ? "bg-primary text-white shadow-lg shadow-primary/20"
-                      : "text-gray-500 hover:text-primary"
-                      }`}
-                  >
-                    {bhk}
-                  </button>
-                ))}
+            {/* BHK (Only if Apartment) */}
+            {selectedType === "Apartment" && (
+              <div className="lg:col-span-2 space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">BHK</label>
+                <div className="flex gap-1 p-1 pb-2 bg-gray-50 rounded-2xl overflow-x-auto custom-scrollbar">
+                  {["All", "1", "2", "3", "4+", "Studio"].map(bhk => (
+                    <button
+                      key={bhk}
+                      onClick={() => setSelectedBHK(bhk)}
+                      className={`flex-shrink-0 min-w-[36px] px-3 py-2 text-[10px] font-black rounded-xl transition-all ${selectedBHK === bhk
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
+                        : "text-gray-500 hover:text-primary"
+                        }`}
+                    >
+                      {bhk}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Price Range */}
-            <div className="lg:col-span-3 space-y-2">
+            <div className={`${selectedType === "Apartment" ? "lg:col-span-3" : "lg:col-span-5"} space-y-2`}>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Price Range (₹)</label>
               <div className="flex items-center gap-2">
                 <input
