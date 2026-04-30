@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { TAMIL_NADU_LOCATIONS } from "@/lib/locations";
 
 const STEPS = [
     { id: 1, title: "Property Details", icon: Check },
@@ -36,22 +37,12 @@ const STEPS = [
 ];
 
 const LOCATION_DATA: Record<string, Record<string, string[]>> = {
-    "Tamil Nadu": {
-        "Chennai": [
-            "Adyar", "Anna Nagar", "T. Nagar", "Velachery", "Besant Nagar",
-            "Mylapore", "Porur", "Ambattur", "Guindy", "Nungambakkam",
-            "Chromepet", "Tambaram", "Pallavaram", "Perambur", "Madipakkam",
-            "OMR", "ECR", "Sholinganallur", "Medavakkam", "Perungudi"
-        ],
-        "Coimbatore": ["Gandhipuram", "Peelamedu", "RS Puram", "Saibaba Colony", "Vadavalli", "Saravanampatti"],
-        "Madurai": ["Anna Nagar", "K.Pudur", "KK Nagar", "Simmakkal", "Sellur"],
-        "Trichy": ["Thillai Nagar", "Woraiyur", "Srirangam", "K.K. Nagar"],
-        "Salem": ["Fairlands", "Hasthampatti", "Alagapuram", "Suramangalam"],
-        "Vellore": ["Sathuvachari", "Katpadi", "Gandhinagar", "Arcot Road"],
-        "Erode": ["Perundurai Road", "Thindal", "Sampath Nagar"],
-        "Tiruppur": ["Avinashi Road", "Palladam Road", "Rayapuram"],
-        "Tirunelveli": ["Palayamkottai", "Maharaja Nagar", "Perumalpuram"]
-    }
+    "Tamil Nadu": Object.fromEntries(
+        Object.entries(TAMIL_NADU_LOCATIONS).map(([city, localities]) => [
+            city,
+            localities.filter(l => l !== "All")
+        ])
+    )
 };
 
 const AMENITY_CATEGORIES = [
