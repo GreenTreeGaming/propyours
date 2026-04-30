@@ -127,22 +127,39 @@ export default function PropertyDetailsPage() {
     };
 
     useEffect(() => {
-        const fetchProperty = async () => {
+        const fetchProperty = async (retries = 1) => {
             try {
                 const res = await fetch(`/api/property/${id}`);
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
+
+                if (!res.ok) {
+                    // If it's a 404 and we have retries left, wait and try again
+                    if (res.status === 404 && retries > 0) {
+                        console.log(`Property not found, retrying in 2s... (${retries} left)`);
+                        setTimeout(() => fetchProperty(retries - 1), 2000);
+                        return;
+                    }
+                    throw new Error(data.error);
+                }
+
                 setProperty(data as PropertyRecord);
                 setDisplayUnit(data.sizeUnit || "sqft");
+                setError(""); // Clear any previous errors
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : "Failed to load property";
                 setError(message);
             } finally {
-                setLoading(false);
+                // Only stop loading if we aren't retrying
+                if (retries === 0 || property) {
+                    setLoading(false);
+                }
             }
         };
 
-        if (id) fetchProperty();
+        if (id) {
+            setLoading(true);
+            fetchProperty();
+        }
     }, [id]);
 
     useEffect(() => {

@@ -111,6 +111,9 @@ export default function PostPropertyPage() {
         images: [] as string[],
     });
 
+    const LAND_TYPES = ["Plot", "Agricultural Land"];
+    const isLand = LAND_TYPES.includes(form.propertyType);
+
     const REQUIRED_FIELDS = [
         {
             key: "state",
@@ -162,19 +165,19 @@ export default function PostPropertyPage() {
             key: "bedrooms",
             label: "Bedrooms",
             step: 2,
-            validate: (val: any) => val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
+            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
         },
         {
             key: "bathrooms",
             label: "Bathrooms",
             step: 2,
-            validate: (val: any) => val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
+            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
         },
         {
             key: "floors",
             label: "Total Floors",
             step: 2,
-            validate: (val: any) => val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
+            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
         },
     ];
 
@@ -232,6 +235,11 @@ export default function PostPropertyPage() {
             localStorage.setItem("post-property-step", currentStep.toString());
         }
     }, [form, currentStep]);
+
+    // Scroll to top whenever step changes
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [currentStep]);
 
     const handleNext = () => {
         if (currentStep < 5) setCurrentStep(currentStep + 1);
@@ -304,10 +312,10 @@ export default function PostPropertyPage() {
                 localStorage.removeItem("post-property-form");
                 localStorage.removeItem("post-property-step");
 
-                setMessage("Property created successfully! Redirecting...");
+                setMessage("Property published successfully! Finalizing your listing...");
                 setTimeout(() => {
                     router.push(`/property/${data.property._id}`);
-                }, 1500);
+                }, 3000);
             }
         } catch (error) {
             setMessage("Failed to connect to server.");
@@ -455,14 +463,16 @@ export default function PostPropertyPage() {
                                                 <input type="text" placeholder="Nearby Landmark" className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.landmark} onChange={(e) => setForm({ ...form, landmark: e.target.value })} />
                                             </div>
                                         </div>
-                                        <div className="grid md:grid-cols-3 gap-4">
-                                            <div className="space-y-2 lg:col-span-2">
-                                                <label className="text-sm font-semibold text-gray-600">Total Size <span className="text-red-500">*</span></label>
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-gray-600">
+                                                    {form.propertyType === "Apartment" ? "Built Up Size" : "Total Size"} <span className="text-red-500">*</span>
+                                                </label>
                                                 <div className="flex gap-2">
                                                     <input
                                                         type="number"
                                                         placeholder="Enter Size"
-                                                        className="flex-[3] px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
+                                                        className="flex-[3] px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
                                                         value={form.size}
                                                         onChange={(e) => setForm({ ...form, size: e.target.value })}
                                                     />
@@ -480,6 +490,16 @@ export default function PostPropertyPage() {
                                                     </select>
                                                 </div>
                                             </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-gray-600">UDS <span className="text-gray-400 font-normal">(Undivided Share - sq. ft.)</span></label>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Enter UDS"
+                                                    className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
+                                                    value={form.uds}
+                                                    onChange={(e) => setForm({ ...form, uds: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
                                         <button type="button" onClick={handleNext} className="w-full bg-primary hover:bg-primary-dark text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 transition-all active:scale-[0.98] mt-4">
                                             Next: Basic Info
@@ -494,54 +514,54 @@ export default function PostPropertyPage() {
                                         </div>
                                         {currentStep === 2 && (
                                             <div className="grid md:grid-cols-2 gap-6">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">
-                                                        {form.propertyType === "Apartment" ? "BHK / Type" : "Bedrooms"}
-                                                    </label>
-                                                    {form.propertyType === "Apartment" ? (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {["Studio", "1", "2", "3", "4+"].map((val) => {
-                                                                const numericVal = val === "Studio" ? "0" : (val === "4+" ? "4" : val);
-                                                                const isActive = form.bedrooms === numericVal;
-                                                                return (
-                                                                    <button
-                                                                        key={val}
-                                                                        type="button"
-                                                                        onClick={() => setForm({ ...form, bedrooms: numericVal })}
-                                                                        className={`px-4 py-2 rounded-xl border-2 font-bold transition-all ${isActive
-                                                                            ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
-                                                                            : "border-gray-100 text-gray-500 hover:border-primary/20 bg-gray-50/50"}`}
-                                                                    >
-                                                                        {val === "4+" ? "4+ BHK" : (val === "Studio" ? "Studio" : `${val} BHK`)}
-                                                                    </button>
-                                                                );
-                                                            })}
+                                                {!isLand && (
+                                                    <>
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-semibold text-gray-600">
+                                                                {form.propertyType === "Apartment" ? "BHK / Type" : "Bedrooms"}
+                                                            </label>
+                                                            {form.propertyType === "Apartment" ? (
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {["Studio", "1", "2", "3", "4+"].map((val) => {
+                                                                        const numericVal = val === "Studio" ? "0" : (val === "4+" ? "4" : val);
+                                                                        const isActive = form.bedrooms === numericVal;
+                                                                        return (
+                                                                            <button
+                                                                                key={val}
+                                                                                type="button"
+                                                                                onClick={() => setForm({ ...form, bedrooms: numericVal })}
+                                                                                className={`px-4 py-2 rounded-xl border-2 font-bold transition-all ${isActive
+                                                                                    ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
+                                                                                    : "border-gray-100 text-gray-500 hover:border-primary/20 bg-gray-50/50"}`}
+                                                                            >
+                                                                                {val === "4+" ? "4+ BHK" : (val === "Studio" ? "Studio" : `${val} BHK`)}
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="e.g. 3"
+                                                                    className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
+                                                                    value={form.bedrooms}
+                                                                    onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
+                                                                />
+                                                            )}
                                                         </div>
-                                                    ) : (
-                                                        <input
-                                                            type="number"
-                                                            placeholder="e.g. 3"
-                                                            className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
-                                                            value={form.bedrooms}
-                                                            onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
-                                                        />
-                                                    )}
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">Bathrooms</label>
-                                                    <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">Total Floors</label>
-                                                    <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.floors} onChange={(e) => setForm({ ...form, floors: e.target.value })} />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">UDS <span className="text-gray-400 font-normal">(sq. ft.)</span></label>
-                                                    <input type="number" placeholder="Enter UDS" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.uds} onChange={(e) => setForm({ ...form, uds: e.target.value })} />
-                                                </div>
-                                                <div className="space-y-2 lg:col-span-2">
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-semibold text-gray-600">Bathrooms</label>
+                                                            <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-sm font-semibold text-gray-600">Total Floors</label>
+                                                            <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.floors} onChange={(e) => setForm({ ...form, floors: e.target.value })} />
+                                                        </div>
+                                                    </>
+                                                )}
+                                                <div className={`space-y-2 ${isLand ? "md:col-span-2" : "lg:col-span-2"}`}>
                                                     <label className="text-sm font-semibold text-gray-600">Dimensions <span className="text-gray-400 font-normal">(e.g. 40 x 60)</span></label>
-                                                    <input type="text" placeholder="e.g. 40 x 60" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.dimensions} onChange={(e) => setForm({ ...form, dimensions: e.target.value })} />
+                                                    <input type="text" placeholder="e.g. 40 x 60" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.dimensions} onChange={(e) => setForm({ ...form, dimensions: e.target.value })} />
                                                 </div>
                                             </div>
                                         )}
@@ -630,9 +650,9 @@ export default function PostPropertyPage() {
                                     </motion.div>
                                 )}
                                 {currentStep === 5 && (
-                                    <motion.div key="step5" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6 space-y-6">
+                                    <motion.div key="step5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                                         {getValidationErrors().length > 0 ? (
-                                            <>
+                                            <div className="text-center py-6 space-y-6">
                                                 <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4"><Info size={40} /></div>
                                                 <h2 className="text-2xl font-bold text-gray-900">Wait! You're Not Ready</h2>
                                                 <p className="text-gray-500 max-w-sm mx-auto">Please fix the following issues before publishing:</p>
@@ -644,18 +664,111 @@ export default function PostPropertyPage() {
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <button type="button" onClick={handleBack} className="w-full bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-xl font-bold">Back to Review</button>
-                                            </>
+                                                <button type="button" onClick={handleBack} className="w-full bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-xl font-bold">Back to Edit</button>
+                                            </div>
                                         ) : (
-                                            <>
-                                                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4"><Check size={40} /></div>
-                                                <h2 className="text-2xl font-bold text-gray-900">Ready to Publish!</h2>
-                                                {message && <p className="text-primary font-bold">{message}</p>}
-                                                <div className="flex gap-4">
-                                                    <button type="button" onClick={handleBack} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-xl font-bold">Review</button>
-                                                    <button type="submit" disabled={loading} className="flex-[2] bg-primary text-white py-4 rounded-xl font-bold shadow-xl shadow-primary/20 disabled:bg-gray-400">{loading ? "Posting..." : "Confirm & Post"}</button>
+                                            <div className="space-y-8">
+                                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                                    <div>
+                                                        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Review Listing</h2>
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Verify your property details before publishing</p>
+                                                    </div>
+                                                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
+                                                        <Check size={24} />
+                                                    </div>
                                                 </div>
-                                            </>
+
+                                                <div className="grid md:grid-cols-2 gap-8">
+                                                    {/* Section 1: Core Info */}
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Core Details</h3>
+                                                            <button type="button" onClick={() => setCurrentStep(1)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
+                                                        </div>
+                                                        <div className="bg-gray-50/50 rounded-3xl p-6 space-y-4 border border-gray-100">
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Type & Purpose</p>
+                                                                <p className="font-bold text-gray-800">{form.purpose} {form.propertyType}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Address</p>
+                                                                <p className="font-bold text-gray-800 leading-tight">{form.address}, {form.locality}, {form.city}, {form.state}</p>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{form.propertyType === "Apartment" ? "Built Up Size" : "Size"}</p>
+                                                                    <p className="font-bold text-gray-800">{form.size} {form.sizeUnit}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">UDS</p>
+                                                                    <p className="font-bold text-gray-800">{form.uds || "N/A"} sqft</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Section 2: Pricing & Specs */}
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Pricing & Specs</h3>
+                                                            <button type="button" onClick={() => setCurrentStep(2)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
+                                                        </div>
+                                                        <div className="bg-gray-50/50 rounded-3xl p-6 space-y-4 border border-gray-100">
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Asking Price</p>
+                                                                    <p className="text-xl font-black text-gray-900">₹ {Number(form.price).toLocaleString()}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Dimensions</p>
+                                                                    <p className="font-bold text-gray-800">{form.dimensions || "N/A"}</p>
+                                                                </div>
+                                                            </div>
+                                                            {!isLand && (
+                                                                <div className="grid grid-cols-3 gap-4">
+                                                                    <div>
+                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">BHK</p>
+                                                                        <p className="font-bold text-gray-800">{form.bedrooms === "0" ? "Studio" : `${form.bedrooms} BHK`}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Baths</p>
+                                                                        <p className="font-bold text-gray-800">{form.bathrooms || "N/A"}</p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Floors</p>
+                                                                        <p className="font-bold text-gray-800">{form.floors || "N/A"}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Amenities */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Amenities ({form.amenities.length})</h3>
+                                                        <button type="button" onClick={() => setCurrentStep(4)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {form.amenities.length > 0 ? form.amenities.map(a => (
+                                                            <span key={a} className="px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-600">{a}</span>
+                                                        )) : (
+                                                            <p className="text-xs font-bold text-gray-400 italic">No amenities selected</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="pt-6 border-t border-gray-100">
+                                                    {message && <p className="text-center text-primary font-bold mb-4">{message}</p>}
+                                                    <div className="flex gap-4">
+                                                        <button type="button" onClick={() => setCurrentStep(1)} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-2xl font-bold transition-all hover:bg-gray-100">Back to Start</button>
+                                                        <button type="submit" disabled={loading} className="flex-[2] bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 disabled:bg-gray-400 transform transition-all active:scale-95">
+                                                            {loading ? "Publishing listing..." : "Publish Property"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         )}
                                     </motion.div>
                                 )}

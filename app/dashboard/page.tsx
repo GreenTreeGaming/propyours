@@ -439,6 +439,7 @@ export default function DashboardPage() {
                                                             className="block w-full px-4 py-4 bg-gray-50 border-transparent rounded-2xl text-sm font-bold text-gray-900 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none cursor-pointer"
                                                         >
                                                             <option value="User">Standard User</option>
+                                                            <option value="Property Owner">Property Owner</option>
                                                             <option value="Agent">Real Estate Agent</option>
                                                             <option value="Builder">Builder / Developer</option>
                                                         </select>
