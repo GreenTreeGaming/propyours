@@ -40,8 +40,17 @@ const LOCATION_DATA: Record<string, Record<string, string[]>> = {
         "Chennai": [
             "Adyar", "Anna Nagar", "T. Nagar", "Velachery", "Besant Nagar",
             "Mylapore", "Porur", "Ambattur", "Guindy", "Nungambakkam",
-            "Chromepet", "Tambaram", "Pallavaram", "Perambur", "Madipakkam"
-        ]
+            "Chromepet", "Tambaram", "Pallavaram", "Perambur", "Madipakkam",
+            "OMR", "ECR", "Sholinganallur", "Medavakkam", "Perungudi"
+        ],
+        "Coimbatore": ["Gandhipuram", "Peelamedu", "RS Puram", "Saibaba Colony", "Vadavalli", "Saravanampatti"],
+        "Madurai": ["Anna Nagar", "K.Pudur", "KK Nagar", "Simmakkal", "Sellur"],
+        "Trichy": ["Thillai Nagar", "Woraiyur", "Srirangam", "K.K. Nagar"],
+        "Salem": ["Fairlands", "Hasthampatti", "Alagapuram", "Suramangalam"],
+        "Vellore": ["Sathuvachari", "Katpadi", "Gandhinagar", "Arcot Road"],
+        "Erode": ["Perundurai Road", "Thindal", "Sampath Nagar"],
+        "Tiruppur": ["Avinashi Road", "Palladam Road", "Rayapuram"],
+        "Tirunelveli": ["Palayamkottai", "Maharaja Nagar", "Perumalpuram"]
     }
 };
 
@@ -92,7 +101,7 @@ export default function PostPropertyPage() {
         address: "",
         locality: "",
         city: "",
-        state: "",
+        state: "Tamil Nadu",
         landmark: "",
         uds: "",
         size: "",
@@ -308,7 +317,6 @@ export default function PostPropertyPage() {
         { name: "Duplex", icon: LayoutGrid, value: "Duplex", category: "type" },
         { name: "Villa", icon: Warehouse, value: "Villa", category: "type" },
         { name: "Penthouse", icon: Ship, value: "Penthouse", category: "type" },
-        { name: "Studio", icon: Box, value: "Studio", category: "type" },
         { name: "Plot", icon: Map, value: "Plot", category: "type" },
         { name: "Farm House", icon: Sprout, value: "Farm House", category: "type" },
         { name: "Agricultural Land", icon: Trees, value: "Agricultural Land", category: "type" },
@@ -401,9 +409,8 @@ export default function PostPropertyPage() {
                                         <div className="grid md:grid-cols-3 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-sm font-bold text-gray-500">State <span className="text-red-500">*</span></label>
-                                                <select className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold" value={form.state} onChange={(e) => handleStateChange(e.target.value)}>
-                                                    <option value="">Select State</option>
-                                                    {Object.keys(LOCATION_DATA).map(state => (<option key={state} value={state}>{state}</option>))}
+                                                <select className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-not-allowed font-bold text-gray-500" value={form.state} disabled>
+                                                    <option value="Tamil Nadu">Tamil Nadu</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-2">
@@ -472,7 +479,7 @@ export default function PostPropertyPage() {
                                             <div className="grid md:grid-cols-2 gap-6">
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-gray-600">Bedrooms</label>
-                                                    <input type="number" placeholder="e.g. 3" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} />
+                                                    <input type="number" placeholder="e.g. 3 (0 for Studio)" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.bedrooms} onChange={(e) => setForm({ ...form, bedrooms: e.target.value })} />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-semibold text-gray-600">Bathrooms</label>

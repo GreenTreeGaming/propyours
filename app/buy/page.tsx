@@ -20,6 +20,7 @@ import {
   X,
   SlidersHorizontal
 } from "lucide-react";
+import { TAMIL_NADU_LOCATIONS, TAMIL_NADU_CITIES } from "@/lib/locations";
 
 interface Property {
   _id: string;
@@ -42,19 +43,16 @@ function BuyPageContent() {
   const [loading, setLoading] = useState(true);
 
   // Initial state from URL params
+  const [selectedCity, setSelectedCity] = useState(searchParams.get("city") || "Chennai");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("location") || "");
   const [selectedType, setSelectedType] = useState(searchParams.get("type") || "All");
-  const [selectedBHK, setSelectedBHK] = useState("All");
+  const [selectedBHK, setSelectedBHK] = useState(searchParams.get("bhk") || "All");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
   const [sortBy, setSortBy] = useState("newest");
 
-  const chennaiLocations = [
-    "All", "Adyar", "OMR", "ECR", "Porur", "Tambaram", "Velachery",
-    "Anna Nagar", "T. Nagar", "Mylapore", "Besant Nagar",
-    "Sholinganallur", "Medavakkam", "Perungudi", "Thiruvanmiyur",
-    "Kotturpuram", "Alwarpet", "Nungambakkam", "Guindy", "Madipakkam"
-  ];
+  const cities = TAMIL_NADU_CITIES;
+  const locations = TAMIL_NADU_LOCATIONS[selectedCity as keyof typeof TAMIL_NADU_LOCATIONS] || ["All"];
 
   const propertyTypes = [
     "All",
@@ -64,7 +62,6 @@ function BuyPageContent() {
     "Duplex",
     "Villa",
     "Penthouse",
-    "Studio",
     "Plot",
     "Farm House",
     "Agricultural Land"
@@ -89,9 +86,10 @@ function BuyPageContent() {
   }, []);
 
   const filteredProperties = properties.filter(prop => {
+    const matchesCity = selectedCity === "All" || prop.city.toLowerCase() === selectedCity.toLowerCase();
+
     const matchesSearch =
       prop.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prop.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (prop.locality && prop.locality.toLowerCase().includes(searchQuery.toLowerCase()));
 
     // Fuzzy matching for property types
@@ -101,12 +99,12 @@ function BuyPageContent() {
     const matchesType = normalizedSelectedType === "All" || prop.propertyType === normalizedSelectedType;
 
     const matchesBHK = selectedBHK === "All" ||
-      (selectedBHK === "5+" ? prop.bedrooms >= 5 : prop.bedrooms === parseInt(selectedBHK));
+      (selectedBHK === "Studio" ? prop.bedrooms === 0 : (selectedBHK === "5+" ? prop.bedrooms >= 5 : prop.bedrooms === parseInt(selectedBHK)));
 
     const matchesMinPrice = minPrice === "" || prop.price >= parseInt(minPrice);
     const matchesMaxPrice = maxPrice === "" || prop.price <= parseInt(maxPrice);
 
-    return matchesSearch && matchesType && matchesBHK && matchesMinPrice && matchesMaxPrice;
+    return matchesCity && matchesSearch && matchesType && matchesBHK && matchesMinPrice && matchesMaxPrice;
   }).sort((a, b) => {
     if (sortBy === "price-low") return a.price - b.price;
     if (sortBy === "price-high") return b.price - a.price;
@@ -120,6 +118,7 @@ function BuyPageContent() {
   };
 
   const clearFilters = () => {
+    setSelectedCity("Chennai");
     setSearchQuery("");
     setSelectedType("All");
     setSelectedBHK("All");
@@ -159,17 +158,37 @@ function BuyPageContent() {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-end">
 
-            {/* Location */}
-            <div className="lg:col-span-4 space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Search Location</label>
+            {/* City */}
+            <div className="lg:col-span-2 space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">City</label>
               <div className="relative">
                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <select
                   className="w-full appearance-none pl-12 pr-10 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary/10 transition-all text-sm font-bold cursor-pointer"
+                  value={selectedCity}
+                  onChange={(e) => {
+                    setSelectedCity(e.target.value);
+                    setSearchQuery("");
+                  }}
+                >
+                  {cities.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="lg:col-span-2 space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Search Area</label>
+              <div className="relative">
+                <select
+                  className="w-full appearance-none px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary/10 transition-all text-sm font-bold cursor-pointer pr-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value === "All" ? "" : e.target.value)}
                 >
-                  {chennaiLocations.map(loc => (
+                  {locations.map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
@@ -197,12 +216,12 @@ function BuyPageContent() {
             {/* BHK */}
             <div className="lg:col-span-2 space-y-2">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">BHK</label>
-              <div className="flex gap-1.5 p-1 bg-gray-50 rounded-2xl">
-                {["All", "1", "2", "3", "4+"].map(bhk => (
+              <div className="flex gap-1 p-1 bg-gray-50 rounded-2xl overflow-x-auto custom-scrollbar no-scrollbar">
+                {["All", "1", "2", "3", "4+", "Studio"].map(bhk => (
                   <button
                     key={bhk}
                     onClick={() => setSelectedBHK(bhk === "4+" ? "5+" : bhk)}
-                    className={`flex-1 py-2 text-[10px] font-black rounded-xl transition-all ${(selectedBHK === bhk || (bhk === "4+" && selectedBHK === "5+"))
+                    className={`flex-shrink-0 min-w-[36px] px-3 py-2 text-[10px] font-black rounded-xl transition-all ${(selectedBHK === bhk || (bhk === "4+" && selectedBHK === "5+"))
                       ? "bg-primary text-white shadow-lg shadow-primary/20"
                       : "text-gray-500 hover:text-primary"
                       }`}

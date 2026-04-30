@@ -185,7 +185,7 @@ export default function FavoritesPage() {
                                                 </p>
                                             </div>
                                             <div className="text-right text-sm font-semibold text-gray-500">
-                                                <p>{property.bedrooms || 0} BHK</p>
+                                                <p>{property.bedrooms === 0 ? "Studio" : `${property.bedrooms || 0} BHK`}</p>
                                                 <p>{property.size} sq. ft.</p>
                                             </div>
                                         </div>

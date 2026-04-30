@@ -65,6 +65,7 @@ h6 {
 .btn-outline {
   @apply border border-primary text-primary hover:bg-primary/5 px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2;
 }
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
@@ -80,4 +81,13 @@ h6 {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

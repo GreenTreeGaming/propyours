@@ -33,7 +33,7 @@ export default function ComparePage() {
         { label: "Property Type", key: "propertyType", icon: Home },
         { label: "Total Area", key: "size", icon: Maximize, format: (v: any, p: any) => `${v} ${p.sizeUnit}` },
         { label: "Price per Unit", key: "pricePerUnit", icon: CircleDollarSign, format: (v: any, p: any) => `₹${Math.round(p.price / p.size).toLocaleString()} / ${p.sizeUnit}` },
-        { label: "Bedrooms", key: "bedrooms", icon: Info },
+        { label: "Bedrooms", key: "bedrooms", icon: Info, format: (v: any) => v === 0 ? "Studio" : v || "N/A" },
         { label: "Bathrooms", key: "bathrooms", icon: Info },
         { label: "Ownership", key: "ownershipType", icon: ShieldCheck },
         { label: "Amenities", key: "amenities", icon: Check, format: (v: any) => v?.join(", ") || "Parking, Security, Power Backup" }

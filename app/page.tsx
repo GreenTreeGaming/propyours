@@ -21,30 +21,29 @@ import {
   Menu,
   X
 } from "lucide-react";
+import { TAMIL_NADU_LOCATIONS, TAMIL_NADU_CITIES } from "@/lib/locations";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("Buy");
   const [activePropertyTab, setActivePropertyTab] = useState("Featured");
 
   // Search State
+  const [city, setCity] = useState("Chennai");
   const [location, setLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
+  const [bhk, setBhk] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
 
-  // Dropdown UI State
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  const locations = [
-    "ADYAR", "OMR", "ECR", "PORUR", "TAMBARAM", "VELACHERY",
-    "ANNA NAGAR", "T. NAGAR", "MYLAPORE", "BESANT NAGAR",
-    "SHOLINGANALLUR", "MEDAVAKKAM", "PERUNGUDI", "THIRUVANMIYUR",
-    "KOTTURPURAM", "ALWARPET", "NUNGAMBAKKAM", "GUINDY", "MADIPAKKAM"
-  ];
+  const cities = TAMIL_NADU_CITIES;
+  const locations = TAMIL_NADU_LOCATIONS[city as keyof typeof TAMIL_NADU_LOCATIONS] || [];
   const propertyTypes = [
     "Apartment", "Independent House", "Independent Floor",
-    "Duplex", "Villa", "Penthouse", "Studio", "Plot",
+    "Duplex", "Villa", "Penthouse", "Plot",
     "Farm House", "Agricultural Land"
   ];
+  const bhkOptions = ["1", "2", "3", "4+", "Studio"];
   const priceRanges = ["Under 50L", "50L - 1Cr", "1Cr - 2Cr", "2Cr - 5Cr", "Above 5Cr", "10Cr+"];
 
   const toggleDropdown = (name: string) => {
@@ -55,8 +54,10 @@ export default function Home() {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
+    if (city) params.append("city", city);
     if (location) params.append("location", location);
     if (propertyType) params.append("type", propertyType);
+    if (propertyType === "Apartment" && bhk) params.append("bhk", bhk);
     if (maxPrice) {
       // Map simplified price ranges to actual values if needed, 
       // but for now we'll just pass the string or try to parse it.
@@ -143,14 +144,14 @@ export default function Home() {
 
                 {/* Buy Dropdown */}
                 <div
-                  className="px-4 py-2 flex items-center justify-between min-w-[110px] cursor-pointer hover:bg-gray-50 rounded-l-xl relative group"
+                  className="px-3 py-2 flex items-center justify-between min-w-[80px] cursor-pointer hover:bg-gray-50 rounded-l-xl relative group"
                   onClick={() => toggleDropdown('buy')}
                 >
-                  <div className="flex items-center gap-2">
-                    <HomeIcon size={16} className="text-gray-400" />
-                    <span className="font-bold text-gray-800 text-sm">{activeTab}</span>
+                  <div className="flex items-center gap-1.5">
+                    <HomeIcon size={14} className="text-gray-400" />
+                    <span className="font-bold text-gray-800 text-xs">{activeTab}</span>
                   </div>
-                  <ChevronDown size={14} className={`text-gray-500 transition-transform ${openDropdown === 'buy' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`text-gray-500 transition-transform ${openDropdown === 'buy' ? 'rotate-180' : ''}`} />
 
                   <AnimatePresence>
                     {openDropdown === 'buy' && (
@@ -166,18 +167,56 @@ export default function Home() {
                   </AnimatePresence>
                 </div>
 
+                {/* City */}
+                <div
+                  className="px-3 py-2 flex-1 min-w-0 md:basis-[100px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
+                  onClick={() => toggleDropdown('city')}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin size={14} className="text-primary flex-shrink-0" />
+                    <span className={`text-xs truncate ${city ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                      {city || "City"}
+                    </span>
+                  </div>
+                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'city' ? 'rotate-180' : ''}`} />
+
+                  <AnimatePresence>
+                    {openDropdown === 'city' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                        className="absolute top-full left-0 mt-2 w-48 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60]"
+                      >
+                        {cities.map(c => (
+                          <div
+                            key={c}
+                            className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold transition-colors cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCity(c);
+                              setLocation("");
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            {c}
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 {/* Location */}
                 <div
-                  className="px-4 py-2 flex-1 min-w-0 md:basis-[150px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
+                  className="px-3 py-2 flex-1 min-w-0 md:basis-[120px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
                   onClick={() => toggleDropdown('location')}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <MapPin size={16} className="text-primary flex-shrink-0" />
-                    <span className={`text-sm truncate ${location ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin size={14} className="text-primary flex-shrink-0" />
+                    <span className={`text-xs truncate ${location ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
                       {location || "Location"}
                     </span>
                   </div>
-                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'location' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'location' ? 'rotate-180' : ''}`} />
 
                   <AnimatePresence>
                     {openDropdown === 'location' && (
@@ -193,9 +232,6 @@ export default function Home() {
                               placeholder="Search areas..."
                               className="w-full bg-gray-50 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                               onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => {
-                                // Simple local filter could go here if we had state for it
-                              }}
                             />
                           </div>
                         </div>
@@ -218,16 +254,16 @@ export default function Home() {
 
                 {/* Property Type */}
                 <div
-                  className="px-4 py-2 flex-1 min-w-0 md:basis-[150px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
+                  className="px-3 py-2 flex-1 min-w-0 md:basis-[120px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
                   onClick={() => toggleDropdown('type')}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Building2 size={16} className="text-primary flex-shrink-0" />
-                    <span className={`text-sm truncate ${propertyType ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Building2 size={14} className="text-primary flex-shrink-0" />
+                    <span className={`text-xs truncate ${propertyType ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
                       {propertyType || "Type"}
                     </span>
                   </div>
-                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
 
                   <AnimatePresence>
                     {openDropdown === 'type' && (
@@ -236,25 +272,58 @@ export default function Home() {
                         className="absolute top-full left-0 mt-2 w-64 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60] max-h-64 overflow-y-auto"
                       >
                         {propertyTypes.map(type => (
-                          <div key={type} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-xs font-black transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setPropertyType(type); setOpenDropdown(null); }}>{type}</div>
+                          <div key={type} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-xs font-black transition-colors cursor-pointer" onClick={(e) => {
+                            e.stopPropagation();
+                            setPropertyType(type);
+                            if (type !== "Apartment") setBhk("");
+                            setOpenDropdown(null);
+                          }}>{type}</div>
                         ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
 
+                {/* BHK (Only visible if Apartment is selected) */}
+                {propertyType === "Apartment" && (
+                  <div
+                    className="px-3 py-2 flex-1 min-w-0 md:basis-[80px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
+                    onClick={() => toggleDropdown('bhk')}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`text-xs truncate ${bhk ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                        {bhk || "BHK"}
+                      </span>
+                    </div>
+                    <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'bhk' ? 'rotate-180' : ''}`} />
+
+                    <AnimatePresence>
+                      {openDropdown === 'bhk' && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                          className="absolute top-full left-0 mt-2 w-32 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60]"
+                        >
+                          {bhkOptions.map(option => (
+                            <div key={option} className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setBhk(option); setOpenDropdown(null); }}>{option}</div>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+
                 {/* Max Price */}
                 <div
-                  className="px-4 py-2 flex-1 min-w-0 md:basis-[120px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
+                  className="px-3 py-2 flex-1 min-w-0 md:basis-[100px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
                   onClick={() => toggleDropdown('price')}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-primary font-bold text-base leading-none flex-shrink-0">₹</span>
-                    <span className={`text-sm truncate ${maxPrice ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-primary font-bold text-sm leading-none flex-shrink-0">₹</span>
+                    <span className={`text-xs truncate ${maxPrice ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
                       {maxPrice || "Max Price"}
                     </span>
                   </div>
-                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${openDropdown === 'price' ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'price' ? 'rotate-180' : ''}`} />
 
                   <AnimatePresence>
                     {openDropdown === 'price' && (
@@ -263,7 +332,7 @@ export default function Home() {
                         className="absolute top-full left-0 mt-2 w-full bg-white shadow-2xl rounded-xl border border-gray-100 py-2 z-[60]"
                       >
                         {priceRanges.map(price => (
-                          <div key={price} className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-sm font-medium" onClick={(e) => { e.stopPropagation(); setMaxPrice(price); setOpenDropdown(null); }}>{price}</div>
+                          <div key={price} className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold cursor-pointer" onClick={(e) => { e.stopPropagation(); setMaxPrice(price); setOpenDropdown(null); }}>{price}</div>
                         ))}
                       </motion.div>
                     )}
@@ -411,7 +480,7 @@ export default function Home() {
                       <MapPin size={12} /> {prop.city}
                     </div>
                     <div className="text-lg font-bold text-gray-900 mb-1">{formatPrice(prop.price)}</div>
-                    <div className="text-sm text-gray-500 mb-5">{prop.bedrooms} BHK {prop.propertyType}</div>
+                    <div className="text-sm text-gray-500 mb-5">{prop.bedrooms === 0 ? "Studio" : `${prop.bedrooms} BHK`} {prop.propertyType}</div>
                     <Link href={`/property/${prop._id}`} className="w-full bg-[#f0f7f7] hover:bg-primary text-primary hover:text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
                       View Details <ArrowRight size={14} />
                     </Link>

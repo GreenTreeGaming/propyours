@@ -29,7 +29,6 @@ const PropertySchema = new mongoose.Schema(
                 "Duplex",
                 "Villa",
                 "Penthouse",
-                "Studio",
                 "Plot",
                 "Farm House",
                 "Agricultural Land",

@@ -352,7 +352,7 @@ export default function PropertyDetailsPage() {
                                         </h1>
 
                                         <div className="text-lg md:text-2xl text-gray-500 font-bold tracking-tight">
-                                            {property.bedrooms ? `${property.bedrooms} BHK ` : ""}
+                                            {property.bedrooms === 0 ? "Studio " : property.bedrooms ? `${property.bedrooms} BHK ` : ""}
                                             {property.propertyType} in {property.locality}, {property.city}
                                         </div>
                                     </div>
@@ -383,7 +383,7 @@ export default function PropertyDetailsPage() {
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-gray-400 uppercase">Bedrooms</p>
-                                            <p className="text-sm font-bold text-gray-900">{property.bedrooms || "N/A"}</p>
+                                            <p className="text-sm font-bold text-gray-900">{property.bedrooms === 0 ? "Studio" : property.bedrooms || "N/A"}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
