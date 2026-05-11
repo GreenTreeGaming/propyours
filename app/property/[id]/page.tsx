@@ -533,7 +533,7 @@ export default function PropertyDetailsPage() {
                             )}
 
                             {/* EMI Calculator Section */}
-                            <EMICalculator propertyPrice={property.price} />
+                            <EMICalculator propertyPrice={property.price || 0} />
                         </div>
 
                         {/* RIGHT COLUMN: Contact & Sidebar */}
