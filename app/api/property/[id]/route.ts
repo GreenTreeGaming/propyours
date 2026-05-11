@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import Property from "@/models/Property";
+import User from "@/models/User";
 
 export async function GET(
     req: Request,
@@ -17,7 +18,8 @@ export async function GET(
 
         return NextResponse.json(property);
     } catch (error) {
-        return NextResponse.json({ error: "Failed to fetch property" }, { status: 500 });
+        console.error("Error fetching property:", error);
+        return NextResponse.json({ error: "Failed to fetch property", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }
 export async function DELETE(
