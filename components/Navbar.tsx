@@ -52,9 +52,9 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Buy", href: "/buy" },
-    { name: "Sell", href: "#" },
+    { name: "Sell", href: "/sell" },
     { name: "Designers", href: "#" },
-    { name: "Builders", href: "#" },
+    { name: "Builders", href: "/builders" },
     { name: "Blog", href: "#" },
   ];
 

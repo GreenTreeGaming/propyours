@@ -159,9 +159,17 @@ export default function Home() {
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
                         className="absolute top-full left-0 mt-2 w-48 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60] overflow-hidden"
                       >
-                        {["Buy", "Rent", "Sell", "PG/CO-Living"].map(tab => (
-                          <div key={tab} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-sm font-bold transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setActiveTab(tab); setOpenDropdown(null); }}>{tab}</div>
-                        ))}
+                          {["Buy", "Rent", "Sell", "PG/CO-Living"].map(tab => (
+                            <div key={tab} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-sm font-bold transition-colors cursor-pointer" onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (tab === "Sell") {
+                                router.push("/sell");
+                              } else {
+                                setActiveTab(tab); 
+                              }
+                              setOpenDropdown(null); 
+                            }}>{tab}</div>
+                          ))}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -398,7 +406,7 @@ export default function Home() {
               </div>
             </Link>
 
-            <div className="flex items-center gap-3 px-4 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
+            <Link href="/sell" className="flex items-center gap-3 px-4 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
               <div className="w-11 h-11 rounded-full bg-[#f0f7f7] flex items-center justify-center text-primary border border-primary/10 flex-shrink-0">
                 <Store size={20} />
               </div>
@@ -406,7 +414,7 @@ export default function Home() {
                 <h3 className="font-bold text-gray-900 text-sm">Sell a Property</h3>
                 <p className="text-[10px] text-gray-500">List your property for free</p>
               </div>
-            </div>
+            </Link>
 
             <div className="flex items-center gap-3 px-6 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
               <div className="w-11 h-11 rounded-full bg-[#f5f0fb] flex items-center justify-center text-[#8a5bd6] border border-[#8a5bd6]/10 flex-shrink-0">
@@ -418,7 +426,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 px-6 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
+            <Link href="/builders" className="flex items-center gap-3 px-6 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
               <div className="w-11 h-11 rounded-full bg-[#fffcf0] flex items-center justify-center text-[#d19b33] border border-[#d19b33]/10 flex-shrink-0">
                 <Building2 size={20} />
               </div>
@@ -426,7 +434,7 @@ export default function Home() {
                 <h3 className="font-bold text-gray-900 text-sm">Top Builders</h3>
                 <p className="text-[10px] text-gray-500">Discover trusted builders</p>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -588,9 +596,9 @@ export default function Home() {
               <p className="text-gray-600 text-sm">List your property and connect with buyers.</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="bg-white text-primary border border-primary px-6 py-3 rounded-lg font-bold text-sm hover:bg-primary/5 transition-colors shadow-sm">
+              <Link href="/sell" className="bg-white text-primary border border-primary px-6 py-3 rounded-lg font-bold text-sm hover:bg-primary/5 transition-colors shadow-sm">
                 List Property
-              </button>
+              </Link>
               <button className="bg-primary text-white border border-primary px-6 py-3 rounded-lg font-bold text-sm hover:bg-primary-dark transition-colors shadow-md">
                 List Business
               </button>

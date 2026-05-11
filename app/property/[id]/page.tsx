@@ -18,8 +18,10 @@ import {
     Building2,
     UserCircle,
     Info,
-    BarChart3
+    BarChart3,
+    Calculator
 } from "lucide-react";
+import EMICalculator from "@/components/EMICalculator";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -529,6 +531,9 @@ export default function PropertyDetailsPage() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* EMI Calculator Section */}
+                            <EMICalculator propertyPrice={property.price} />
                         </div>
 
                         {/* RIGHT COLUMN: Contact & Sidebar */}
