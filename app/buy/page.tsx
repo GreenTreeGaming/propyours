@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,13 +43,19 @@ function BuyPageContent() {
   const [loading, setLoading] = useState(true);
 
   // Initial state from URL params
-  const [selectedCity, setSelectedCity] = useState(searchParams.get("city") || "Chennai");
+  const [selectedCity, setSelectedCity] = useState("All");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("location") || "");
   const [selectedType, setSelectedType] = useState(searchParams.get("type") || "All");
   const [selectedBHK, setSelectedBHK] = useState(searchParams.get("bhk") || "All");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
   const [sortBy, setSortBy] = useState("newest");
+
+  const [searchTerm, setSearchTerm] = useState(
+      searchParams.get("location") || ""
+  );
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const cities = TAMIL_NADU_CITIES;
   const locations = TAMIL_NADU_LOCATIONS[selectedCity as keyof typeof TAMIL_NADU_LOCATIONS] || ["All"];
@@ -66,6 +72,15 @@ function BuyPageContent() {
     "Farm House",
     "Agricultural Land"
   ];
+
+  useEffect(() => {
+    setSelectedCity(searchParams.get("city") || "All");
+    setSearchQuery(searchParams.get("location") || "");
+    setSelectedType(searchParams.get("type") || "All");
+    setSelectedBHK(searchParams.get("bhk") || "All");
+    setMaxPrice(searchParams.get("maxPrice") || "");
+    setSearchTerm(searchParams.get("location") || "");
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -85,12 +100,34 @@ function BuyPageContent() {
     fetchProperties();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+          searchRef.current &&
+          !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener(
+          "mousedown",
+          handleClickOutside
+      );
+    };
+  }, []);
+
   const filteredProperties = properties.filter(prop => {
     const matchesCity = selectedCity === "All" || prop.city.toLowerCase() === selectedCity.toLowerCase();
 
     const matchesSearch =
-      prop.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (prop.locality && prop.locality.toLowerCase().includes(searchQuery.toLowerCase()));
+        searchQuery === "" ||
+        prop.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        prop.locality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        prop.city?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Fuzzy matching for property types
     const normalizedSelectedType = (selectedType === "Apartments" || selectedType === "Apartment") ? "Apartment" :
@@ -120,13 +157,90 @@ function BuyPageContent() {
   };
 
   const clearFilters = () => {
-    setSelectedCity("Chennai");
+    setSelectedCity("All");
     setSearchQuery("");
     setSelectedType("All");
     setSelectedBHK("All");
     setMinPrice("");
     setMaxPrice("");
     setSortBy("newest");
+    setSearchTerm("");
+    setShowSuggestions(false);
+  };
+
+  const getCityForArea = (area: string) => {
+    for (const [city, areas] of Object.entries(TAMIL_NADU_LOCATIONS)) {
+      if (areas.includes(area)) {
+        return city;
+      }
+    }
+
+    return null;
+  };
+
+  const searchableItems = [
+    ...cities.map(city => ({
+      type: "city",
+      label: city
+    })),
+
+    ...Object.entries(TAMIL_NADU_LOCATIONS)
+        .flatMap(([city, areas]) =>
+            areas
+                .filter(area => area !== "All")
+                .map(area => ({
+                  type: "area",
+                  label: area,
+                  city
+                }))
+        ),
+
+    ...propertyTypes
+        .filter(type => type !== "All")
+        .map(type => ({
+          type: "property",
+          label: type
+        }))
+  ];
+
+  const suggestions = searchTerm.length > 0
+      ? searchableItems
+          .filter(item =>
+              item.label
+                  .toLowerCase()
+                  .includes(searchTerm.toLowerCase())
+          )
+          .slice(0, 8)
+      : [];
+
+  const handleSuggestionClick = (
+      item: {
+        type: string;
+        label: string;
+      }
+  ) => {
+    if (item.type === "city") {
+      setSelectedCity(item.label);
+    }
+
+    if (item.type === "area") {
+      setSearchQuery(item.label);
+
+      const city = getCityForArea(item.label);
+
+      if (city) {
+        setSelectedCity(city);
+      }
+    }
+
+    if (item.type === "property") {
+      setSelectedType(item.label);
+    }
+
+    if (item.type !== "city") {
+      setSearchTerm("");
+    }
+    setShowSuggestions(false);
   };
 
   return (
@@ -160,41 +274,74 @@ function BuyPageContent() {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-end">
 
-            {/* City */}
-            <div className="lg:col-span-2 space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">City</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <select
-                  className="w-full appearance-none pl-12 pr-10 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary/10 transition-all text-sm font-bold cursor-pointer"
-                  value={selectedCity}
-                  onChange={(e) => {
-                    setSelectedCity(e.target.value);
-                    setSearchQuery("");
-                  }}
-                >
-                  {cities.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
-              </div>
-            </div>
+            <div
+                ref={searchRef}
+                className="lg:col-span-4 space-y-2 relative"
+            >
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                Search Location / Property
+              </label>
 
-            {/* Location */}
-            <div className="lg:col-span-2 space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Search Area</label>
               <div className="relative">
-                <select
-                  className="w-full appearance-none px-4 py-3.5 bg-gray-50 border-none rounded-2xl focus:ring-4 focus:ring-primary/10 transition-all text-sm font-bold cursor-pointer pr-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value === "All" ? "" : e.target.value)}
-                >
-                  {locations.map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                <Search
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={18}
+                />
+
+                <input
+                    type="text"
+                    value={searchTerm}
+                    placeholder="Chennai, Adyar, OMR, Apartment..."
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    className="w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-2xl border-none focus:ring-4 focus:ring-primary/10 font-bold"
+                />
+
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-50 mt-2 w-full bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                      {suggestions.map((item, index) => (
+                          <button
+                              key={`${item.type}-${index}`}
+                              onClick={() => handleSuggestionClick(item)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left"
+                          >
+                            {item.type === "city" && (
+                                <MapPin size={16} className="text-primary" />
+                            )}
+
+                            {item.type === "area" && (
+                                <MapPin size={16} className="text-gray-500" />
+                            )}
+
+                            {item.type === "property" && (
+                                <Building2 size={16} className="text-green-500" />
+                            )}
+
+                            <div className="flex flex-col">
+  <span className="font-semibold text-sm">
+    {item.label}
+  </span>
+
+                              {item.type === "area" && (
+                                  <span className="text-xs text-gray-400">
+      {item.city}
+    </span>
+                              )}
+                            </div>
+
+                            <span className="ml-auto text-[10px] uppercase text-gray-400">
+  {item.type === "city"
+      ? "CITY"
+      : item.type === "property"
+          ? "PROPERTY"
+          : ""}
+</span>
+                          </button>
+                      ))}
+                    </div>
+                )}
               </div>
             </div>
 
@@ -273,6 +420,40 @@ function BuyPageContent() {
                 <X size={20} className="group-hover:rotate-90 transition-transform duration-300" />
               </button>
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+
+            {selectedCity !== "All" && (
+                <button
+                    onClick={() => setSelectedCity("All")}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"
+                >
+                  {selectedCity}
+                  <X size={12} />
+                </button>
+            )}
+
+            {searchQuery && (
+                <button
+                    onClick={() => setSearchQuery("")}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"
+                >
+                  {searchQuery}
+                  <X size={12} />
+                </button>
+            )}
+
+            {selectedType !== "All" && (
+                <button
+                    onClick={() => setSelectedType("All")}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold"
+                >
+                  {selectedType}
+                  <X size={12} />
+                </button>
+            )}
+
           </div>
 
           {/* Secondary Filter Row */}

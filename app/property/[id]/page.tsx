@@ -118,7 +118,7 @@ export default function PropertyDetailsPage() {
             sqm: 10.7639,
             acre: 43560,
             kanal: 5445,
-            marla: 272.25
+            marla: 272.25,
         };
 
         const sqftValue = value * (factors[fromUnit] || 1);
@@ -129,39 +129,33 @@ export default function PropertyDetailsPage() {
     };
 
     useEffect(() => {
-        const fetchProperty = async (retries = 1) => {
+        if (!id) return;
+
+        const fetchProperty = async () => {
             try {
+                setLoading(true);
+
                 const res = await fetch(`/api/property/${id}`);
                 const data = await res.json();
 
                 if (!res.ok) {
-                    // If it's a 404 and we have retries left, wait and try again
-                    if (res.status === 404 && retries > 0) {
-                        console.log(`Property not found, retrying in 2s... (${retries} left)`);
-                        setTimeout(() => fetchProperty(retries - 1), 2000);
-                        return;
-                    }
-                    throw new Error(data.error);
+                    throw new Error(data.error || "Property not found");
                 }
 
-                setProperty(data as PropertyRecord);
+                setProperty(data);
                 setDisplayUnit(data.sizeUnit || "sqft");
-                setError(""); // Clear any previous errors
-            } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : "Failed to load property";
-                setError(message);
+            } catch (err) {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to load property"
+                );
             } finally {
-                // Only stop loading if we aren't retrying
-                if (retries === 0 || property) {
-                    setLoading(false);
-                }
+                setLoading(false);
             }
         };
 
-        if (id) {
-            setLoading(true);
-            fetchProperty();
-        }
+        fetchProperty();
     }, [id]);
 
     useEffect(() => {
@@ -346,13 +340,51 @@ export default function PropertyDetailsPage() {
                     <div className="grid lg:grid-cols-3 gap-10">
 
                         {/* LEFT COLUMN: Main Details */}
-                        <div className="lg:col-span-2 space-y-8">
+                        <div className="lg:col-span-2">
+
+                            {/* Image Gallery Placeholder */}
+                            <div className="grid md:grid-cols-4 gap-4 h-[420px]">
+                                <div className="relative col-span-3 rounded-3xl overflow-hidden shadow-sm group">
+                                    <Image
+                                        src="/loginimage.png"
+                                        alt="Property"
+                                        fill
+                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                </div>
+                                <div className="col-span-1 grid grid-rows-3 gap-4 h-full">
+                                    <div className="relative rounded-3xl overflow-hidden shadow-sm">
+                                        <Image src="/signuppageimage.png" alt="Property" fill className="object-cover" />
+                                    </div>
+                                    <div className="relative rounded-3xl overflow-hidden shadow-sm bg-primary/10 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <div className="text-center text-white">
+                                                <p className="text-3xl font-black">+12</p>
+                                                <p className="text-xs uppercase tracking-widest">
+                                                    View All Photos
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Title & Price Header */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm"
+                                className="
+        relative
+        -mt-12
+        z-10
+        bg-white
+        rounded-3xl
+        p-8
+        border border-gray-100
+        shadow-xl
+        mb-8
+    "
                             >
                                 <div className="flex flex-col gap-6">
                                     {/* TITLE BLOCK */}
@@ -366,7 +398,7 @@ export default function PropertyDetailsPage() {
                                             </span>
                                         </div>
 
-                                        <h1 className="text-4xl md:text-6xl font-black text-gray-900 leading-[1.1] tracking-tighter">
+                                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-[1.1] tracking-tighter">
                                             {property.address}
                                         </h1>
 
@@ -379,10 +411,10 @@ export default function PropertyDetailsPage() {
                                     {/* PRICE BLOCK — NOW LEFT ALIGNED */}
                                     <div className="space-y-2">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            Total Asking Price
+                                            Asking Price
                                         </p>
 
-                                        <h2 className="text-3xl md:text-5xl font-black text-primary tracking-tighter">
+                                        <h2 className="text-5xl md:text-7xl font-black text-primary tracking-tighter">
                                             ₹{property.price?.toLocaleString()}
                                         </h2>
 
@@ -453,29 +485,8 @@ export default function PropertyDetailsPage() {
                                 </div>
                             </motion.div>
 
-                            {/* Image Gallery Placeholder */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[400px]">
-                                <div className="relative rounded-3xl overflow-hidden shadow-sm group">
-                                    <Image
-                                        src="/loginimage.png"
-                                        alt="Property"
-                                        fill
-                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                                </div>
-                                <div className="grid grid-rows-2 gap-4 h-full">
-                                    <div className="relative rounded-3xl overflow-hidden shadow-sm">
-                                        <Image src="/signuppageimage.png" alt="Property" fill className="object-cover" />
-                                    </div>
-                                    <div className="relative rounded-3xl overflow-hidden shadow-sm bg-primary/10 flex items-center justify-center">
-                                        <p className="text-primary font-bold">View all photos</p>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Description Section */}
-                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4">
+                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4 mb-8">
                                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <Building2 size={22} className="text-primary" />
                                     About this Property
@@ -486,7 +497,7 @@ export default function PropertyDetailsPage() {
                             </div>
 
                             {/* Property Specs Table */}
-                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6">
+                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6 mb-8">
                                 <h3 className="text-xl font-bold text-gray-900">Property Details</h3>
                                 <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
                                     {property.uds ? (
@@ -514,7 +525,7 @@ export default function PropertyDetailsPage() {
 
                             {/* Amenities Section */}
                             {property.amenities && property.amenities.length > 0 && (
-                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8">
+                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8 mb-8">
                                     <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                         <CheckCircle2 size={22} className="text-primary" />
                                         Amenities & Features

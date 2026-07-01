@@ -20,7 +20,6 @@ const notoTamil = Noto_Sans_Tamil({
   display: "swap",
 });
 
-import { LanguageProvider } from "@/context/LanguageContext";
 import { CompareProvider } from "@/components/CompareContext";
 import CompareFloatingBar from "@/components/CompareFloatingBar";
 
@@ -40,14 +39,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${headingFont.variable} ${bodyFont.variable} ${notoTamil.variable} antialiased font-body flex flex-col min-h-screen`}>
-        <LanguageProvider>
-          <CompareProvider>
-            <Navbar />
-            {children}
-            <CompareFloatingBar />
-            <Footer />
-          </CompareProvider>
-        </LanguageProvider>
+        <CompareProvider>
+          <Navbar />
+          {children}
+          <CompareFloatingBar />
+          <Footer />
+        </CompareProvider>
       </body>
     </html>
   );

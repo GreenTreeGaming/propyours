@@ -1,12 +1,10 @@
 "use client"
 
-import { useLanguage } from "@/context/LanguageContext";
 import { Home as HomeIcon } from "lucide-react";
 import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin } from "react-icons/fa";
 import Image from "next/image";
 
 export default function Footer() {
-  const { language, t } = useLanguage();
 
   return (
     <footer className="bg-white pt-20 pb-10 border-t border-gray-100">

@@ -65,7 +65,7 @@ export default function SharePropertyModal({
     };
 
 
-    const customMessage = `I just found this property on PropYours: ${propertyTitle}`;
+    const customMessage = `🏡 Found a property you might like on PropYours:\n\n${propertyTitle}`;
 
     const handleNativeShare = async () => {
         if (!canNativeShare) return;
@@ -104,7 +104,7 @@ export default function SharePropertyModal({
         {
             name: "Email",
             icon: <Mail size={20} />,
-            href: `mailto:?subject=${encodeURIComponent(propertyTitle)}&body=${encodedMessage}%0A%0A${encodedUrl}`,
+            href: `mailto:?subject=${encodeURIComponent(`Property Recommendation from PropYours`)}&body=${encodedMessage}%0A%0A${encodedUrl}`,
             color: "hover:bg-gray-50 hover:text-gray-600 hover:border-gray-100",
         },
     ];

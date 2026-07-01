@@ -138,13 +138,6 @@ export default function EMICalculator({ propertyPrice }: EMICalculatorProps) {
                 <span className="text-sm font-black text-gray-900">{formatCurrency(emi * tenure * 12)}</span>
              </div>
           </div>
-
-          <div className="mt-6">
-            <button className="w-full py-4 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-              Apply for Home Loan
-              <ArrowRight size={14} />
-            </button>
-          </div>
         </div>
       </div>
 
