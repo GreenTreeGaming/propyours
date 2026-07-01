@@ -3,124 +3,94 @@ import { ComparisonRow } from "@/types/pricing";
 export const developerComparison: ComparisonRow[] = [
     {
         feature: "Active Projects",
-        plan1: "Up to 5",
-        plan2: "Up to 15",
-        plan3: "Unlimited"
+        plan1: "Up to 3",
+        plan2: "Up to 10",
+        plan3: "Up to 25"
     },
     {
-        feature: "Subscription",
-        plan1: "1 Year",
-        plan2: "1 Year",
-        plan3: "1 Year"
-    },
-    {
-        feature: "Company Profile",
-        plan1: "Standard",
-        plan2: "Premium",
-        plan3: "Enterprise"
-    },
-    {
-        feature: "Builder Directory",
-        plan1: "Standard Listing",
-        plan2: "Featured Listing",
-        plan3: "Top Featured"
-    },
-    {
-        feature: "Photos per Project",
-        plan1: "25",
-        plan2: "Unlimited",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "Videos per Project",
-        plan1: "5",
-        plan2: "Unlimited",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "Project Brochure",
-        plan1: "✓",
-        plan2: "✓",
-        plan3: "✓"
-    },
-    {
-        feature: "Search Ranking",
+        feature: "Builder Directory Listing",
         plan1: "Standard",
         plan2: "Priority",
-        plan3: "Top Priority"
+        plan3: "Top Placement"
     },
     {
-        feature: "Homepage Promotion",
-        plan1: "—",
-        plan2: "Featured Rotation",
-        plan3: "Hero Placement"
+        feature: "Builder Card Style",
+        plan1: "Standard",
+        plan2: "Highlighted",
+        plan3: "Premium"
     },
     {
         feature: "Verified Builder Badge",
         plan1: "—",
         plan2: "✓",
-        plan3: "Premium Verified"
-    },
-    {
-        feature: "Analytics",
-        plan1: "Basic",
-        plan2: "Advanced",
-        plan3: "Enterprise",
-        tooltip:
-            "Track project views, enquiries, traffic sources, buyer behaviour and campaign performance."
-    },
-    {
-        feature: "Lead Dashboard",
-        plan1: "Basic",
-        plan2: "Advanced",
-        plan3: "Advanced + Assignment"
-    },
-    {
-        feature: "CRM Export",
-        plan1: "—",
-        plan2: "CSV Export",
-        plan3: "CSV + API"
-    },
-    {
-        feature: "Bulk Project Upload",
-        plan1: "—",
-        plan2: "✓",
-        plan3: "✓"
-    },
-    {
-        feature: "API Integration",
-        plan1: "—",
-        plan2: "—",
-        plan3: "✓"
-    },
-    {
-        feature: "Team Members",
-        plan1: "1",
-        plan2: "5",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "Lead Assignment",
-        plan1: "—",
-        plan2: "✓",
-        plan3: "Advanced Routing"
-    },
-    {
-        feature: "Dedicated Builder Landing Page",
-        plan1: "—",
-        plan2: "✓",
         plan3: "Premium"
     },
     {
-        feature: "Dedicated Account Manager",
+        feature: "Search Ranking",
+        plan1: "Standard",
+        plan2: "Priority",
+        plan3: "Top"
+    },
+    {
+        feature: "Featured Property Placement",
+        plan1: "—",
+        plan2: "✓",
+        plan3: "✓"
+    },
+    {
+        feature: "Promote Boosts",
+        plan1: "—",
+        plan2: "5 / month",
+        plan3: "15 / month"
+    },
+    {
+        feature: "Scheduled Promote Boosts",
         plan1: "—",
         plan2: "—",
         plan3: "✓"
     },
     {
-        feature: "Support",
-        plan1: "Email",
-        plan2: "Priority Email",
-        plan3: "Priority Phone & WhatsApp"
+        feature: "Photos per Project",
+        plan1: "10",
+        plan2: "25",
+        plan3: "40"
+    },
+    {
+        feature: "Profile Details",
+        plan1: "Company, bio, city, phone",
+        plan2: "Company, bio, city, phone",
+        plan3: "Company, bio, city, phone"
+    },
+    {
+        feature: "Property Views Tracking",
+        plan1: "✓",
+        plan2: "✓",
+        plan3: "✓"
+    },
+    {
+        feature: "Phone Click Tracking",
+        plan1: "✓",
+        plan2: "✓",
+        plan3: "✓"
+    },
+    {
+        feature: "Favorites Count",
+        plan1: "✓",
+        plan2: "✓",
+        plan3: "✓"
+    },
+    {
+        feature: "Views Over Time Chart",
+        plan1: "—",
+        plan2: "✓",
+        plan3: "✓"
+    },
+    {
+        feature: "Analytics Level",
+        plan1: "Basic",
+        plan2: "Project analytics",
+        plan3: "Portfolio analytics",
+        tooltip:
+            "Based on available listing analytics such as views, phone clicks, favorites, and daily view trends."
     }
 ];

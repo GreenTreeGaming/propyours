@@ -60,6 +60,7 @@ export async function POST(req: Request) {
                 role: user.role,
                 phone: user.phone || "",
                 favorites: user.favorites || [],
+                plan: user.plan,
             },
         });
 

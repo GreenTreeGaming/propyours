@@ -14,89 +14,53 @@ export const ownerComparison: ComparisonRow[] = [
         plan3: "180 Days"
     },
     {
-        feature: "Verified Leads",
-        plan1: "1",
-        plan2: "25",
-        plan3: "Unlimited"
-    },
-    {
         feature: "Photos",
-        plan1: "5",
-        plan2: "20",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "Videos",
-        plan1: "—",
-        plan2: "1 Video",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "360° Virtual Tour",
-        plan1: "—",
-        plan2: "—",
-        plan3: "✓"
+        plan1: "Up to 5",
+        plan2: "Up to 20",
+        plan3: "Up to 30"
     },
     {
         feature: "Search Ranking",
         plan1: "Standard",
         plan2: "Featured",
-        plan3: "Top Priority"
+        plan3: "Priority"
     },
     {
-        feature: "Homepage Promotion",
-        plan1: "—",
-        plan2: "—",
-        plan3: "✓"
-    },
-    {
-        feature: "Verified Owner Badge",
+        feature: "Featured Listing",
         plan1: "—",
         plan2: "✓",
         plan3: "✓"
+    },
+    {
+        feature: "Compare Tool Visibility",
+        plan1: "Standard",
+        plan2: "Highlighted",
+        plan3: "Priority"
     },
     {
         feature: "Analytics",
-        plan1: "None",
+        plan1: "—",
         plan2: "Basic",
         plan3: "Advanced",
         tooltip:
-            "Track listing views, clicks, enquiries, buyer behaviour, and listing performance."
+            "Uses available property analytics such as views, phone clicks, favorites, and daily view trends."
     },
     {
-        feature: "Lead Notifications",
-        plan1: "—",
-        plan2: "Email",
-        plan3: "Email + SMS + WhatsApp"
-    },
-    {
-        feature: "Lead Export",
-        plan1: "—",
-        plan2: "—",
-        plan3: "CSV Export"
-    },
-    {
-        feature: "AI Property Description",
-        plan1: "—",
-        plan2: "3 Generations",
-        plan3: "Unlimited"
-    },
-    {
-        feature: "Listing Performance Score",
+        feature: "Views Tracking",
         plan1: "—",
         plan2: "✓",
         plan3: "✓"
     },
     {
-        feature: "Social Media Sharing",
-        plan1: "Basic",
+        feature: "Phone Click Tracking",
+        plan1: "—",
         plan2: "✓",
         plan3: "✓"
     },
     {
-        feature: "Priority Support",
+        feature: "Favorites Count",
         plan1: "—",
-        plan2: "Standard",
-        plan3: "Priority"
+        plan2: "✓",
+        plan3: "✓"
     }
 ];

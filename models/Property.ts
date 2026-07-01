@@ -49,10 +49,10 @@ const PropertySchema = new mongoose.Schema(
         sizeUnit: {
             type: String,
             enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla"],
-            default: "sqft"
+            default: "sqft",
         },
-        uds: Number, // Undivided Share
-        dimensions: String, // "50 x 50"
+        uds: Number,
+        dimensions: String,
         ownershipType: {
             type: String,
             enum: ["Freehold", "Leasehold", "Co-operative", "Power of Attorney"],
@@ -79,8 +79,11 @@ const PropertySchema = new mongoose.Schema(
             default: true,
         },
 
-        // ⭐ Extras (future-proofing)
-        amenities: [String], // ["Parking", "Lift", "Gym"]
+        // ⭐ Extras
+        amenities: {
+            type: [String],
+            default: [],
+        },
 
         status: {
             type: String,
@@ -93,8 +96,54 @@ const PropertySchema = new mongoose.Schema(
             default: false,
         },
 
-        // 🖼 Images (skip for now but keep placeholder)
-        images: [String],
+        // 🖼 Images
+        images: {
+            type: [String],
+            default: [],
+        },
+
+        // 💳 Plan Snapshot
+        planSnapshot: {
+            tier: {
+                type: String,
+                enum: [
+                    "silver",
+                    "gold",
+                    "diamond",
+                    "builder-starter",
+                    "builder-growth",
+                    "builder-elite",
+                ],
+                default: "silver",
+            },
+            listingDays: {
+                type: Number,
+                default: 30,
+            },
+            maxPhotos: {
+                type: Number,
+                default: 5,
+            },
+            featured: {
+                type: Boolean,
+                default: false,
+            },
+            analyticsLevel: {
+                type: String,
+                enum: ["none", "basic", "advanced", "project", "portfolio"],
+                default: "none",
+            },
+        },
+
+        listingExpiresAt: {
+            type: Date,
+            required: false,
+        },
+
+        promoteBoostsRemaining: {
+            type: Number,
+            default: 0,
+        },
 
         // 📈 Analytics
         analytics: {
@@ -103,22 +152,11 @@ const PropertySchema = new mongoose.Schema(
             favoritesCount: { type: Number, default: 0 },
             dailyStats: [
                 {
-                    date: String, // "YYYY-MM-DD"
+                    date: String,
                     views: { type: Number, default: 0 },
                     phoneClicks: { type: Number, default: 0 },
                 },
             ],
-        },
-
-        // 📅 Meta
-        createdAt: {
-            type: Date,
-            default: Date.now,
-        },
-
-        updatedAt: {
-            type: Date,
-            default: Date.now,
         },
     },
     { timestamps: true }

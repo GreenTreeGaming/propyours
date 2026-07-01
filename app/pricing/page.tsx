@@ -6,44 +6,17 @@ import { ownerPlans } from "@/data/pricing/ownerPlans";
 import { developerPlans } from "@/data/pricing/developerPlans";
 import { pricingFaqs } from "@/data/pricing/pricingFaq";
 import Link from "next/link";
+import { ownerComparison } from "@/data/pricing/ownerComparison";
+import { developerComparison } from "@/data/pricing/developerComparison";
 import {
     Check,
     X,
-    Building,
-    Zap,
-    Award,
     Sparkles,
-    Calculator,
-    HelpCircle,
-    PhoneCall,
     ArrowRight,
     ChevronDown,
     Info,
-    User,
-    Users,
-    Target,
-    BarChart3,
-    TrendingUp,
-    Eye,
-    MessageSquare
+    BarChart3
 } from "lucide-react";
-
-// Pricing Types
-interface PricingPlan {
-    name: string;
-    price: string;
-    period: string;
-    originalPrice?: string;
-    badge?: string;
-    badgeType?: "popular" | "premium" | "standard";
-    description: string;
-    icon: React.ReactNode;
-    ctaText: string;
-    ctaLink: string;
-    features: string[];
-    notIncluded?: string[];
-    analyticsHighlight: string;
-}
 
 export default function PricingPage() {
     // FAQ Active Accordions
@@ -52,6 +25,24 @@ export default function PricingPage() {
     const [pricingAudience, setPricingAudience] = useState<"owners" | "builders">("owners");
 
     const activePlans = pricingAudience === "owners" ? ownerPlans : developerPlans;
+
+    const activeComparison =
+        pricingAudience === "owners" ? ownerComparison : developerComparison;
+
+    const comparisonContent = {
+        owners: {
+            title: "Compare Owner Plans",
+            description:
+                "See how Silver, Gold, and Diamond compare across listing duration, visibility, media, and analytics.",
+            columns: ["Silver", "Gold", "Diamond"],
+        },
+        builders: {
+            title: "Compare Builder Plans",
+            description:
+                "Compare builder visibility, active project limits, profile treatment, placement, and analytics.",
+            columns: ["Builder Starter", "Builder Growth", "Builder Elite"],
+        },
+    };
 
     const pricingContent = {
         owners: {
@@ -123,7 +114,7 @@ export default function PricingPage() {
                         transition={{ duration: 0.6, delay: 0.2 }}
                         className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed"
                     >
-                        No broker commissions. Choose listing plans based on leads, ad extension runtime, compare visibility, and advanced visitor analytics.
+                        Choose the right plan for your property listing or builder profile. Get better visibility, clearer analytics, and tools designed for how you sell.
                     </motion.p>
                 </div>
             </section>
@@ -520,92 +511,91 @@ export default function PricingPage() {
             <section className="max-w-7xl mx-auto px-6 py-16">
                 <div className="text-center space-y-4 mb-12">
                     <h2 className="text-3xl md:text-4xl font-black text-gray-900 font-heading uppercase tracking-wide">
-                        Compare Advertising & Analytics Plans
+                        {comparisonContent[pricingAudience].title}
                     </h2>
+
                     <p className="text-sm md:text-base text-gray-600 max-w-xl mx-auto">
-                        Review side-by-side values to see what package best supports your listing goals.
+                        {comparisonContent[pricingAudience].description}
                     </p>
                 </div>
 
-                <div className="overflow-x-auto border border-gray-200 rounded-3xl shadow-sm bg-white">
-                    <table className="w-full text-left border-collapse min-w-[700px]">
-                        <thead>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={`comparison-${pricingAudience}`}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -16 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-x-auto border border-gray-200 rounded-3xl shadow-sm bg-white"
+                    >
+                        <table className="w-full text-left border-collapse min-w-[760px]">
+                            <thead>
                             <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="p-5 font-black text-xs uppercase text-gray-500 tracking-wider w-[35%]">Plan Details</th>
-                                <th className="p-5 font-black text-xs uppercase text-gray-700 tracking-wider text-center">Basic (Free)</th>
-                                <th className="p-5 font-black text-xs uppercase text-primary tracking-wider text-center bg-primary-light/20">3-Month Boost</th>
-                                <th className="p-5 font-black text-xs uppercase text-primary-dark tracking-wider text-center bg-teal-500/5">6-Month Premium</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-sm">
+                                <th className="p-5 font-black text-xs uppercase text-gray-500 tracking-wider w-[35%]">
+                                    Plan Details
+                                </th>
 
-                            {/* Row: Ad Duration */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Advertisement Duration</td>
-                                <td className="p-5 text-center text-gray-600">30 Days</td>
-                                <td className="p-5 text-center font-semibold text-primary">90 Days (3 Months)</td>
-                                <td className="p-5 text-center font-bold text-primary-dark">180 Days (6 Months)</td>
+                                {comparisonContent[pricingAudience].columns.map((column, index) => (
+                                    <th
+                                        key={column}
+                                        className={`p-5 font-black text-xs uppercase tracking-wider text-center ${
+                                            index === 1
+                                                ? "text-primary bg-primary-light/20"
+                                                : index === 2
+                                                    ? "text-primary-dark bg-teal-500/5"
+                                                    : "text-gray-700"
+                                        }`}
+                                    >
+                                        {column}
+                                    </th>
+                                ))}
                             </tr>
+                            </thead>
 
-                            {/* Row: Leads Included */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Verified Leads Included</td>
-                                <td className="p-5 text-center text-gray-600">Up to 3 Standard Leads</td>
-                                <td className="p-5 text-center font-semibold text-primary">Up to 30 Screened Leads</td>
-                                <td className="p-5 text-center font-bold text-primary-dark">Unlimited Leads</td>
-                            </tr>
+                            <tbody className="divide-y divide-gray-100 text-sm">
+                            {activeComparison.map((row) => (
+                                <tr key={row.feature}>
+                                    <td className="p-5 font-semibold text-gray-800">
+                                        <div className="flex items-center gap-2">
+                                            {row.feature}
 
-                            {/* Row: Dashboard Analytics */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800 flex items-center gap-2">
-                                    Performance Dashboard Analytics
-                                    <div className="group relative cursor-pointer">
-                                        <Info className="w-3.5 h-3.5 text-gray-400" />
-                                        <div className="absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
-                                            Track clicks, profile views, contact details revealed, and WhatsApp conversions.
+                                            {row.tooltip && (
+                                                <div className="group relative cursor-pointer">
+                                                    <Info className="w-3.5 h-3.5 text-gray-400" />
+                                                    <div className="absolute left-0 bottom-full mb-2 w-56 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20">
+                                                        {row.tooltip}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                </td>
-                                <td className="p-5 text-center text-gray-400">None</td>
-                                <td className="p-5 text-center text-gray-600">Views & Clicks counts</td>
-                                <td className="p-5 text-center font-bold text-primary-dark">CTR, Geo-traffic & Demographics</td>
-                            </tr>
+                                    </td>
 
-                            {/* Row: Search Boost */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Featured Placement Boost</td>
-                                <td className="p-5 text-center"><X className="w-4 h-4 mx-auto text-red-400" /></td>
-                                <td className="p-5 text-center text-gray-600">15 Days Boost</td>
-                                <td className="p-5 text-center"><Check className="w-5 h-5 mx-auto text-primary-dark font-extrabold" /></td>
-                            </tr>
-
-                            {/* Row: Media Support */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Photos & Multimedia</td>
-                                <td className="p-5 text-center text-gray-600">Up to 5 Photos</td>
-                                <td className="p-5 text-center text-gray-600">Up to 10 Photos + 1 Video</td>
-                                <td className="p-5 text-center font-semibold text-gray-900">Up to 15 Photos + 2 Videos</td>
-                            </tr>
-
-                            {/* Row: Compare Tool Prominence */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Compare Tool Prominence</td>
-                                <td className="p-5 text-center text-gray-500">Standard Rank</td>
-                                <td className="p-5 text-center text-primary font-bold">Highlighted Badge</td>
-                                <td className="p-5 text-center text-primary-dark font-extrabold">Top Alternate Suggestion</td>
-                            </tr>
-
-                            {/* Row: Directory Listing */}
-                            <tr>
-                                <td className="p-5 font-semibold text-gray-800">Directory Presence (Builders/Designers)</td>
-                                <td className="p-5 text-center"><X className="w-4 h-4 mx-auto text-red-400" /></td>
-                                <td className="p-5 text-center text-gray-600">Standard Profile</td>
-                                <td className="p-5 text-center"><Check className="w-5 h-5 mx-auto text-primary-dark font-extrabold" /></td>
-                            </tr>
-
-                        </tbody>
-                    </table>
-                </div>
+                                    {[row.plan1, row.plan2, row.plan3].map((value, index) => (
+                                        <td
+                                            key={`${row.feature}-${index}`}
+                                            className={`p-5 text-center ${
+                                                index === 1
+                                                    ? "font-semibold text-primary"
+                                                    : index === 2
+                                                        ? "font-bold text-primary-dark"
+                                                        : "text-gray-600"
+                                            }`}
+                                        >
+                                            {value === "✓" ? (
+                                                <Check className="w-5 h-5 mx-auto text-primary" />
+                                            ) : value === "—" ? (
+                                                <X className="w-4 h-4 mx-auto text-red-400" />
+                                            ) : (
+                                                value
+                                            )}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </motion.div>
+                </AnimatePresence>
             </section>
 
             {/* --- FAQ SECTION --- */}
@@ -665,12 +655,12 @@ export default function PricingPage() {
 
                     <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
                         <div className="space-y-4 max-w-2xl">
-                            <span className="text-accent font-black text-xs uppercase tracking-[0.3em] block">Custom Developer Solutions</span>
+                            <span className="text-accent font-black text-xs uppercase tracking-[0.3em] block">Builder Visibility</span>
                             <h2 className="text-3xl md:text-4xl font-black font-heading leading-tight uppercase tracking-tight">
                                 Have a Large Property Portfolio?
                             </h2>
                             <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
-                                If you are a professional builder or broker agency listing over 10 active developments, contact our accounts team for bulk discounts and custom CRM lead integration.
+                                Builders with larger portfolios can start with the Elite plan for higher visibility, more active projects, and stronger analytics across their listings.
                             </p>
                         </div>
 

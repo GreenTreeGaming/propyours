@@ -70,6 +70,44 @@ export default function Navbar() {
     { name: "Pricing", href: "/pricing" },
   ];
 
+  const getPlanLabel = () => {
+    const tier = user?.plan?.tier;
+
+    const labels: Record<string, string> = {
+      silver: "Silver",
+      gold: "Gold",
+      diamond: "Diamond",
+      "builder-starter": "Builder Starter",
+      "builder-growth": "Builder Growth",
+      "builder-elite": "Builder Elite",
+    };
+
+    return tier ? labels[tier] || "Silver" : "Silver";
+  };
+
+  const getPlanBadgeClass = () => {
+    const tier = user?.plan?.tier;
+    const status = user?.plan?.status;
+
+    if (status === "expired" || status === "cancelled") {
+      return "bg-red-50 text-red-600";
+    }
+
+    if (tier === "diamond" || tier === "builder-elite") {
+      return "bg-zinc-950 text-white";
+    }
+
+    if (tier === "gold" || tier === "builder-growth") {
+      return "bg-yellow-100 text-yellow-800";
+    }
+
+    if (tier === "builder-starter") {
+      return "bg-primary/10 text-primary";
+    }
+
+    return "bg-gray-100 text-gray-700";
+  };
+
   return (
     <>
       <nav
@@ -110,12 +148,12 @@ export default function Navbar() {
 
               {/* Auth Section */}
               {!user ? (
-                <a
-                  href="/login"
-                  className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-                >
-                  Login
-                </a>
+                  <Link
+                      href="/login"
+                      className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
+                  >
+                    Login
+                  </Link>
               ) : (
                 <div className="relative">
                   <button
@@ -126,7 +164,12 @@ export default function Navbar() {
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
                         {user.name?.[0]?.toUpperCase() || "U"}
                       </div>
-                      <span className="text-sm font-medium">{user.name}</span>
+                      <div className="text-left leading-tight">
+                        <span className="block text-sm font-medium">{user.name}</span>
+                        <span className="block text-[10px] font-bold text-primary uppercase tracking-wide">
+  {getPlanLabel()}
+</span>
+                      </div>
                       <ChevronDown size={14} />
                     </div>
                   </button>
@@ -137,8 +180,33 @@ export default function Navbar() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-0 mt-3 w-44 bg-white border border-gray-100 rounded-xl shadow-lg py-2"
+                        className="absolute right-0 mt-3 w-64 bg-white border border-gray-100 rounded-xl shadow-lg py-2"
                       >
+                        <div className="px-4 py-3 border-b border-gray-100">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                            Current Plan
+                          </p>
+
+                          <div className="flex items-center justify-between gap-3">
+    <span className={`px-2.5 py-1 rounded-full text-xs font-black ${getPlanBadgeClass()}`}>
+      {getPlanLabel()}
+    </span>
+
+                            <Link
+                                href="/pricing"
+                                className="text-xs font-bold text-primary hover:text-primary-dark"
+                                onClick={() => setProfileOpen(false)}
+                            >
+                              Upgrade
+                            </Link>
+                          </div>
+
+                          {user.plan?.status && (
+                              <p className="text-[11px] text-gray-400 mt-2 capitalize">
+                                Status: {user.plan.status}
+                              </p>
+                          )}
+                        </div>
                         <Link
                           href="/dashboard"
                           className="block px-4 py-2 text-sm hover:bg-gray-50"
@@ -176,12 +244,12 @@ export default function Navbar() {
               )}
 
               {/* CTA */}
-              <a
-                href="/post-property"
-                className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md text-sm font-semibold transition-all inline-block"
+              <Link
+                  href="/post-property"
+                  className="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-md text-sm font-semibold transition-all inline-block"
               >
                 List Your Property
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -219,38 +287,63 @@ export default function Navbar() {
               ))}
 
               {!user ? (
-                <a
-                  href="/login"
-                  className="text-lg font-bold text-gray-800"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Login
-                </a>
+                  <Link
+                      href="/login"
+                      className="text-lg font-bold text-gray-800"
+                      onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Login
+                  </Link>
               ) : (
                 <>
-                  <a
-                    href="/dashboard"
-                    className="text-lg font-bold text-gray-800"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+                      Current Plan
+                    </p>
+
+                    <div className="flex items-center justify-between gap-3">
+    <span className={`px-3 py-1.5 rounded-full text-xs font-black ${getPlanBadgeClass()}`}>
+      {getPlanLabel()}
+    </span>
+
+                      <Link
+                          href="/pricing"
+                          className="text-sm font-bold text-primary"
+                          onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Upgrade
+                      </Link>
+                    </div>
+
+                    {user.plan?.status && (
+                        <p className="text-[11px] text-gray-400 mt-2 capitalize">
+                          Status: {user.plan.status}
+                        </p>
+                    )}
+                  </div>
+                  <Link
+                      href="/dashboard"
+                      className="text-lg font-bold text-gray-800"
+                      onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
-                  </a>
+                  </Link>
 
-                  <a
-                    href="/manage-properties"
-                    className="text-lg font-bold text-gray-800"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <Link
+                      href="/manage-properties"
+                      className="text-lg font-bold text-gray-800"
+                      onClick={() => setMobileMenuOpen(false)}
                   >
                     Manage Properties
-                  </a>
+                  </Link>
 
-                  <a
-                    href="/favorites"
-                    className="text-lg font-bold text-gray-800"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <Link
+                      href="/favorites"
+                      className="text-lg font-bold text-gray-800"
+                      onClick={() => setMobileMenuOpen(false)}
                   >
                     Favorited Properties
-                  </a>
+                  </Link>
 
                   <button
                     onClick={handleLogout}
@@ -261,13 +354,13 @@ export default function Navbar() {
                 </>
               )}
 
-              <a
-                href="/post-property"
-                className="w-full py-4 bg-primary text-white rounded-xl font-bold text-center block"
-                onClick={() => setMobileMenuOpen(false)}
+              <Link
+                  href="/post-property"
+                  className="w-full py-4 bg-primary text-white rounded-xl font-bold text-center block"
+                  onClick={() => setMobileMenuOpen(false)}
               >
                 List Your Property
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}
