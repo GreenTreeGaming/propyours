@@ -22,11 +22,26 @@ export async function getAuthenticatedUser(): Promise<AuthUser | NextResponse> {
         );
     }
 
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret) {
+        console.error("JWT_SECRET is not configured");
+
+        return NextResponse.json(
+            { error: "Server authentication is not configured" },
+            { status: 500 }
+        );
+    }
+
     try {
-        const payload = jwt.verify(
-            token,
-            process.env.JWT_SECRET!
-        ) as JwtPayload;
+        const payload = jwt.verify(token, secret) as JwtPayload;
+
+        if (!payload.userId) {
+            return NextResponse.json(
+                { error: "Invalid session" },
+                { status: 401 }
+            );
+        }
 
         return {
             userId: payload.userId,

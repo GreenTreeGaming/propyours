@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
     Bed,
     Bath,
@@ -30,7 +30,6 @@ import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import {
     getStoredUser,
-    getStoredUserId,
     updateStoredUserFavorites,
 } from "@/lib/browser-user";
 import { useCompare } from "@/components/CompareContext";
@@ -88,6 +87,8 @@ export default function PropertyDetailsPage() {
     const [isOwner, setIsOwner] = useState(false);
 
     const isInCompare = property ? compareList.some((p) => p._id === property._id) : false;
+
+    const router = useRouter();
 
     const handleCompareToggle = () => {
         if (!property) return;
@@ -159,10 +160,14 @@ export default function PropertyDetailsPage() {
     }, [id]);
 
     useEffect(() => {
-        const userId = getStoredUserId();
-        if (userId && property?.userId?._id === userId) {
-            setIsOwner(true);
+        const user = getStoredUser();
+
+        if (!user || !property) {
+            setIsOwner(false);
+            return;
         }
+
+        setIsOwner(property.userId?._id === user.id);
     }, [property]);
 
     useEffect(() => {
@@ -195,16 +200,25 @@ export default function PropertyDetailsPage() {
             setIsFavorite(true);
         }
 
-        const userId = getStoredUserId();
-        if (!userId) return;
+        if (!storedUser) {
+            return;
+        }
 
         const fetchFavorites = async () => {
             try {
-                const res = await fetch(`/api/user/${userId}/favorites`, { cache: "no-store" });
+                const res = await fetch(`/api/user/${storedUser.id}/favorites`, {
+                    cache: "no-store",
+                    credentials: "include",
+                });
+
                 const data = await res.json();
+
                 if (!res.ok) return;
 
-                const favoriteIds = (data as FavoriteRecord[]).map((favorite) => favorite._id);
+                const favoriteIds = (data as FavoriteRecord[]).map(
+                    (favorite) => favorite._id
+                );
+
                 updateStoredUserFavorites(favoriteIds);
                 setIsFavorite(favoriteIds.includes(normalizedId));
             } catch (error) {
@@ -217,16 +231,18 @@ export default function PropertyDetailsPage() {
 
     useEffect(() => {
         if (typeof window === "undefined" || !id) return;
+
         const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
+
         setShareUrl(`${window.location.origin}/property/${normalizedId}`);
     }, [id]);
 
     const handleFavoriteToggle = async () => {
-        const userId = getStoredUserId();
+        const user = getStoredUser();
         const rawId = Array.isArray(id) ? id[0] : id;
 
-        if (!userId) {
-            window.location.href = "/login";
+        if (!user) {
+            router.push("/login");
             return;
         }
 
@@ -237,11 +253,12 @@ export default function PropertyDetailsPage() {
         setFavoriteError("");
 
         try {
-            const res = await fetch(`/api/user/${userId}/favorites`, {
+            const res = await fetch(`/api/user/${user.id}/favorites`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                credentials: "include",
                 body: JSON.stringify({ propertyId: normalizedId }),
             });
 

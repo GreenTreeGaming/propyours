@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Home as HomeIcon,
@@ -9,7 +10,11 @@ import {
   X,
   ChevronDown,
 } from "lucide-react";
-import { getStoredUser, type StoredUser } from "@/lib/browser-user";
+import {
+  getStoredUser,
+  clearStoredUser,
+  type StoredUser,
+} from "@/lib/browser-user";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -18,19 +23,15 @@ export default function Navbar() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
 
     const syncUser = () => {
-      const token = localStorage.getItem("token");
       const storedUser = getStoredUser();
-
-      if (token && storedUser) {
-        setUser(storedUser);
-      } else {
-        setUser(null);
-      }
+      setUser(storedUser);
     };
 
     syncUser();
@@ -51,9 +52,13 @@ export default function Navbar() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      localStorage.removeItem("user");
+      clearStoredUser();
+      setUser(null); // immediately update the navbar
       setProfileOpen(false);
-      window.location.href = "/";
+      setMobileMenuOpen(false);
+
+      router.push("/");
+      router.refresh();
     }
   };
 
@@ -78,7 +83,7 @@ export default function Navbar() {
           {/* Logo */}
           <div
             className="flex items-center gap-2 cursor-pointer"
-            onClick={() => (window.location.href = "/")}
+            onClick={() => router.push("/")}
           >
             <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
               <HomeIcon size={18} strokeWidth={2.5} />
