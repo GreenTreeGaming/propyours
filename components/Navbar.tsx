@@ -76,7 +76,7 @@ export default function Navbar() {
     const labels: Record<string, string> = {
       silver: "Silver",
       gold: "Gold",
-      diamond: "Diamond",
+      platinum: "Platinum",
       "builder-starter": "Builder Starter",
       "builder-growth": "Builder Growth",
       "builder-elite": "Builder Elite",
@@ -93,7 +93,7 @@ export default function Navbar() {
       return "bg-red-50 text-red-600";
     }
 
-    if (tier === "diamond" || tier === "builder-elite") {
+    if (tier === "platinum" || tier === "builder-elite") {
       return "bg-zinc-950 text-white";
     }
 

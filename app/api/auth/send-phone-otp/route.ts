@@ -6,6 +6,10 @@ import PhoneOtp from "@/models/PhoneOtp";
 import { sendSms } from "@/lib/send-sms";
 
 function generateOtp() {
+    if (process.env.NODE_ENV !== "production") {
+        return "123456";
+    }
+
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 

@@ -1,7 +1,7 @@
 export type PlanTier =
     | "silver"
     | "gold"
-    | "diamond"
+    | "platinum"
     | "builder-starter"
     | "builder-growth"
     | "builder-elite";

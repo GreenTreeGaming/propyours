@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { UploadDropzone } from "@/lib/uploadthing";
+import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
 import {
     Home,
     Building2,
@@ -108,6 +110,7 @@ export default function PostPropertyPage() {
         floors: "",
         amenities: [] as string[],
         images: [] as string[],
+        videoLinks: [] as string[],
     });
 
     const LAND_TYPES = ["Plot", "Agricultural Land"];
@@ -192,6 +195,12 @@ export default function PostPropertyPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [user, setUser] = useState<any>(null);
+
+    const currentTier = (user?.plan?.tier || "silver") as PlanTier;
+    const currentPlanLimits = PLAN_LIMITS[currentTier] || PLAN_LIMITS.silver;
+
+    const maxImages = currentPlanLimits.maxImages;
+    const maxVideoLinks = currentPlanLimits.maxVideoLinks;
 
     useEffect(() => {
         const syncUser = () => {
@@ -295,6 +304,8 @@ export default function PostPropertyPage() {
                     bathrooms: Number(form.bathrooms) || undefined,
                     floors: Number(form.floors) || undefined,
                     amenities: form.amenities,
+                    images: form.images,
+                    videoLinks: form.videoLinks.filter(Boolean),
                 }),
             });
 
@@ -617,24 +628,193 @@ export default function PostPropertyPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* PHOTOS PLACEHOLDER */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">
+                                                            Photos ({form.images.length})
+                                                        </h3>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCurrentStep(4)}
+                                                            className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
+                                                        >
+                                                            EDIT <ChevronRight size={10} />
+                                                        </button>
+                                                    </div>
+
+                                                    {form.images.length > 0 ? (
+                                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                                                            {form.images.map((imageUrl) => (
+                                                                <img
+                                                                    key={imageUrl}
+                                                                    src={imageUrl}
+                                                                    alt="Property"
+                                                                    className="w-full h-20 object-cover rounded-xl border border-gray-100"
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-xs font-bold text-gray-400 italic">
+                                                            No photos uploaded
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* PHOTOS UPLOAD */}
                                                 <div className="space-y-6 pt-6 border-t border-gray-100">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
                                                             <ImageIcon size={20} />
                                                         </div>
+
                                                         <div>
-                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">Property Photos</h3>
-                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Add up to 10 images</p>
+                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">
+                                                                Property Photos
+                                                            </h3>
+                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                                Add up to 10 images
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                    <div className="border-2 border-dashed border-gray-100 rounded-[2.5rem] p-12 text-center bg-gray-50/30 hover:bg-white hover:border-primary/20 transition-all cursor-pointer group">
-                                                        <div className="w-16 h-16 bg-white shadow-sm border border-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-400 group-hover:text-primary transition-colors">
-                                                            <Plus size={32} />
+
+                                                    {form.images.length < maxImages ? (
+                                                            <UploadDropzone
+                                                                endpoint="propertyImageUploader"
+                                                        onClientUploadComplete={(res) => {
+                                                            if (!res) return;
+
+                                                            const urls = res.map((file) => file.url);
+
+                                                            setForm((prev) => {
+                                                                const remainingSlots = maxImages - prev.images.length;
+                                                                const allowedUrls = urls.slice(0, Math.max(remainingSlots, 0));
+
+                                                                if (urls.length > remainingSlots) {
+                                                                    setMessage(`Your ${currentTier} plan allows up to ${maxImages} image(s).`);
+                                                                } else {
+                                                                    setMessage("Images uploaded successfully.");
+                                                                }
+
+                                                                return {
+                                                                    ...prev,
+                                                                    images: [...prev.images, ...allowedUrls],
+                                                                };
+                                                            });
+                                                        }}
+                                                                onUploadError={(error: Error) => {
+                                                                    setMessage(error.message || "Image upload failed.");
+                                                                }}
+                                                            />
+                                                    ) : (
+                                                        <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6 text-center">
+                                                            <p className="text-sm font-bold text-gray-600">
+                                                                You have reached your image limit for the {currentTier} plan.
+                                                            </p>
                                                         </div>
-                                                        <p className="text-sm font-bold text-gray-600 mb-1">Click to upload or drag and drop</p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">JPG, PNG up to 5MB</p>
+                                                    )}
+
+                                                    {/* VIDEO LINKS */}
+                                                    <div className="space-y-4 pt-6 border-t border-gray-100">
+                                                        <div>
+                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">
+                                                                Video Links
+                                                            </h3>
+
+                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                                {form.videoLinks.length}/{maxVideoLinks} video links used
+                                                            </p>
+                                                        </div>
+
+                                                        {maxVideoLinks > 0 ? (
+                                                            <div className="space-y-3">
+                                                                {form.videoLinks.map((link, index) => (
+                                                                    <div key={index} className="flex gap-2">
+                                                                        <input
+                                                                            type="url"
+                                                                            value={link}
+                                                                            placeholder="Paste YouTube or Vimeo link"
+                                                                            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-primary/10 outline-none"
+                                                                            onChange={(e) => {
+                                                                                const value = e.target.value;
+
+                                                                                setForm((prev) => ({
+                                                                                    ...prev,
+                                                                                    videoLinks: prev.videoLinks.map((item, i) =>
+                                                                                        i === index ? value : item
+                                                                                    ),
+                                                                                }));
+                                                                            }}
+                                                                        />
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                setForm((prev) => ({
+                                                                                    ...prev,
+                                                                                    videoLinks: prev.videoLinks.filter((_, i) => i !== index),
+                                                                                }))
+                                                                            }
+                                                                            className="px-4 rounded-xl bg-red-50 text-red-500 font-bold"
+                                                                        >
+                                                                            Remove
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+
+                                                                {form.videoLinks.length < maxVideoLinks && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setForm((prev) => ({
+                                                                                ...prev,
+                                                                                videoLinks: [...prev.videoLinks, ""],
+                                                                            }))
+                                                                        }
+                                                                        className="w-full py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 font-bold"
+                                                                    >
+                                                                        Add Video Link
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6 text-center">
+                                                                <p className="text-sm font-bold text-gray-600">
+                                                                    Video links are not included in your current plan.
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
+
+                                                    {form.images.length > 0 && (
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                            {form.images.map((imageUrl) => (
+                                                                <div
+                                                                    key={imageUrl}
+                                                                    className="relative group rounded-2xl overflow-hidden border border-gray-100 bg-gray-50"
+                                                                >
+                                                                    <img
+                                                                        src={imageUrl}
+                                                                        alt="Property"
+                                                                        className="w-full h-28 object-cover"
+                                                                    />
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setForm((prev) => ({
+                                                                                ...prev,
+                                                                                images: prev.images.filter((img) => img !== imageUrl),
+                                                                            }))
+                                                                        }
+                                                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    >
+                                                                        ×
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -754,11 +934,50 @@ export default function PostPropertyPage() {
                                                     </div>
                                                 </div>
 
+                                                {/* Media */}
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">
+                                                            Media
+                                                        </h3>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCurrentStep(4)}
+                                                            className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
+                                                        >
+                                                            EDIT <ChevronRight size={10} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <p className="text-xs font-bold text-gray-500">
+                                                            Photos: {form.images.length}/{maxImages}
+                                                        </p>
+
+                                                        <p className="text-xs font-bold text-gray-500">
+                                                            Video Links: {form.videoLinks.length}/{maxVideoLinks}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
                                                 <div className="pt-6 border-t border-gray-100">
                                                     {message && <p className="text-center text-primary font-bold mb-4">{message}</p>}
+
                                                     <div className="flex gap-4">
-                                                        <button type="button" onClick={() => setCurrentStep(1)} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-2xl font-bold transition-all hover:bg-gray-100">Back to Start</button>
-                                                        <button type="submit" disabled={loading} className="flex-[2] bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 disabled:bg-gray-400 transform transition-all active:scale-95">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setCurrentStep(1)}
+                                                            className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-2xl font-bold transition-all hover:bg-gray-100"
+                                                        >
+                                                            Back to Start
+                                                        </button>
+
+                                                        <button
+                                                            type="submit"
+                                                            disabled={loading}
+                                                            className="flex-[2] bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 disabled:bg-gray-400 transform transition-all active:scale-95"
+                                                        >
                                                             {loading ? "Publishing listing..." : "Publish Property"}
                                                         </button>
                                                     </div>

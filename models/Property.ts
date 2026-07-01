@@ -102,6 +102,11 @@ const PropertySchema = new mongoose.Schema(
             default: [],
         },
 
+        videoLinks: {
+            type: [String],
+            default: [],
+        },
+
         // 💳 Plan Snapshot
         planSnapshot: {
             tier: {
@@ -109,7 +114,7 @@ const PropertySchema = new mongoose.Schema(
                 enum: [
                     "silver",
                     "gold",
-                    "diamond",
+                    "platinum",
                     "builder-starter",
                     "builder-growth",
                     "builder-elite",
@@ -123,6 +128,10 @@ const PropertySchema = new mongoose.Schema(
             maxPhotos: {
                 type: Number,
                 default: 5,
+            },
+            maxVideoLinks: {
+                type: Number,
+                default: 0,
             },
             featured: {
                 type: Boolean,

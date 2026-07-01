@@ -71,7 +71,7 @@ const UserSchema = new Schema(
                 enum: [
                     "silver",
                     "gold",
-                    "diamond",
+                    "platinum",
                     "builder-starter",
                     "builder-growth",
                     "builder-elite",

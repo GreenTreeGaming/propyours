@@ -33,8 +33,8 @@ export default function PricingPage() {
         owners: {
             title: "Compare Owner Plans",
             description:
-                "See how Silver, Gold, and Diamond compare across listing duration, visibility, media, and analytics.",
-            columns: ["Silver", "Gold", "Diamond"],
+                "See how Silver, Gold, and Platinum compare across listing duration, visibility, media, and analytics.",
+            columns: ["Silver", "Gold", "Platinum"],
         },
         builders: {
             title: "Compare Builder Plans",
@@ -188,7 +188,7 @@ export default function PricingPage() {
                                     </h2>
 
                                     <p className="text-sm text-white/80 leading-relaxed">
-                                        Answer three quick questions and we’ll suggest Silver, Gold, or Diamond before you pick a plan.
+                                        Answer three quick questions and we’ll suggest Silver, Gold, or Platinum before you pick a plan.
                                     </p>
                                 </div>
 
@@ -308,7 +308,7 @@ export default function PricingPage() {
                                                 <h3 className="text-2xl font-black text-gray-900 uppercase font-heading tracking-wide">
                                                     {finderResult === "basic" && "Silver Plan"}
                                                     {finderResult === "boost" && "Gold Plan"}
-                                                    {finderResult === "premium" && "Diamond Plan"}
+                                                    {finderResult === "premium" && "Platinum Plan"}
                                                 </h3>
 
                                                 <p className="text-sm text-gray-600 max-w-sm mx-auto">
@@ -336,7 +336,7 @@ export default function PricingPage() {
                                                             ? "/post-property?plan=silver"
                                                             : finderResult === "boost"
                                                                 ? "/post-property?plan=gold"
-                                                                : "/post-property?plan=diamond"
+                                                                : "/post-property?plan=platinum"
                                                     }
                                                     className="w-full sm:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary-dark shadow-md block text-center"
                                                 >
