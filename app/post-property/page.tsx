@@ -25,10 +25,9 @@ import {
     Sprout,
     Trees
 } from "lucide-react";
-import Image from "next/image";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { TAMIL_NADU_LOCATIONS } from "@/lib/locations";
-import { getStoredUser, getStoredUserId } from "@/lib/browser-user";
+import { getStoredUser } from "@/lib/browser-user";
 
 const STEPS = [
     { id: 1, title: "Property Details", icon: Check },
@@ -229,11 +228,15 @@ export default function PostPropertyPage() {
     }, []);
 
     useEffect(() => {
-        const userId = getStoredUserId();
-        if (userId) {
-            localStorage.setItem("post-property-form", JSON.stringify(form));
-            localStorage.setItem("post-property-step", currentStep.toString());
-        }
+        localStorage.setItem(
+            "post-property-form",
+            JSON.stringify(form)
+        );
+
+        localStorage.setItem(
+            "post-property-step",
+            currentStep.toString()
+        );
     }, [form, currentStep]);
 
     // Scroll to top whenever step changes
@@ -264,14 +267,6 @@ export default function PostPropertyPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const userId = getStoredUserId();
-        if (!userId) {
-            setMessage("Your session has expired. Please login again.");
-            // Force redirect to login if session lost during multi-step process
-            setTimeout(() => window.location.href = "/login", 2000);
-            return;
-        }
-
         setLoading(true);
         setMessage("");
 
@@ -279,6 +274,7 @@ export default function PostPropertyPage() {
             const res = await fetch("/api/property/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     purpose: form.purpose,
                     propertyType: form.propertyType,
@@ -299,7 +295,6 @@ export default function PostPropertyPage() {
                     bathrooms: Number(form.bathrooms) || undefined,
                     floors: Number(form.floors) || undefined,
                     amenities: form.amenities,
-                    userId,
                 }),
             });
 

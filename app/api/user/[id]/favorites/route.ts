@@ -1,65 +1,81 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
-import Property from "@/models/Property"; // Ensure Property is registered for population
+import Property from "@/models/Property";
+import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 
-export async function POST(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: Request) {
     try {
-        const { id } = await params;
+        const auth = await getAuthenticatedUser();
 
-        // Handle potentially malformed or empty body
+        if (isAuthError(auth)) {
+            return auth;
+        }
+
         let body;
+
         try {
             body = await req.json();
-        } catch (e) {
-            return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+        } catch {
+            return NextResponse.json(
+                { error: "Invalid request body" },
+                { status: 400 }
+            );
         }
 
         const { propertyId } = body;
 
         if (!propertyId) {
-            return NextResponse.json({ error: "Property ID is required" }, { status: 400 });
+            return NextResponse.json(
+                { error: "Property ID is required" },
+                { status: 400 }
+            );
         }
 
         await connectDB();
 
-        const user = await User.findById(id);
+        const user = await User.findById(auth.userId);
+
         if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "User not found" },
+                { status: 404 }
+            );
         }
 
-        // Check if the property exists
         const property = await Property.findById(propertyId);
+
         if (!property) {
-            return NextResponse.json({ error: "Property not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "Property not found" },
+                { status: 404 }
+            );
         }
 
-        // Initialize favorites if it doesn't exist
         if (!user.favorites) {
             user.favorites = [];
         }
 
-        // Toggle favorite
-        // Use string comparison for ObjectIds
         const index = user.favorites.findIndex(
             (fav: any) => fav.toString() === propertyId
         );
 
         if (index === -1) {
-            user.favorites.push(propertyId); // Add to favorites
-            // Increment favoritesCount on the property
+            user.favorites.push(propertyId);
+
             await Property.findByIdAndUpdate(propertyId, {
-                $inc: { "analytics.favoritesCount": 1 }
+                $inc: {
+                    "analytics.favoritesCount": 1,
+                },
             });
         } else {
-            user.favorites.splice(index, 1); // Remove from favorites
-            // Decrement favoritesCount on the property
+            user.favorites.splice(index, 1);
+
             await Property.findByIdAndUpdate(propertyId, {
-                $inc: { "analytics.favoritesCount": -1 }
-            }, { min: { "analytics.favoritesCount": 0 } }); // Ensure it doesn't go below 0
+                $inc: {
+                    "analytics.favoritesCount": -1,
+                },
+            });
         }
 
         await user.save();
@@ -70,35 +86,55 @@ export async function POST(
         });
     } catch (error: any) {
         console.error("Toggle Favorite Error:", error);
-        return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+
+        return NextResponse.json(
+            {
+                error: error.message || "Internal Server Error",
+            },
+            {
+                status: 500,
+            }
+        );
     }
 }
 
-export async function GET(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET() {
     try {
-        const { id } = await params;
+        const auth = await getAuthenticatedUser();
+
+        if (isAuthError(auth)) {
+            return auth;
+        }
+
         await connectDB();
 
-        // Populate favorites to get full property details
-        const user = await User.findById(id).populate({
+        const user = await User.findById(auth.userId).populate({
             path: "favorites",
-            model: Property // Explicitly mention the model to avoid population issues
+            model: Property,
         });
 
         if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "User not found" },
+                { status: 404 }
+            );
         }
 
-        // Filter out any favorites that might have been deleted (null after populate)
-        const validFavorites = (user.favorites || []).filter((f: any) => f != null);
+        const validFavorites = (user.favorites || []).filter(
+            (favorite: any) => favorite != null
+        );
 
         return NextResponse.json(validFavorites);
     } catch (error: any) {
         console.error("Fetch Favorites Error:", error);
-        return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+
+        return NextResponse.json(
+            {
+                error: error.message || "Internal Server Error",
+            },
+            {
+                status: 500,
+            }
+        );
     }
 }
-

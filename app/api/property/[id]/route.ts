@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import Property from "@/models/Property";
-import User from "@/models/User";
+import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 
 export async function GET(
     req: Request,
@@ -22,22 +22,51 @@ export async function GET(
         return NextResponse.json({ error: "Failed to fetch property", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }
+
 export async function DELETE(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        await connectDB();
-        const { id } = await params;
+        const auth = await getAuthenticatedUser();
 
-        const deletedProperty = await Property.findByIdAndDelete(id);
-
-        if (!deletedProperty) {
-            return NextResponse.json({ error: "Property not found" }, { status: 404 });
+        if (isAuthError(auth)) {
+            return auth;
         }
 
-        return NextResponse.json({ message: "Property deleted successfully" });
+        await connectDB();
+
+        const { id } = await params;
+
+        const property = await Property.findById(id);
+
+        if (!property) {
+            return NextResponse.json(
+                { error: "Property not found" },
+                { status: 404 }
+            );
+        }
+
+        // Only the owner can delete
+        if (property.userId.toString() !== auth.userId) {
+            return NextResponse.json(
+                { error: "You are not allowed to delete this property." },
+                { status: 403 }
+            );
+        }
+
+        await property.deleteOne();
+
+        return NextResponse.json({
+            success: true,
+        });
+
     } catch (error) {
-        return NextResponse.json({ error: "Failed to delete property" }, { status: 500 });
+        console.error(error);
+
+        return NextResponse.json(
+            { error: "Failed to delete property" },
+            { status: 500 }
+        );
     }
 }

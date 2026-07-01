@@ -231,8 +231,13 @@ export default function DashboardPage() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
+        await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "include",
+        });
+
         localStorage.removeItem("user");
+
         window.location.href = "/";
     };
 

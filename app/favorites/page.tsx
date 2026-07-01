@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, MapPin } from "lucide-react";
-import { getStoredUserId } from "@/lib/browser-user";
+import { getStoredUser } from "@/lib/browser-user";
 
 type FavoriteProperty = {
     _id: string;
@@ -27,17 +27,22 @@ export default function FavoritesPage() {
     const [isLoggedIn, setIsLoggedIn] = useState(true);
 
     useEffect(() => {
-        const userId = getStoredUserId();
-
-        if (!userId) {
-            setIsLoggedIn(false);
-            setLoading(false);
-            return;
-        }
-
         const fetchFavorites = async () => {
             try {
-                const res = await fetch(`/api/user/${userId}/favorites`, { cache: "no-store" });
+                const res = await fetch(
+                    `/api/user/${getStoredUser()?.id}/favorites`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                    }
+                );
+
+                if (res.status === 401) {
+                    setIsLoggedIn(false);
+                    setLoading(false);
+                    return;
+                }
+
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -46,7 +51,11 @@ export default function FavoritesPage() {
 
                 setFavorites(data);
             } catch (err) {
-                const message = err instanceof Error ? err.message : "Failed to load favorites";
+                const message =
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to load favorites";
+
                 setError(message);
             } finally {
                 setLoading(false);

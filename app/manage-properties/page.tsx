@@ -75,6 +75,7 @@ export default function ManagePropertiesPage() {
         try {
             const res = await fetch(`/api/property/${id}`, {
                 method: "DELETE",
+                credentials: "include",
             });
 
             if (res.ok) {

@@ -28,9 +28,10 @@ function LoginForm() {
         if (!res.ok) {
             setMessage(data.error);
         } else {
-            localStorage.setItem("token", data.token);
+            // Store only non-sensitive user info.
             localStorage.setItem("user", JSON.stringify(data.user));
-            // Redirect back to intended page or home
+
+            // JWT is already stored securely in an HTTP-only cookie.
             window.location.href = redirectPath;
         }
     };

@@ -42,12 +42,19 @@ export default function Navbar() {
     };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    setProfileOpen(false);
-    window.location.href = "/";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      localStorage.removeItem("user");
+      setProfileOpen(false);
+      window.location.href = "/";
+    }
   };
 
   const navLinks = [
