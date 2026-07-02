@@ -96,6 +96,40 @@ export default function ManagePropertiesPage() {
         setShowAnalytics(true);
     };
 
+    const getListingTimeLeft = (listingExpiresAt?: string) => {
+        if (!listingExpiresAt) {
+            return {
+                label: "No expiry date",
+                expired: false,
+            };
+        }
+
+        const expiresAt = new Date(listingExpiresAt).getTime();
+        const now = Date.now();
+        const diff = expiresAt - now;
+
+        if (diff <= 0) {
+            return {
+                label: "Expired",
+                expired: true,
+            };
+        }
+
+        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 1) {
+            return {
+                label: "1 day left",
+                expired: false,
+            };
+        }
+
+        return {
+            label: `${days} days left`,
+            expired: false,
+        };
+    };
+
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -160,15 +194,36 @@ export default function ManagePropertiesPage() {
                                 >
                                     {/* Image */}
                                     <div className="relative h-48 bg-gray-100 overflow-hidden">
-                                        <div className="absolute top-4 left-4 z-10">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${property.purpose === 'Sell' ? 'bg-orange-500 text-white' : 'bg-primary text-white'
-                                                }`}>
-                                                {property.purpose}
-                                            </span>
+                                        <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
+    <span
+        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+            property.purpose === "Sell"
+                ? "bg-orange-500 text-white"
+                : "bg-primary text-white"
+        }`}
+    >
+        {property.purpose}
+    </span>
+
+                                            {(() => {
+                                                const timeLeft = getListingTimeLeft(property.listingExpiresAt);
+
+                                                return (
+                                                    <span
+                                                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                                            timeLeft.expired
+                                                                ? "bg-red-500 text-white"
+                                                                : "bg-white/95 text-gray-700"
+                                                        }`}
+                                                    >
+                {timeLeft.label}
+            </span>
+                                                );
+                                            })()}
                                         </div>
                                         <Image
                                             src={property.images?.[0] || "/loginimage.png"}
-                                            alt={property.title}
+                                            alt={property.address || "Property"}
                                             fill
                                             className="object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
@@ -178,11 +233,24 @@ export default function ManagePropertiesPage() {
                                     {/* Content */}
                                     <div className="p-6 space-y-4 flex-grow">
                                         <div className="space-y-1">
-                                            <h3 className="text-lg font-bold text-gray-900 truncate">{property.title}</h3>
+                                            <h3 className="text-lg font-bold text-gray-900 truncate">{property.address}</h3>
                                             <p className="text-sm font-medium text-gray-400 flex items-center gap-1.5 uppercase tracking-tighter">
                                                 <MapPin size={14} className="text-primary" />
                                                 {property.city}, {property.state}
                                             </p>
+                                            {(() => {
+                                                const timeLeft = getListingTimeLeft(property.listingExpiresAt);
+
+                                                return (
+                                                    <p
+                                                        className={`text-xs font-black uppercase tracking-widest ${
+                                                            timeLeft.expired ? "text-red-500" : "text-gray-400"
+                                                        }`}
+                                                    >
+                                                        Listing: {timeLeft.label}
+                                                    </p>
+                                                );
+                                            })()}
                                         </div>
 
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-50">

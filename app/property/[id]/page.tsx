@@ -42,6 +42,7 @@ type PropertyRecord = {
     _id: string;
     address: string;
     images?: string[];
+    videoLinks?: string[];
     purpose?: string;
     propertyType?: string;
     bedrooms?: number;
@@ -86,6 +87,7 @@ export default function PropertyDetailsPage() {
     const [displayUnit, setDisplayUnit] = useState<string | null>(null);
     const [showAnalytics, setShowAnalytics] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
+    const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
     const isInCompare = property ? compareList.some((p) => p._id === property._id) : false;
 
@@ -303,6 +305,32 @@ export default function PropertyDetailsPage() {
             ? property.images
             : ["/loginimage.png", "/signuppageimage.png"];
 
+    const getVideoEmbedUrl = (url: string) => {
+        try {
+            const parsedUrl = new URL(url);
+
+            if (parsedUrl.hostname.includes("youtube.com")) {
+                const videoId = parsedUrl.searchParams.get("v");
+
+                if (videoId) {
+                    return `https://www.youtube.com/embed/${videoId}`;
+                }
+            }
+
+            if (parsedUrl.hostname.includes("youtu.be")) {
+                const videoId = parsedUrl.pathname.replace("/", "");
+
+                if (videoId) {
+                    return `https://www.youtube.com/embed/${videoId}`;
+                }
+            }
+
+            return url;
+        } catch {
+            return url;
+        }
+    };
+
     return (
         <ProtectedRoute>
             <main className="min-h-screen bg-[#F8FAFA] pt-32 pb-20">
@@ -367,7 +395,11 @@ export default function PropertyDetailsPage() {
 
                             {/* Image Gallery */}
                             <div className="grid md:grid-cols-4 gap-4 h-[420px]">
-                                <div className="relative md:col-span-3 rounded-3xl overflow-hidden shadow-sm group">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedImageIndex(0)}
+                                    className="relative md:col-span-3 rounded-3xl overflow-hidden shadow-sm group cursor-zoom-in text-left"
+                                >
                                     <Image
                                         src={propertyImages[0]}
                                         alt={property.address || "Property"}
@@ -376,13 +408,15 @@ export default function PropertyDetailsPage() {
                                         className="object-cover group-hover:scale-105 transition-transform duration-700"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                                </div>
+                                </button>
 
                                 <div className="hidden md:grid col-span-1 grid-rows-3 gap-4 h-full">
                                     {propertyImages.slice(1, 4).map((imageUrl, index) => (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={imageUrl}
-                                            className="relative rounded-3xl overflow-hidden shadow-sm bg-gray-100"
+                                            onClick={() => setSelectedImageIndex(index + 1)}
+                                            className="relative rounded-3xl overflow-hidden shadow-sm bg-gray-100 cursor-zoom-in text-left"
                                         >
                                             <Image
                                                 src={imageUrl}
@@ -404,7 +438,7 @@ export default function PropertyDetailsPage() {
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
@@ -415,7 +449,7 @@ export default function PropertyDetailsPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="
         relative
-        -mt-12
+        mt-6
         z-10
         bg-white
         rounded-3xl
@@ -523,6 +557,43 @@ export default function PropertyDetailsPage() {
                                     </div>
                                 </div>
                             </motion.div>
+
+                            {property.videoLinks && property.videoLinks.length > 0 && (
+                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6 mb-8">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                                <Building2 size={22} className="text-primary" />
+                                                Property Videos
+                                            </h3>
+                                            <p className="text-sm font-semibold text-gray-400 mt-1">
+                                                Watch walkthroughs, tours, or additional property videos.
+                                            </p>
+                                        </div>
+
+                                        <span className="px-3 py-1 bg-primary/5 text-primary border border-primary/10 text-[10px] font-black uppercase tracking-widest rounded-full">
+                {property.videoLinks.length} Video{property.videoLinks.length > 1 ? "s" : ""}
+            </span>
+                                    </div>
+
+                                    <div className="grid gap-6">
+                                        {property.videoLinks.map((videoUrl, index) => (
+                                            <div
+                                                key={`${videoUrl}-${index}`}
+                                                className="rounded-3xl overflow-hidden bg-black shadow-sm aspect-video"
+                                            >
+                                                <iframe
+                                                    src={getVideoEmbedUrl(videoUrl)}
+                                                    title={`Property video ${index + 1}`}
+                                                    className="w-full h-full"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Description Section */}
                             <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4 mb-8">
@@ -699,6 +770,68 @@ export default function PropertyDetailsPage() {
 
                     </div>
                 </div>
+
+            {selectedImageIndex !== null && (
+                <div className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-6">
+                    <button
+                        type="button"
+                        onClick={() => setSelectedImageIndex(null)}
+                        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-2xl font-bold"
+                        aria-label="Close image viewer"
+                    >
+                        ×
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setSelectedImageIndex((current) =>
+                                current === null
+                                    ? null
+                                    : current === 0
+                                        ? propertyImages.length - 1
+                                        : current - 1
+                            )
+                        }
+                        className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-3xl font-bold"
+                        aria-label="Previous image"
+                    >
+                        ‹
+                    </button>
+
+                    <div className="relative w-full max-w-6xl h-[80vh]">
+                        <Image
+                            src={propertyImages[selectedImageIndex]}
+                            alt={`${property.address || "Property"} photo ${selectedImageIndex + 1}`}
+                            fill
+                            sizes="100vw"
+                            className="object-contain"
+                            priority
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setSelectedImageIndex((current) =>
+                                current === null
+                                    ? null
+                                    : current === propertyImages.length - 1
+                                        ? 0
+                                        : current + 1
+                            )
+                        }
+                        className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-3xl font-bold"
+                        aria-label="Next image"
+                    >
+                        ›
+                    </button>
+
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-bold">
+                        {selectedImageIndex + 1} / {propertyImages.length}
+                    </div>
+                </div>
+            )}
 
                 <SharePropertyModal
                     isOpen={shareOpen}
