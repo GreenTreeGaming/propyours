@@ -22,12 +22,14 @@ export const ourFileRouter = {
             };
         })
         .onUploadComplete(async ({ metadata, file }) => {
+            const fileUrl = file.ufsUrl || file.url;
+
             console.log("Property image uploaded by:", metadata.userId);
-            console.log("File URL:", file.url);
+            console.log("File URL:", fileUrl);
 
             return {
                 uploadedBy: metadata.userId,
-                url: file.url,
+                url: fileUrl,
             };
         }),
 } satisfies FileRouter;

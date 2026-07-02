@@ -230,15 +230,23 @@ export default function DashboardPage() {
         }
     };
 
-    const handleLogout = () => {
-        await fetch("/api/auth/logout", {
-            method: "POST",
-            credentials: "include",
-        });
+    const handleLogout = async () => {
+        try {
+            const response = await fetch("/api/auth/logout", {
+                method: "POST",
+                credentials: "include",
+            });
 
-        localStorage.removeItem("user");
+            if (!response.ok) {
+                throw new Error("Logout failed");
+            }
 
-        window.location.href = "/";
+            localStorage.removeItem("user");
+            window.location.href = "/";
+        } catch (error) {
+            console.error("Logout error:", error);
+            // Optionally show a toast/message to the user
+        }
     };
 
     const menuItems = [

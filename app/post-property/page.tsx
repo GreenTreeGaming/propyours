@@ -628,39 +628,6 @@ export default function PostPropertyPage() {
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">
-                                                            Photos ({form.images.length})
-                                                        </h3>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentStep(4)}
-                                                            className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
-                                                        >
-                                                            EDIT <ChevronRight size={10} />
-                                                        </button>
-                                                    </div>
-
-                                                    {form.images.length > 0 ? (
-                                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                                                            {form.images.map((imageUrl) => (
-                                                                <img
-                                                                    key={imageUrl}
-                                                                    src={imageUrl}
-                                                                    alt="Property"
-                                                                    className="w-full h-20 object-cover rounded-xl border border-gray-100"
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-xs font-bold text-gray-400 italic">
-                                                            No photos uploaded
-                                                        </p>
-                                                    )}
-                                                </div>
-
                                                 {/* PHOTOS UPLOAD */}
                                                 <div className="space-y-6 pt-6 border-t border-gray-100">
                                                     <div className="flex items-center gap-3">
@@ -678,34 +645,53 @@ export default function PostPropertyPage() {
                                                         </div>
                                                     </div>
 
+                                                    {message && (
+                                                        <p className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-sm font-bold text-gray-600">
+                                                            {message}
+                                                        </p>
+                                                    )}
+
                                                     {form.images.length < maxImages ? (
-                                                            <UploadDropzone
-                                                                endpoint="propertyImageUploader"
-                                                        onClientUploadComplete={(res) => {
-                                                            if (!res) return;
+                                                        <UploadDropzone
+                                                            endpoint="propertyImageUploader"
+                                                            onUploadBegin={() => {
+                                                                console.log("Upload started");
+                                                                setMessage("Uploading image...");
+                                                            }}
+                                                            onClientUploadComplete={(res) => {
+                                                                console.log("UploadThing response:", res);
 
-                                                            const urls = res.map((file) => file.url);
-
-                                                            setForm((prev) => {
-                                                                const remainingSlots = maxImages - prev.images.length;
-                                                                const allowedUrls = urls.slice(0, Math.max(remainingSlots, 0));
-
-                                                                if (urls.length > remainingSlots) {
-                                                                    setMessage(`Your ${currentTier} plan allows up to ${maxImages} image(s).`);
-                                                                } else {
-                                                                    setMessage("Images uploaded successfully.");
+                                                                if (!res || res.length === 0) {
+                                                                    setMessage("Upload finished, but no file URL was returned.");
+                                                                    return;
                                                                 }
 
-                                                                return {
-                                                                    ...prev,
-                                                                    images: [...prev.images, ...allowedUrls],
-                                                                };
-                                                            });
-                                                        }}
-                                                                onUploadError={(error: Error) => {
-                                                                    setMessage(error.message || "Image upload failed.");
-                                                                }}
-                                                            />
+                                                                const urls = res
+                                                                    .map((file: any) => file.ufsUrl || file.url)
+                                                                    .filter(Boolean);
+
+                                                                if (urls.length === 0) {
+                                                                    setMessage("Upload finished, but the image URL was missing.");
+                                                                    return;
+                                                                }
+
+                                                                setForm((prev) => {
+                                                                    const remainingSlots = maxImages - prev.images.length;
+                                                                    const allowedUrls = urls.slice(0, Math.max(remainingSlots, 0));
+
+                                                                    return {
+                                                                        ...prev,
+                                                                        images: [...prev.images, ...allowedUrls],
+                                                                    };
+                                                                });
+
+                                                                setMessage("Images uploaded successfully.");
+                                                            }}
+                                                            onUploadError={(error: Error) => {
+                                                                console.error("UploadThing error:", error);
+                                                                setMessage(error.message || "Image upload failed.");
+                                                            }}
+                                                        />
                                                     ) : (
                                                         <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6 text-center">
                                                             <p className="text-sm font-bold text-gray-600">
