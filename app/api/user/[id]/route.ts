@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import Property from "@/models/Property";
+import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 
 export async function GET(
     req: Request,
@@ -10,6 +11,18 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+        const auth = await getAuthenticatedUser();
+
+        if (isAuthError(auth)) {
+            return auth;
+        }
+
+        if (auth.userId !== id) {
+            return NextResponse.json(
+                { error: "You are not allowed to update this account." },
+                { status: 403 }
+            );
+        }
         await connectDB();
         const user = await User.findById(id).select("-password");
         console.log("GET User:", user?.email, "Phone:", user?.phone);
@@ -30,8 +43,14 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await req.json();
-        const { name, email, phone, role, bio, company, address, city, newPassword } = body;
-        console.log("PUT Request Body:", body);
+        const { name, email, role, bio, company, address, city, newPassword } = body;
+
+        if ("phone" in body) {
+            return NextResponse.json(
+                { error: "Phone number can only be changed through OTP verification." },
+                { status: 400 }
+            );
+        }
         await connectDB();
         // Check if email is already taken by another user
         if (email) {
@@ -44,7 +63,7 @@ export async function PUT(
             }
         }
 
-        const updateData: any = { name, email, phone, role, bio, company, address, city };
+        const updateData: any = { name, email, role, bio, company, address, city };
 
         if (newPassword) {
             const { oldPassword } = body;

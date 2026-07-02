@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import Property from "@/models/Property";
-import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
+import { getPublicPropertyFilter } from "@/lib/property-filters";
 
 export async function GET(
     req: Request,
@@ -9,36 +9,12 @@ export async function GET(
 ) {
     try {
         await connectDB();
-        const { id } = await params;
-        const property = await Property.findById(id).populate("userId", "name email role bio company city phone");
-
-        if (!property) {
-            return NextResponse.json({ error: "Property not found" }, { status: 404 });
-        }
-
-        return NextResponse.json(property);
-    } catch (error) {
-        console.error("Error fetching property:", error);
-        return NextResponse.json({ error: "Failed to fetch property", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
-    }
-}
-
-export async function DELETE(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const auth = await getAuthenticatedUser();
-
-        if (isAuthError(auth)) {
-            return auth;
-        }
-
-        await connectDB();
 
         const { id } = await params;
 
-        const property = await Property.findById(id);
+        const property = await Property.findOne(
+            getPublicPropertyFilter({ _id: id })
+        ).populate("userId", "name email role bio company city phone");
 
         if (!property) {
             return NextResponse.json(
@@ -47,25 +23,12 @@ export async function DELETE(
             );
         }
 
-        // Only the owner can delete
-        if (property.userId.toString() !== auth.userId) {
-            return NextResponse.json(
-                { error: "You are not allowed to delete this property." },
-                { status: 403 }
-            );
-        }
-
-        await property.deleteOne();
-
-        return NextResponse.json({
-            success: true,
-        });
-
+        return NextResponse.json(property);
     } catch (error) {
-        console.error(error);
+        console.error("Failed to fetch property:", error);
 
         return NextResponse.json(
-            { error: "Failed to delete property" },
+            { error: "Failed to fetch property" },
             { status: 500 }
         );
     }

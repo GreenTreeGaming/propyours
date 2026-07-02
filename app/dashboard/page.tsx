@@ -125,10 +125,12 @@ export default function DashboardPage() {
         try {
             console.log("Saving Profile Data:", formData);
             const userId = user.id || user._id;
+            const { phone, ...profileUpdateData } = formData;
+
             const res = await fetch(`/api/user/${userId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(profileUpdateData)
             });
 
             if (res.ok) {
@@ -382,62 +384,27 @@ export default function DashboardPage() {
 
                                                     <div className="relative group">
                                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                            <Phone size={18} className="text-gray-400 group-focus-within:text-primary transition-colors" />
+                                                            <Phone size={18} className="text-gray-400" />
                                                         </div>
 
-                                                        <PhoneInput
-                                                            international
-                                                            defaultCountry="IN"
-                                                            countries={PRIORITIZED_COUNTRIES as any}
-                                                            value={formData.phone}
-                                                            onChange={(val) => setFormData({ ...formData, phone: val || "" })}
-                                                            placeholder="Enter phone number"
-                                                            className="phone-input-clean"
+                                                        <input
+                                                            type="tel"
+                                                            value={formData.phone || "No verified phone number"}
+                                                            disabled
+                                                            className="block w-full pl-11 pr-4 py-4 bg-gray-100 border-transparent rounded-2xl text-sm font-bold text-gray-500 cursor-not-allowed"
                                                         />
                                                     </div>
 
-                                                    <style jsx global>{`
-    .phone-input-clean {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      background: #f9fafb;
-      border-radius: 1rem;
-      padding-left: 44px;
-      padding-right: 12px;
-      height: 52px;
-      transition: all 0.2s;
-      border: 1px solid transparent;
-    }
+                                                    <p className="text-xs font-semibold text-gray-400 ml-1">
+                                                        Phone numbers can only be changed after OTP verification.
+                                                    </p>
 
-    .phone-input-clean:focus-within {
-      background: white;
-      border-color: #14b8a6;
-      box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.08);
-    }
-
-    .phone-input-clean .PhoneInputCountry {
-      margin-right: 6px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .phone-input-clean .PhoneInputCountryIcon {
-      width: 18px !important;
-      height: auto !important;
-    }
-
-    .phone-input-clean .PhoneInputInput {
-      border: none;
-      outline: none;
-      background: transparent;
-      font-size: 14px;
-      font-weight: 700;
-      color: #111827;
-      width: 100%;
-    }
-  `}</style>
+                                                    <Link
+                                                        href="/signup"
+                                                        className="inline-flex items-center text-xs font-black text-primary hover:underline uppercase tracking-widest ml-1"
+                                                    >
+                                                        Verify a new phone number
+                                                    </Link>
                                                 </div>
                                             </div>
 

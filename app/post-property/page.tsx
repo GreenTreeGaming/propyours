@@ -654,6 +654,7 @@ export default function PostPropertyPage() {
                                                     {form.images.length < maxImages ? (
                                                         <UploadDropzone
                                                             endpoint="propertyImageUploader"
+                                                            config={{ mode: "auto" }}
                                                             onUploadBegin={() => {
                                                                 console.log("Upload started");
                                                                 setMessage("Uploading image...");

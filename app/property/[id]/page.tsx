@@ -41,6 +41,7 @@ type FavoriteRecord = {
 type PropertyRecord = {
     _id: string;
     address: string;
+    images?: string[];
     purpose?: string;
     propertyType?: string;
     bedrooms?: number;
@@ -297,6 +298,11 @@ export default function PropertyDetailsPage() {
         </div>
     );
 
+    const propertyImages =
+        property.images && property.images.length > 0
+            ? property.images
+            : ["/loginimage.png", "/signuppageimage.png"];
+
     return (
         <ProtectedRoute>
             <main className="min-h-screen bg-[#F8FAFA] pt-32 pb-20">
@@ -359,31 +365,47 @@ export default function PropertyDetailsPage() {
                         {/* LEFT COLUMN: Main Details */}
                         <div className="lg:col-span-2">
 
-                            {/* Image Gallery Placeholder */}
+                            {/* Image Gallery */}
                             <div className="grid md:grid-cols-4 gap-4 h-[420px]">
-                                <div className="relative col-span-3 rounded-3xl overflow-hidden shadow-sm group">
+                                <div className="relative md:col-span-3 rounded-3xl overflow-hidden shadow-sm group">
                                     <Image
-                                        src="/loginimage.png"
-                                        alt="Property"
+                                        src={propertyImages[0]}
+                                        alt={property.address || "Property"}
                                         fill
+                                        sizes="(max-width: 768px) 100vw, 75vw"
                                         className="object-cover group-hover:scale-105 transition-transform duration-700"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                                 </div>
-                                <div className="col-span-1 grid grid-rows-3 gap-4 h-full">
-                                    <div className="relative rounded-3xl overflow-hidden shadow-sm">
-                                        <Image src="/signuppageimage.png" alt="Property" fill className="object-cover" />
-                                    </div>
-                                    <div className="relative rounded-3xl overflow-hidden shadow-sm bg-primary/10 flex items-center justify-center">
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                            <div className="text-center text-white">
-                                                <p className="text-3xl font-black">+12</p>
-                                                <p className="text-xs uppercase tracking-widest">
-                                                    View All Photos
-                                                </p>
-                                            </div>
+
+                                <div className="hidden md:grid col-span-1 grid-rows-3 gap-4 h-full">
+                                    {propertyImages.slice(1, 4).map((imageUrl, index) => (
+                                        <div
+                                            key={imageUrl}
+                                            className="relative rounded-3xl overflow-hidden shadow-sm bg-gray-100"
+                                        >
+                                            <Image
+                                                src={imageUrl}
+                                                alt={`${property.address || "Property"} photo ${index + 2}`}
+                                                fill
+                                                sizes="25vw"
+                                                className="object-cover"
+                                            />
+
+                                            {index === 2 && propertyImages.length > 4 && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <div className="text-center text-white">
+                                                        <p className="text-3xl font-black">
+                                                            +{propertyImages.length - 4}
+                                                        </p>
+                                                        <p className="text-xs uppercase tracking-widest">
+                                                            More Photos
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
 

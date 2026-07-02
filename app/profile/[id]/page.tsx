@@ -30,6 +30,7 @@ type PropertyListing = {
     size?: number;
     sizeUnit?: string;
     purpose?: string;
+    images?: string[];
 };
 
 type UserProfile = {
@@ -210,9 +211,10 @@ export default function PublicProfilePage() {
                                         >
                                             <div className="relative h-56 overflow-hidden">
                                                 <Image
-                                                    src="/loginimage.png"
+                                                    src={prop.images?.[0] || "/loginimage.png"}
                                                     alt={prop.address}
                                                     fill
+                                                    sizes="(max-width: 768px) 100vw, 50vw"
                                                     className="object-cover group-hover:scale-105 transition-transform duration-700"
                                                 />
                                                 <div className="absolute top-4 left-4 bg-white/95 backdrop-blur text-[10px] font-black px-4 py-2 rounded-xl text-primary uppercase tracking-widest shadow-lg border border-primary/10">

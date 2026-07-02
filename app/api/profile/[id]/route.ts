@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import Property from "@/models/Property";
+import {
+    getPublicPropertyFilter,
+    publicPropertySort,
+} from "@/lib/property-filters";
 
 export async function GET(
     req: Request,
@@ -19,7 +23,9 @@ export async function GET(
         }
 
         // Fetch user's property listings
-        const properties = await Property.find({ userId: id }).sort({ createdAt: -1 });
+        const properties = await Property.find(
+            getPublicPropertyFilter({ userId: id })
+        ).sort(publicPropertySort);
 
         return NextResponse.json({
             user,
