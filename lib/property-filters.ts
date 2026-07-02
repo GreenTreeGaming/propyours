@@ -10,6 +10,7 @@ export function getPublicPropertyFilter(extraFilter: Record<string, unknown> = {
 }
 
 export const publicPropertySort = {
+    promotedUntil: -1,
     featured: -1,
     createdAt: -1,
 } as const;

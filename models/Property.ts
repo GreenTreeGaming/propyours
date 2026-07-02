@@ -154,6 +154,11 @@ const PropertySchema = new mongoose.Schema(
             default: 0,
         },
 
+        promotedUntil: {
+            type: Date,
+            required: false,
+        },
+
         // 📈 Analytics
         analytics: {
             views: { type: Number, default: 0 },

@@ -37,12 +37,40 @@ import {
 } from 'recharts';
 import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
 
+
 export default function ManagePropertiesPage() {
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
     const [selectedProperty, setSelectedProperty] = useState<any>(null);
     const [showAnalytics, setShowAnalytics] = useState(false);
+
+    const handlePromote = async (propertyId: string) => {
+        try {
+            const res = await fetch(`/api/property/${propertyId}/promote`, {
+                method: "POST",
+                credentials: "include",
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data.error || "Failed to promote property.");
+                return;
+            }
+
+            setProperties((prev) =>
+                prev.map((property) =>
+                    property._id === propertyId ? data.property : property
+                )
+            );
+
+            alert("Property promoted successfully.");
+        } catch (error) {
+            console.error("Failed to promote property:", error);
+            alert("Something went wrong. Please try again.");
+        }
+    };
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -266,6 +294,35 @@ export default function ManagePropertiesPage() {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <button
+                                            onClick={() => handlePromote(property._id)}
+                                            disabled={(property.promoteBoostsRemaining || 0) <= 0}
+                                            className="
+        w-full
+        flex items-center justify-center gap-2
+        py-3.5 px-4
+        rounded-2xl
+        bg-yellow-400
+        text-yellow-950
+        font-black text-sm uppercase tracking-widest
+        shadow-lg shadow-yellow-200/60
+        hover:bg-yellow-300 hover:scale-[1.02]
+        active:scale-[0.98]
+        transition-all
+        disabled:bg-gray-100
+        disabled:text-gray-400
+        disabled:shadow-none
+        disabled:hover:scale-100
+        disabled:cursor-not-allowed
+    "
+                                        >
+                                            <span>Promote Listing</span>
+
+                                            <span className="px-2 py-0.5 rounded-full bg-white/50 text-[11px] font-black">
+        {property.promoteBoostsRemaining || 0} left
+    </span>
+                                        </button>
 
                                         {/* Actions */}
                                         <div className="flex flex-col gap-3 pt-2">
