@@ -175,10 +175,16 @@ export default function PropertyDetailsPage() {
 
     useEffect(() => {
         if (!id || !property) return;
-        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
 
-        // Single view per session recording is handled on the backend check if needed,
-        // but for now we simple-track every load
+        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
+        const sessionKey = `viewed-property-${normalizedId}`;
+
+        if (sessionStorage.getItem(sessionKey)) {
+            return;
+        }
+
+        sessionStorage.setItem(sessionKey, "true");
+
         const recordView = async () => {
             try {
                 await fetch(`/api/property/${normalizedId}/analytics`, {
@@ -190,6 +196,7 @@ export default function PropertyDetailsPage() {
                 console.error("Failed to record view:", err);
             }
         };
+
         recordView();
     }, [id, !!property]);
 
@@ -242,21 +249,23 @@ export default function PropertyDetailsPage() {
 
     const handleFavoriteToggle = async () => {
         const user = getStoredUser();
+        const userId = user?.id || user?._id;
         const rawId = Array.isArray(id) ? id[0] : id;
 
-        if (!user) {
+        if (!user || !userId) {
             router.push("/login");
             return;
         }
 
         if (!rawId) return;
+
         const normalizedId: string = rawId;
 
         setFavoriteLoading(true);
         setFavoriteError("");
 
         try {
-            const res = await fetch(`/api/user/${user.id}/favorites`, {
+            const res = await fetch(`/api/user/${userId}/favorites`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -266,6 +275,7 @@ export default function PropertyDetailsPage() {
             });
 
             const data = await res.json();
+
             if (!res.ok) {
                 throw new Error(data.error || "Failed to update favorites");
             }
@@ -274,7 +284,9 @@ export default function PropertyDetailsPage() {
             updateStoredUserFavorites(updatedFavorites);
             setIsFavorite(updatedFavorites.includes(normalizedId));
         } catch (err) {
-            const message = err instanceof Error ? err.message : "Failed to update favorites";
+            const message =
+                err instanceof Error ? err.message : "Failed to update favorites";
+
             setFavoriteError(message);
         } finally {
             setFavoriteLoading(false);

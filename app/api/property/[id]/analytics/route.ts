@@ -100,6 +100,25 @@ export async function POST(
             );
         }
 
+        let viewerUserId: string | null = null;
+
+        try {
+            const auth = await getAuthenticatedUser();
+
+            if (!isAuthError(auth)) {
+                viewerUserId = auth.userId;
+            }
+        } catch {
+            viewerUserId = null;
+        }
+
+        if (viewerUserId && property.userId.toString() === viewerUserId) {
+            return NextResponse.json({
+                success: true,
+                skipped: "owner_view",
+            });
+        }
+
         if (eventType === "view") {
             property.analytics.views = (property.analytics.views || 0) + 1;
 

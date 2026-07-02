@@ -71,11 +71,17 @@ export async function POST(req: Request) {
         } else {
             user.favorites.splice(index, 1);
 
-            await Property.findByIdAndUpdate(propertyId, {
-                $inc: {
-                    "analytics.favoritesCount": -1,
+            await Property.findOneAndUpdate(
+                {
+                    _id: propertyId,
+                    "analytics.favoritesCount": { $gt: 0 },
                 },
-            });
+                {
+                    $inc: {
+                        "analytics.favoritesCount": -1,
+                    },
+                }
+            );
         }
 
         await user.save();
