@@ -33,6 +33,21 @@ type PropertyListing = {
     images?: string[];
 };
 
+type BuilderPlan = {
+    tier: "builder-starter" | "builder-growth" | "builder-elite" | null;
+    isActive: boolean;
+    rank: number;
+};
+
+type ProfileStats = {
+    totalListings: number;
+    activeListings: number;
+    featuredListings: number;
+    totalViews: number;
+    phoneClicks: number;
+    favorites: number;
+};
+
 type UserProfile = {
     _id: string;
     name: string;
@@ -43,6 +58,7 @@ type UserProfile = {
     address?: string;
     city?: string;
     phone?: string;
+    builderPlan?: BuilderPlan;
 };
 
 export default function PublicProfilePage() {
@@ -52,6 +68,15 @@ export default function PublicProfilePage() {
     const [properties, setProperties] = useState<PropertyListing[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    const [stats, setStats] = useState<ProfileStats>({
+        totalListings: 0,
+        activeListings: 0,
+        featuredListings: 0,
+        totalViews: 0,
+        phoneClicks: 0,
+        favorites: 0,
+    });
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -63,6 +88,7 @@ export default function PublicProfilePage() {
 
                 setProfile(data.user);
                 setProperties(data.properties);
+                setStats(data.stats);
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -93,6 +119,40 @@ export default function PublicProfilePage() {
         );
     }
 
+    function getProfileBadges(profile: UserProfile, stats: ProfileStats) {
+        const badges = [];
+
+        if (profile.builderPlan?.isActive) {
+            if (profile.builderPlan.tier === "builder-elite") {
+                badges.push("Premium Builder");
+            }
+
+            if (profile.builderPlan.tier === "builder-growth") {
+                badges.push("Verified Builder");
+            }
+
+            if (profile.builderPlan.tier === "builder-starter") {
+                badges.push("Builder Starter");
+            }
+        }
+
+        if (profile.phone) {
+            badges.push("Phone Available");
+        }
+
+        if (stats.activeListings > 0) {
+            badges.push(`${stats.activeListings} Active Listings`);
+        }
+
+        if (stats.featuredListings > 0) {
+            badges.push(`${stats.featuredListings} Featured Listings`);
+        }
+
+        return badges;
+    }
+
+    const profileBadges = getProfileBadges(profile, stats);
+
     return (
         <ProtectedRoute>
             <main className="min-h-screen bg-[#F8FAFA] pt-32 pb-20">
@@ -115,9 +175,12 @@ export default function PublicProfilePage() {
                                 <div className="text-center mb-8">
                                     <div className="w-32 h-32 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-primary relative">
                                         <User size={64} />
-                                        <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 border-[6px] border-white rounded-full flex items-center justify-center shadow-lg">
-                                            <CheckCircle2 size={16} className="text-white" />
-                                        </div>
+
+                                        {profile.builderPlan?.isActive && (
+                                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-green-500 border-[6px] border-white rounded-full flex items-center justify-center shadow-lg">
+                                                <CheckCircle2 size={16} className="text-white" />
+                                            </div>
+                                        )}
                                     </div>
 
                                     <h1 className="text-3xl font-black text-gray-900 leading-tight mb-2 tracking-tight">
@@ -165,20 +228,23 @@ export default function PublicProfilePage() {
                                         className="w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/10 active:scale-95"
                                     >
                                         <Mail size={20} />
-                                        Email Verified
+                                        Email {profile.role}
                                     </button>
                                 </div>
 
-                                <div className="mt-8 pt-8 border-t border-gray-50 flex flex-col gap-4">
-                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                        <CheckCircle2 size={16} className="text-green-500" />
-                                        Background Verified
+                                {profileBadges.length > 0 && (
+                                    <div className="mt-8 pt-8 border-t border-gray-50 flex flex-col gap-4">
+                                        {profileBadges.map((badge) => (
+                                            <div
+                                                key={badge}
+                                                className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider"
+                                            >
+                                                <CheckCircle2 size={16} className="text-primary" />
+                                                {badge}
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                        <CheckCircle2 size={16} className="text-green-500" />
-                                        Industry Expert
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
 

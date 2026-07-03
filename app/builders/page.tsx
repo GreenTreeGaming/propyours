@@ -1,19 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Search,
   MapPin,
   Building2,
-  Star,
   ChevronRight,
   Award,
   CheckCircle2,
-  Clock,
-  Filter,
   X,
   Loader2
 } from "lucide-react";
@@ -27,7 +23,49 @@ interface Builder {
   bio?: string;
   phone?: string;
   projects: number;
+  activeProjects: number;
+  featuredProjects: number;
+  totalViews: number;
+  phoneClicks: number;
+  favorites: number;
   experience?: string;
+  builderPlan?: {
+    tier: "builder-starter" | "builder-growth" | "builder-elite" | null;
+    isActive: boolean;
+    rank: number;
+  };
+}
+
+function getBuilderCardStyles(builder: Builder) {
+  const tier = builder.builderPlan?.isActive
+      ? builder.builderPlan.tier
+      : null;
+
+  switch (tier) {
+    case "builder-elite":
+      return {
+        card: "bg-white rounded-[2.5rem] overflow-hidden border-2 border-primary shadow-xl shadow-primary/10 hover:shadow-2xl transition-all duration-500 group relative",
+        badge: "Premium Builder",
+        badgeClass: "bg-primary text-white border-primary",
+        cta: "w-full bg-primary text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+      };
+
+    case "builder-growth":
+      return {
+        card: "bg-white rounded-[2.5rem] overflow-hidden border border-primary/30 shadow-lg shadow-primary/5 hover:shadow-2xl transition-all duration-500 group relative",
+        badge: "Verified Builder",
+        badgeClass: "bg-primary/10 text-primary border-primary/20",
+        cta: "w-full bg-[#f0f7f7] group-hover:bg-primary group-hover:text-white text-primary py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+      };
+
+    default:
+      return {
+        card: "bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 group relative",
+        badge: null,
+        badgeClass: "",
+        cta: "w-full bg-[#f0f7f7] group-hover:bg-primary group-hover:text-white text-primary py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+      };
+  }
 }
 
 export default function BuildersPage() {
@@ -135,68 +173,99 @@ export default function BuildersPage() {
           </div>
         ) : filteredBuilders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredBuilders.map((builder, idx) => (
-              <motion.div
-                key={builder._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 group"
-              >
-                <div className="p-8">
-                  {/* Logo & Rating Header */}
-                  <div className="flex justify-between items-start mb-8">
-                    <div className="w-24 h-24 relative rounded-2xl bg-gray-50 p-4 border border-gray-100 group-hover:border-primary/20 transition-colors flex items-center justify-center">
-                      <Building2 className="w-12 h-12 text-gray-300" />
-                    </div>
-                    <div className="bg-primary/5 px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-primary/10">
-                      <Star size={14} className="fill-primary text-primary" />
-                      <span className="text-[11px] font-black text-primary">4.5</span>
-                    </div>
-                  </div>
+            {filteredBuilders.map((builder, idx) => {
+              const styles = getBuilderCardStyles(builder);
 
-                  {/* Info */}
-                  <div className="mb-6">
-                    <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2 group-hover:text-primary transition-colors">
-                      {builder.company || builder.name}
-                    </h3>
-                    <div className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                      <MapPin size={12} className="text-primary" /> {builder.city || "Tamil Nadu"}, India
-                    </div>
-                  </div>
-
-                  <p className="text-gray-500 text-sm font-medium leading-relaxed mb-8 line-clamp-3">
-                    {builder.bio || "No description provided. This builder is a verified partner on Propyours, delivering quality real estate solutions."}
-                  </p>
-
-                  {/* Stats Bar */}
-                  <div className="grid grid-cols-2 gap-4 py-6 border-y border-gray-50 mb-8">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Projects</p>
-                      <div className="flex items-center gap-1.5">
-                        <Building2 size={16} className="text-primary" />
-                        <span className="font-bold text-gray-900">{builder.projects} Active</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Experience</p>
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={16} className="text-primary" />
-                        <span className="font-bold text-gray-900">{builder.experience || "10+ Years"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/profile/${builder._id}`}
-                    className="w-full bg-[#f0f7f7] group-hover:bg-primary group-hover:text-white text-primary py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+              return (
+                  <motion.div
+                      key={builder._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className={styles.card}
                   >
-                    View Builder Profile
-                    <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </motion.div>
-            ))}
+                    <div className="p-8">
+                      {styles.badge && (
+                          <div className="mb-5 flex justify-end">
+                            <div
+                                className={`px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest ${styles.badgeClass}`}
+                            >
+                              {styles.badge}
+                            </div>
+                          </div>
+                      )}
+
+                      {/* Logo & Stats Header */}
+                      <div className="flex justify-between items-start mb-8">
+                        <div className="w-24 h-24 relative rounded-2xl bg-gray-50 p-4 border border-gray-100 group-hover:border-primary/20 transition-colors flex items-center justify-center">
+                          <Building2 className="w-12 h-12 text-gray-300" />
+                        </div>
+
+                        <div className="bg-primary/5 px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-primary/10">
+                          <Award size={14} className="text-primary" />
+                          <span className="text-[11px] font-black text-primary">
+              {builder.featuredProjects > 0
+                  ? `${builder.featuredProjects} Featured`
+                  : `${builder.activeProjects} Active`}
+            </span>
+                        </div>
+                      </div>
+
+                      {/* Info */}
+                      <div className="mb-6">
+                        <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-2 group-hover:text-primary transition-colors">
+                          {builder.company || builder.name}
+                        </h3>
+
+                        <div className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                          <MapPin size={12} className="text-primary" />
+                          {builder.city || "Tamil Nadu"}, India
+                        </div>
+                      </div>
+
+                      <p className="text-gray-500 text-sm font-medium leading-relaxed mb-8 line-clamp-3">
+                        {builder.bio ||
+                            "No description provided. This builder is a verified partner on Propyours, delivering quality real estate solutions."}
+                      </p>
+
+                      {/* Stats Bar */}
+                      <div className="grid grid-cols-2 gap-4 py-6 border-y border-gray-50 mb-8">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            Projects
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <Building2 size={16} className="text-primary" />
+                            <span className="font-bold text-gray-900">
+                {builder.activeProjects} Active
+              </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            Enquiries
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 size={16} className="text-primary" />
+                            <span className="font-bold text-gray-900">
+                {builder.phoneClicks}
+              </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link href={`/profile/${builder._id}`} className={styles.cta}>
+                        View Builder Profile
+                        <ChevronRight
+                            size={16}
+                            className="group-hover:translate-x-1 transition-transform"
+                        />
+                      </Link>
+                    </div>
+                  </motion.div>
+              );
+            })}
           </div>
         ) : (
           <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-dashed border-gray-200">
