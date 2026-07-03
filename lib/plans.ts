@@ -6,19 +6,29 @@ export type PlanTier =
     | "builder-growth"
     | "builder-elite";
 
-export const PLAN_LIMITS: Record<
-    PlanTier,
-    {
-        audience: "owner" | "builder";
-        activeProperties: number;
-        listingDays: number;
-        maxImages: number;
-        maxVideoLinks: number;
-        featured: boolean;
-        analyticsLevel: "none" | "basic" | "advanced" | "project" | "portfolio";
-        promoteBoosts: number;
-    }
-> = {
+export type PlanStatus = "free" | "active" | "expired" | "cancelled";
+
+export type PlanAudience = "owner" | "builder";
+
+export type AnalyticsLevel =
+    | "none"
+    | "basic"
+    | "advanced"
+    | "project"
+    | "portfolio";
+
+export type PlanLimits = {
+    audience: PlanAudience;
+    activeProperties: number;
+    listingDays: number;
+    maxImages: number;
+    maxVideoLinks: number;
+    featured: boolean;
+    analyticsLevel: AnalyticsLevel;
+    promoteBoosts: number;
+};
+
+export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     silver: {
         audience: "owner",
         activeProperties: 1,
@@ -88,7 +98,7 @@ export const PLAN_LIMITS: Record<
 
 export function getPlanTier(user: any): PlanTier {
     const tier = user?.plan?.tier as PlanTier | undefined;
-    const status = user?.plan?.status;
+    const status = user?.plan?.status as PlanStatus | undefined;
 
     if (!tier || !PLAN_LIMITS[tier]) {
         return "silver";
