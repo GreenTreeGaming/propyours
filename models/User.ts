@@ -101,18 +101,13 @@ const UserSchema = new Schema(
                 default: "manual",
             },
 
-            paymentId: {
-                type: String,
-                required: false,
-            },
-
-            promoteBoostsRemaining: {
+            boostsRemaining: {
                 type: Number,
                 default: 0,
             },
 
-            promoteBoostsResetAt: {
-                type: Date,
+            paymentId: {
+                type: String,
                 required: false,
             },
         },

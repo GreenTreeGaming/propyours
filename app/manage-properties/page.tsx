@@ -65,6 +65,14 @@ export default function ManagePropertiesPage() {
                 )
             );
 
+            setUser((prev: any) => ({
+                ...prev,
+                plan: {
+                    ...prev.plan,
+                    boostsRemaining: data.boostsRemaining,
+                },
+            }));
+
             alert("Property promoted successfully.");
         } catch (error) {
             console.error("Failed to promote property:", error);
@@ -106,11 +114,18 @@ export default function ManagePropertiesPage() {
                 credentials: "include",
             });
 
+            let data: any = {};
+
+            try {
+                data = await res.json();
+            } catch {
+                data = {};
+            }
+
             if (res.ok) {
-                setProperties(properties.filter(p => p._id !== id));
+                setProperties(properties.filter((p) => p._id !== id));
                 alert("Property removed successfully.");
             } else {
-                const data = await res.json();
                 alert(data.error || "Failed to delete property.");
             }
         } catch (error) {
@@ -184,6 +199,9 @@ export default function ManagePropertiesPage() {
                     <div>
                         <h1 className="text-3xl font-black text-gray-900 tracking-tight">Manage Properties</h1>
                         <p className="text-gray-500 font-medium">You have posted {properties.length} properties</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-yellow-600 mt-2">
+                            {user?.plan?.boostsRemaining || 0} boost token{(user?.plan?.boostsRemaining || 0) === 1 ? "" : "s"} remaining
+                        </p>
                     </div>
                     <Link
                         href="/post-property"
@@ -218,20 +236,41 @@ export default function ManagePropertiesPage() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.1 }}
-                                    className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 flex flex-col"
+                                    className={`
+    relative
+    bg-white
+    rounded-3xl
+    overflow-hidden
+    group
+    transition-all
+    duration-300
+    flex
+    flex-col
+    ${
+                                        property.promotedUntil &&
+                                        new Date(property.promotedUntil).getTime() > Date.now()
+                                            ? "border border-yellow-400 shadow-xl shadow-yellow-100/80 ring-2 ring-yellow-100/70 hover:shadow-2xl hover:shadow-yellow-200/80"
+                                            : "border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50"
+                                    }
+`}
                                 >
+                                    {property.promotedUntil &&
+                                        new Date(property.promotedUntil).getTime() > Date.now() && (
+                                            <div className="h-1.5 w-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-400" />
+                                        )}
+
                                     {/* Image */}
                                     <div className="relative h-48 bg-gray-100 overflow-hidden">
                                         <div className="absolute top-4 left-4 z-10 flex flex-col items-start gap-2">
-    <span
-        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-            property.purpose === "Sell"
-                ? "bg-orange-500 text-white"
-                : "bg-primary text-white"
-        }`}
-    >
-        {property.purpose}
-    </span>
+        <span
+            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                property.purpose === "Sell"
+                    ? "bg-orange-500 text-white"
+                    : "bg-primary text-white"
+            }`}
+        >
+            {property.purpose}
+        </span>
 
                                             {(() => {
                                                 const timeLeft = getListingTimeLeft(property.listingExpiresAt);
@@ -244,11 +283,12 @@ export default function ManagePropertiesPage() {
                                                                 : "bg-white/95 text-gray-700"
                                                         }`}
                                                     >
-                {timeLeft.label}
-            </span>
+                    {timeLeft.label}
+                </span>
                                                 );
                                             })()}
                                         </div>
+
                                         <Image
                                             src={property.images?.[0] || "/loginimage.png"}
                                             alt={property.address || "Property"}
@@ -295,34 +335,50 @@ export default function ManagePropertiesPage() {
                                             </div>
                                         </div>
 
-                                        <button
-                                            onClick={() => handlePromote(property._id)}
-                                            disabled={(property.promoteBoostsRemaining || 0) <= 0}
-                                            className="
-        w-full
-        flex items-center justify-center gap-2
-        py-3.5 px-4
-        rounded-2xl
-        bg-yellow-400
-        text-yellow-950
-        font-black text-sm uppercase tracking-widest
-        shadow-lg shadow-yellow-200/60
-        hover:bg-yellow-300 hover:scale-[1.02]
-        active:scale-[0.98]
-        transition-all
-        disabled:bg-gray-100
-        disabled:text-gray-400
-        disabled:shadow-none
-        disabled:hover:scale-100
-        disabled:cursor-not-allowed
-    "
-                                        >
-                                            <span>Promote Listing</span>
+                                        {(() => {
+                                            const isPromoted =
+                                                property.promotedUntil &&
+                                                new Date(property.promotedUntil).getTime() > Date.now();
 
-                                            <span className="px-2 py-0.5 rounded-full bg-white/50 text-[11px] font-black">
-        {property.promoteBoostsRemaining || 0} left
-    </span>
-                                        </button>
+                                            return (
+                                                <button
+                                                    onClick={() => handlePromote(property._id)}
+                                                    disabled={isPromoted || (user?.plan?.boostsRemaining || 0) <= 0}
+                                                    className={`
+                w-full
+                flex items-center justify-center gap-2
+                py-3.5 px-4
+                rounded-2xl
+                font-black text-sm uppercase tracking-widest
+                shadow-lg
+                active:scale-[0.98]
+                transition-all
+                ${
+                                                        isPromoted
+                                                            ? "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed border border-gray-200"
+                                                            : (user?.plan?.boostsRemaining || 0) <= 0
+                                                                ? "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed border border-gray-200"
+                                                                : "bg-yellow-400 text-yellow-950 shadow-yellow-200/60 hover:bg-yellow-300 hover:scale-[1.02]"
+                                                    }
+            `}
+                                                >
+                                                    <span>{isPromoted ? "Boost Active" : "Promote Listing"}</span>
+
+                                                    <span
+                                                        className={`
+        px-2 py-0.5 rounded-full text-[11px] font-black
+        ${
+                                                            isPromoted
+                                                                ? "bg-gray-200 text-gray-500"
+                                                                : "bg-white/40 text-yellow-950"
+                                                        }
+    `}
+                                                    >
+    {user?.plan?.boostsRemaining || 0} left
+</span>
+                                                </button>
+                                            );
+                                        })()}
 
                                         {/* Actions */}
                                         <div className="flex flex-col gap-3 pt-2">

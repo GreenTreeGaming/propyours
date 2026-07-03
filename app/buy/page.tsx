@@ -35,6 +35,7 @@ interface Property {
   locality: string;
   images: string[];
   purpose: string;
+  promotedUntil?: string;
 }
 
 function BuyPageContent() {
@@ -514,6 +515,13 @@ function BuyPageContent() {
                       <div className="bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-900 shadow-sm">
                         {prop.propertyType}
                       </div>
+
+                      {prop.promotedUntil &&
+                          new Date(prop.promotedUntil).getTime() > Date.now() && (
+                              <span className="px-4 py-1.5 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-black uppercase tracking-widest shadow-sm">
+        Promoted
+      </span>
+                          )}
                     </div>
                     <div className="absolute bottom-6 left-6 bg-primary px-5 py-2 rounded-2xl text-white text-lg font-black shadow-xl shadow-primary/30">
                       {formatPrice(prop.price)}

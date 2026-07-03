@@ -478,8 +478,17 @@ export default function Home() {
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur text-[10px] font-bold px-3 py-1.5 rounded-full text-gray-700 uppercase tracking-wider shadow-sm">
-                      {prop.propertyType}
+                    <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
+                      <div className="bg-white/90 backdrop-blur text-[10px] font-bold px-3 py-1.5 rounded-full text-gray-700 uppercase tracking-wider shadow-sm">
+                        {prop.propertyType}
+                      </div>
+
+                      {prop.promotedUntil &&
+                          new Date(prop.promotedUntil).getTime() > Date.now() && (
+                              <span className="px-3 py-1.5 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-black uppercase tracking-widest shadow-sm">
+        Promoted
+      </span>
+                          )}
                     </div>
                   </div>
                   <div className="p-5">

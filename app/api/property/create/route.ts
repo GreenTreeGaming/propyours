@@ -152,8 +152,6 @@ export async function POST(req: Request) {
 
             featured: limits.featured,
             listingExpiresAt,
-            promoteBoostsRemaining: limits.promoteBoosts,
-
             planSnapshot: {
                 tier: limits.tier,
                 listingDays: limits.listingDays,

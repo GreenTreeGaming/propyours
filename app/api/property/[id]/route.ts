@@ -215,3 +215,50 @@ export async function PUT(
         );
     }
 }
+
+export async function DELETE(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const auth = await getAuthenticatedUser();
+
+        if (isAuthError(auth)) {
+            return auth;
+        }
+
+        await connectDB();
+
+        const { id } = await params;
+
+        const property = await Property.findById(id);
+
+        if (!property) {
+            return NextResponse.json(
+                { error: "Property not found" },
+                { status: 404 }
+            );
+        }
+
+        if (property.userId.toString() !== auth.userId) {
+            return NextResponse.json(
+                { error: "You are not allowed to delete this property." },
+                { status: 403 }
+            );
+        }
+
+        await Property.findByIdAndDelete(id);
+
+        return NextResponse.json({
+            success: true,
+            message: "Property deleted successfully.",
+        });
+    } catch (error) {
+        console.error("Failed to delete property:", error);
+
+        return NextResponse.json(
+            { error: "Failed to delete property" },
+            { status: 500 }
+        );
+    }
+}

@@ -15,7 +15,7 @@ export type StoredUserPlan = {
     tier?: PlanTier;
     status?: PlanStatus;
     expiresAt?: string;
-    promoteBoostsRemaining?: number;
+    boostsRemaining?: number;
 };
 
 export type StoredUser = {

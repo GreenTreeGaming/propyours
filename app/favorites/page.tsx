@@ -18,6 +18,7 @@ type FavoriteProperty = {
     bedrooms?: number;
     size: number;
     images?: string[];
+    promotedUntil?: string;
 };
 
 export default function FavoritesPage() {
@@ -162,8 +163,17 @@ export default function FavoritesPage() {
                                             fill
                                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                                         />
-                                        <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-gray-700 backdrop-blur">
-                                            {property.purpose}
+                                        <div className="absolute left-4 top-4 flex flex-col items-start gap-2">
+                                            <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-gray-700 backdrop-blur">
+                                                {property.purpose}
+                                            </div>
+
+                                            {property.promotedUntil &&
+                                                new Date(property.promotedUntil).getTime() > Date.now() && (
+                                                    <span className="px-3 py-1 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-black uppercase tracking-widest shadow-sm">
+                Promoted
+            </span>
+                                                )}
                                         </div>
                                     </div>
 

@@ -10,9 +10,25 @@ export async function GET() {
     try {
         await connectDB();
 
-        const properties = await Property.find(getPublicPropertyFilter()).sort(
-            publicPropertySort
-        );
+        const properties = await Property.aggregate([
+            {
+                $match: getPublicPropertyFilter(),
+            },
+            {
+                $addFields: {
+                    isPromoted: {
+                        $gt: ["$promotedUntil", new Date()],
+                    },
+                },
+            },
+            {
+                $sort: {
+                    isPromoted: -1,
+                    featured: -1,
+                    createdAt: -1,
+                },
+            },
+        ]);
 
         return NextResponse.json(properties);
     } catch (error) {

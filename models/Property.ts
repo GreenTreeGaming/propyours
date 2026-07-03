@@ -149,11 +149,6 @@ const PropertySchema = new mongoose.Schema(
             required: false,
         },
 
-        promoteBoostsRemaining: {
-            type: Number,
-            default: 0,
-        },
-
         promotedUntil: {
             type: Date,
             required: false,
