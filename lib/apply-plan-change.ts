@@ -129,7 +129,7 @@ export async function applyPlanChange({
     );
 
     for (const property of propertiesToKeepActive) {
-        const updates: Record<string, unknown> = {
+        const setUpdates: Record<string, unknown> = {
             planSnapshot: {
                 tier: limits.tier,
                 listingDays: limits.listingDays,
@@ -146,32 +146,20 @@ export async function applyPlanChange({
             : null;
 
         if (!existingExpiry || existingExpiry.getTime() > cappedExpiry.getTime()) {
-            updates.listingExpiresAt = cappedExpiry;
-        }
-
-        if (limits.promoteBoosts <= 0) {
-            updates.$unset = {
-                promotedUntil: "",
-            };
+            setUpdates.listingExpiresAt = cappedExpiry;
         }
 
         await Property.updateOne(
             { _id: property._id },
             limits.promoteBoosts <= 0
                 ? {
-                    $set: {
-                        planSnapshot: updates.planSnapshot,
-                        featured: updates.featured,
-                        ...(updates.listingExpiresAt
-                            ? { listingExpiresAt: updates.listingExpiresAt }
-                            : {}),
-                    },
+                    $set: setUpdates,
                     $unset: {
                         promotedUntil: "",
                     },
                 }
                 : {
-                    $set: updates,
+                    $set: setUpdates,
                 }
         );
     }
