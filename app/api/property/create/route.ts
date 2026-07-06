@@ -158,6 +158,10 @@ export async function POST(req: Request) {
                 maxPhotos: limits.maxImages,
                 maxVideoLinks: limits.maxVideoLinks,
                 featured: limits.featured,
+                homepageFeatured: limits.homepageFeatured,
+                rankingLevel: limits.rankingLevel,
+                compareVisibility: limits.compareVisibility,
+                badgeLevel: limits.badgeLevel,
                 analyticsLevel: limits.analyticsLevel,
             },
 

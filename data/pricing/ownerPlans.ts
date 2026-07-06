@@ -69,7 +69,6 @@ export const ownerPlans: PricingPlan[] = [
         notIncluded: [
             "2 Active Properties",
             "Unlimited Leads",
-            "360° Virtual Tour",
             "Homepage Featured",
             "Advanced Analytics"
         ],
@@ -102,7 +101,6 @@ export const ownerPlans: PricingPlan[] = [
             "Unlimited Verified Leads",
             "30 Photos",
             "2 Video Uploads",
-            "360° Virtual Tour",
             "Homepage Featured",
             "Priority Search Ranking",
             "Advanced Analytics",

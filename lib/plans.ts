@@ -17,15 +17,50 @@ export type AnalyticsLevel =
     | "project"
     | "portfolio";
 
+export type RankingLevel =
+    | "standard"
+    | "featured"
+    | "priority"
+    | "top";
+
+export type CompareVisibility =
+    | "standard"
+    | "highlighted"
+    | "priority";
+
+export type BadgeLevel =
+    | "none"
+    | "verified"
+    | "premium";
+
 export type PlanLimits = {
     audience: PlanAudience;
+
     activeProperties: number;
     listingDays: number;
+
     maxImages: number;
     maxVideoLinks: number;
+
+    verifiedLeadLimit: number | null;
+
     featured: boolean;
+    homepageFeatured: boolean;
+
+    rankingLevel: RankingLevel;
+    compareVisibility: CompareVisibility;
+    badgeLevel: BadgeLevel;
+
     analyticsLevel: AnalyticsLevel;
+
     promoteBoosts: number;
+    scheduledBoosts: boolean;
+
+    leadNotifications: boolean;
+    leadExport: boolean;
+    buyerDemographics: boolean;
+    whatsappSmsAlerts: boolean;
+    prioritySupport: boolean;
 };
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
@@ -35,9 +70,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 30,
         maxImages: 5,
         maxVideoLinks: 0,
+        verifiedLeadLimit: 1,
         featured: false,
+        homepageFeatured: false,
+        rankingLevel: "standard",
+        compareVisibility: "standard",
+        badgeLevel: "none",
         analyticsLevel: "none",
         promoteBoosts: 0,
+        scheduledBoosts: false,
+        leadNotifications: false,
+        leadExport: false,
+        buyerDemographics: false,
+        whatsappSmsAlerts: false,
+        prioritySupport: false,
     },
 
     gold: {
@@ -46,9 +92,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 90,
         maxImages: 20,
         maxVideoLinks: 1,
+        verifiedLeadLimit: 25,
         featured: true,
+        homepageFeatured: false,
+        rankingLevel: "featured",
+        compareVisibility: "highlighted",
+        badgeLevel: "verified",
         analyticsLevel: "basic",
         promoteBoosts: 0,
+        scheduledBoosts: false,
+        leadNotifications: true,
+        leadExport: false,
+        buyerDemographics: false,
+        whatsappSmsAlerts: false,
+        prioritySupport: false,
     },
 
     platinum: {
@@ -57,9 +114,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 180,
         maxImages: 30,
         maxVideoLinks: 2,
+        verifiedLeadLimit: null,
         featured: true,
+        homepageFeatured: true,
+        rankingLevel: "priority",
+        compareVisibility: "priority",
+        badgeLevel: "verified",
         analyticsLevel: "advanced",
         promoteBoosts: 0,
+        scheduledBoosts: false,
+        leadNotifications: true,
+        leadExport: true,
+        buyerDemographics: true,
+        whatsappSmsAlerts: true,
+        prioritySupport: true,
     },
 
     "builder-starter": {
@@ -68,9 +136,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 365,
         maxImages: 10,
         maxVideoLinks: 0,
+        verifiedLeadLimit: null,
         featured: false,
+        homepageFeatured: false,
+        rankingLevel: "standard",
+        compareVisibility: "standard",
+        badgeLevel: "none",
         analyticsLevel: "basic",
         promoteBoosts: 0,
+        scheduledBoosts: false,
+        leadNotifications: false,
+        leadExport: false,
+        buyerDemographics: false,
+        whatsappSmsAlerts: false,
+        prioritySupport: false,
     },
 
     "builder-growth": {
@@ -79,9 +158,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 365,
         maxImages: 25,
         maxVideoLinks: 1,
+        verifiedLeadLimit: null,
         featured: true,
+        homepageFeatured: false,
+        rankingLevel: "priority",
+        compareVisibility: "highlighted",
+        badgeLevel: "verified",
         analyticsLevel: "project",
         promoteBoosts: 5,
+        scheduledBoosts: false,
+        leadNotifications: true,
+        leadExport: false,
+        buyerDemographics: false,
+        whatsappSmsAlerts: false,
+        prioritySupport: false,
     },
 
     "builder-elite": {
@@ -90,9 +180,20 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
         listingDays: 365,
         maxImages: 40,
         maxVideoLinks: 3,
+        verifiedLeadLimit: null,
         featured: true,
+        homepageFeatured: true,
+        rankingLevel: "top",
+        compareVisibility: "priority",
+        badgeLevel: "premium",
         analyticsLevel: "portfolio",
         promoteBoosts: 15,
+        scheduledBoosts: true,
+        leadNotifications: true,
+        leadExport: false,
+        buyerDemographics: false,
+        whatsappSmsAlerts: false,
+        prioritySupport: true,
     },
 };
 

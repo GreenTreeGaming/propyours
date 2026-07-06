@@ -110,7 +110,8 @@ export default function PropertyDetailsPage() {
                 locality: property.locality,
                 city: property.city,
                 amenities: property.amenities || [],
-                ownershipType: property.ownershipType
+                ownershipType: property.ownershipType,
+                planSnapshot: property.planSnapshot,
             });
         }
     };
@@ -291,6 +292,35 @@ export default function PropertyDetailsPage() {
         } finally {
             setFavoriteLoading(false);
         }
+    };
+
+    const getListingBadges = (property: any) => {
+        const badges: string[] = [];
+
+        if (property.planSnapshot?.homepageFeatured) {
+            badges.push("Homepage Featured");
+        }
+
+        if (
+            property.promotedUntil &&
+            new Date(property.promotedUntil).getTime() > Date.now()
+        ) {
+            badges.push("Promoted");
+        }
+
+        if (property.planSnapshot?.badgeLevel === "premium") {
+            badges.push("Premium");
+        } else if (property.planSnapshot?.badgeLevel === "verified") {
+            badges.push("Verified Owner");
+        }
+
+        if (property.planSnapshot?.rankingLevel === "top") {
+            badges.push("Top Ranked");
+        } else if (property.planSnapshot?.rankingLevel === "priority") {
+            badges.push("Priority");
+        }
+
+        return badges;
     };
 
     if (loading) return (
@@ -474,14 +504,28 @@ export default function PropertyDetailsPage() {
                                 <div className="flex flex-col gap-6">
                                     {/* TITLE BLOCK */}
                                     <div className="space-y-3 max-w-3xl">
-                                        <div className="flex items-center gap-2">
-                                            <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm">
-                                                {property.purpose || "FOR SALE"}
-                                            </span>
+                                        <div className="flex flex-wrap items-center gap-2">
+        <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm">
+            {property.purpose || "FOR SALE"}
+        </span>
+
                                             <span className="px-3 py-1 bg-gray-50 text-gray-500 border border-gray-100 text-[10px] font-bold uppercase tracking-widest rounded-lg">
-                                                {property.propertyType || "RESIDENTIAL"}
-                                            </span>
+            {property.propertyType || "RESIDENTIAL"}
+        </span>
                                         </div>
+
+                                        {getListingBadges(property).length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {getListingBadges(property).map((badge) => (
+                                                    <span
+                                                        key={badge}
+                                                        className="rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary border border-primary/10"
+                                                    >
+                    {badge}
+                </span>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-[1.1] tracking-tighter">
                                             {property.address}

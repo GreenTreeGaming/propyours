@@ -137,6 +137,30 @@ const PropertySchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
+
+            homepageFeatured: {
+                type: Boolean,
+                default: false,
+            },
+
+            rankingLevel: {
+                type: String,
+                enum: ["standard", "featured", "priority", "top"],
+                default: "standard",
+            },
+
+            compareVisibility: {
+                type: String,
+                enum: ["standard", "highlighted", "priority"],
+                default: "standard",
+            },
+
+            badgeLevel: {
+                type: String,
+                enum: ["none", "verified", "premium"],
+                default: "none",
+            },
+
             analyticsLevel: {
                 type: String,
                 enum: ["none", "basic", "advanced", "project", "portfolio"],

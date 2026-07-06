@@ -82,10 +82,11 @@ export default function Home() {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch("/api/property");
+        const response = await fetch("/api/property/homepage-featured");
         const data = await response.json();
+
         if (Array.isArray(data)) {
-          setRealProperties(data.slice(0, 4)); // Show first 4 on home page
+          setRealProperties(data);
         }
       } catch (error) {
         console.error("Error fetching properties:", error);
@@ -100,6 +101,32 @@ export default function Home() {
     if (price >= 10000000) return `₹ ${(price / 10000000).toFixed(2)} Cr`;
     if (price >= 100000) return `₹ ${(price / 100000).toFixed(2)} L`;
     return `₹ ${price.toLocaleString()}`;
+  };
+
+  const getListingBadges = (property: any) => {
+    const badges: string[] = [];
+
+    if (property.planSnapshot?.homepageFeatured) {
+      badges.push("Homepage Featured");
+    }
+
+    if (property.promotedUntil && new Date(property.promotedUntil).getTime() > Date.now()) {
+      badges.push("Promoted");
+    }
+
+    if (property.planSnapshot?.badgeLevel === "premium") {
+      badges.push("Premium");
+    } else if (property.planSnapshot?.badgeLevel === "verified") {
+      badges.push("Verified Owner");
+    }
+
+    if (property.planSnapshot?.rankingLevel === "priority") {
+      badges.push("Priority");
+    } else if (property.planSnapshot?.rankingLevel === "top") {
+      badges.push("Top Ranked");
+    }
+
+    return badges;
   };
 
   return (
@@ -478,17 +505,19 @@ export default function Home() {
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 left-3 flex flex-col items-start gap-2">
+                    <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2">
                       <div className="bg-white/90 backdrop-blur text-[10px] font-bold px-3 py-1.5 rounded-full text-gray-700 uppercase tracking-wider shadow-sm">
                         {prop.propertyType}
                       </div>
 
-                      {prop.promotedUntil &&
-                          new Date(prop.promotedUntil).getTime() > Date.now() && (
-                              <span className="px-3 py-1.5 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-black uppercase tracking-widest shadow-sm">
-        Promoted
-      </span>
-                          )}
+                      {getListingBadges(prop).slice(0, 2).map((badge) => (
+                          <span
+                              key={badge}
+                              className="w-fit rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary shadow-sm"
+                          >
+      {badge}
+    </span>
+                      ))}
                     </div>
                   </div>
                   <div className="p-5">
