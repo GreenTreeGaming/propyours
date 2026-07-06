@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 type CompareProperty = {
     _id: string;
     address: string;
+    images?: string[];
     price: number;
     size: number;
     sizeUnit: string;
@@ -15,6 +16,13 @@ type CompareProperty = {
     city?: string;
     amenities?: string[];
     ownershipType?: string;
+    planSnapshot?: {
+        homepageFeatured?: boolean;
+        rankingLevel?: "standard" | "featured" | "priority" | "top";
+        compareVisibility?: "standard" | "highlighted" | "priority";
+        badgeLevel?: "none" | "verified" | "premium";
+        analyticsLevel?: "none" | "basic" | "advanced" | "project" | "portfolio";
+    };
 };
 
 type CompareContextType = {

@@ -70,6 +70,13 @@ type PropertyRecord = {
         phone?: string;
     };
     amenities?: string[];
+    planSnapshot?: {
+        homepageFeatured?: boolean;
+        rankingLevel?: "standard" | "featured" | "priority" | "top";
+        compareVisibility?: "standard" | "highlighted" | "priority";
+        badgeLevel?: "none" | "verified" | "premium";
+        analyticsLevel?: "none" | "basic" | "advanced" | "project" | "portfolio";
+    };
 };
 
 export default function PropertyDetailsPage() {
@@ -101,6 +108,7 @@ export default function PropertyDetailsPage() {
             addToCompare({
                 _id: property._id,
                 address: property.address,
+                images: property.images || [],
                 price: property.price || 0,
                 size: property.size || 0,
                 sizeUnit: property.sizeUnit || "sqft",
@@ -248,6 +256,25 @@ export default function PropertyDetailsPage() {
         setShareUrl(`${window.location.origin}/property/${normalizedId}`);
     }, [id]);
 
+    const createLead = async (source: "phone" | "email" | "favorite") => {
+        const rawId = Array.isArray(id) ? id[0] : id;
+
+        if (!rawId) return;
+
+        try {
+            await fetch(`/api/property/${rawId}/lead`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify({ source }),
+            });
+        } catch (error) {
+            console.error(`Failed to create ${source} lead:`, error);
+        }
+    };
+
     const handleFavoriteToggle = async () => {
         const user = getStoredUser();
         const userId = user?.id || user?._id;
@@ -284,6 +311,9 @@ export default function PropertyDetailsPage() {
             const updatedFavorites = data.favorites as string[];
             updateStoredUserFavorites(updatedFavorites);
             setIsFavorite(updatedFavorites.includes(normalizedId));
+            if (updatedFavorites.includes(normalizedId)) {
+                await createLead("favorite");
+            }
         } catch (err) {
             const message =
                 err instanceof Error ? err.message : "Failed to update favorites";
@@ -771,6 +801,8 @@ export default function PropertyDetailsPage() {
                                                         headers: { "Content-Type": "application/json" },
                                                         body: JSON.stringify({ type: "phoneClick" }),
                                                     });
+
+                                                    await createLead("phone");
                                                 } catch (err) {
                                                     console.error("Failed to record phone click:", err);
                                                 }
@@ -783,7 +815,10 @@ export default function PropertyDetailsPage() {
                                         </button>
                                     )}
                                     <button
-                                        onClick={() => window.location.href = `mailto:${property.userId?.email}`}
+                                        onClick={async () => {
+                                            await createLead("email");
+                                            window.location.href = `mailto:${property.userId?.email}`;
+                                        }}
                                         className="w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/5 active:scale-95"
                                     >
                                         <Mail size={20} />

@@ -16,9 +16,24 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function ComparePage() {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
+
+    const getCompareBadge = (property: any) => {
+        const visibility = property.planSnapshot?.compareVisibility;
+
+        if (visibility === "priority") {
+            return "Priority Compare";
+        }
+
+        if (visibility === "highlighted") {
+            return "Highlighted";
+        }
+
+        return null;
+    };
 
     interface Attribute {
         label: string;
@@ -94,13 +109,41 @@ export default function ComparePage() {
                                             </button>
                                             <div className="space-y-4">
                                                 <div className="h-40 bg-gray-100 rounded-2xl overflow-hidden relative">
-                                                    <div className="absolute inset-0 flex items-center justify-center text-gray-300 font-black uppercase tracking-widest text-[10px]">
-                                                        Property Image
-                                                    </div>
+                                                    {property.images?.[0] ? (
+                                                        <Image
+                                                            src={property.images[0]}
+                                                            alt={property.address || "Property"}
+                                                            fill
+                                                            sizes="300px"
+                                                            className="object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="absolute inset-0 flex items-center justify-center text-gray-300 font-black uppercase tracking-widest text-[10px]">
+                                                            No Image
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-black text-gray-900 text-lg leading-tight truncate pr-6">{property.address}</h3>
-                                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">₹{property.price.toLocaleString()}</p>
+                                                <div className="space-y-2">
+                                                    {(() => {
+                                                        const compareBadge = getCompareBadge(property);
+
+                                                        if (!compareBadge) return null;
+
+                                                        return (
+                                                            <span className="inline-flex w-fit rounded-full border border-primary/10 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+    {compareBadge}
+</span>
+                                                        );
+                                                    })()}
+
+                                                    <div>
+                                                        <h3 className="font-black text-gray-900 text-lg leading-tight truncate pr-6">
+                                                            {property.address}
+                                                        </h3>
+                                                        <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">
+                                                            ₹{property.price.toLocaleString()}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                                 <Link
                                                     href={`/property/${property._id}`}
