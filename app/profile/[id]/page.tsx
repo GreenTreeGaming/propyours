@@ -12,7 +12,6 @@ import {
     CheckCircle2,
     Building2,
     ArrowLeft,
-    Share2,
     ArrowRight,
     Map
 } from "lucide-react";
@@ -61,6 +60,118 @@ type UserProfile = {
     builderPlan?: BuilderPlan;
 };
 
+function getProfileTheme(profile: UserProfile) {
+    const tier = profile.builderPlan?.isActive
+        ? profile.builderPlan.tier
+        : null;
+
+    switch (tier) {
+        case "builder-elite":
+            return {
+                page: "min-h-screen bg-[#F8FAFA] pt-32 pb-20",
+                profileCard:
+                    "bg-white rounded-[2.5rem] p-8 border-2 border-primary shadow-2xl shadow-primary/10 sticky top-32 relative overflow-hidden",
+                avatar:
+                    "w-32 h-32 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-primary relative ring-4 ring-primary/10",
+                roleBadge:
+                    "px-5 py-1.5 bg-primary text-white text-xs font-black uppercase tracking-[0.15em] rounded-full border border-primary",
+                primaryButton:
+                    "w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95",
+                secondaryButton:
+                    "w-full bg-primary/5 border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/10 active:scale-95",
+                listingCard:
+                    "bg-white border border-primary/20 rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all group border-b-4 border-b-primary",
+                headerStat:
+                    "bg-white rounded-2xl border border-primary/20 shadow-sm flex items-center gap-4 px-6 py-4",
+                listingButton:
+                    "w-full bg-primary text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 group/btn border border-primary hover:shadow-lg hover:shadow-primary/25",
+            };
+
+        case "builder-growth":
+            return {
+                page: "min-h-screen bg-[#F8FAFA] pt-32 pb-20",
+                profileCard:
+                    "bg-white rounded-[2.5rem] p-8 border border-primary/30 shadow-xl shadow-primary/5 sticky top-32 relative overflow-hidden",
+                avatar:
+                    "w-32 h-32 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-primary relative",
+                roleBadge:
+                    "px-5 py-1.5 bg-primary/10 text-primary text-xs font-black uppercase tracking-[0.15em] rounded-full border border-primary/20",
+                primaryButton:
+                    "w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95",
+                secondaryButton:
+                    "w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/10 active:scale-95",
+                listingCard:
+                    "bg-white border border-primary/10 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-primary/40",
+                headerStat:
+                    "bg-white rounded-2xl border border-primary/10 shadow-sm flex items-center gap-4 px-6 py-4",
+                listingButton:
+                    "w-full bg-primary/10 hover:bg-primary text-primary hover:text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 group/btn border border-primary/20",
+            };
+
+        default:
+            return {
+                page: "min-h-screen bg-[#F8FAFA] pt-32 pb-20",
+                profileCard:
+                    "bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/40 sticky top-32",
+                avatar:
+                    "w-32 h-32 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-primary relative",
+                roleBadge:
+                    "px-5 py-1.5 bg-primary/5 text-primary text-xs font-black uppercase tracking-[0.15em] rounded-full border border-primary/10",
+                primaryButton:
+                    "w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95",
+                secondaryButton:
+                    "w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/10 active:scale-95",
+                listingCard:
+                    "bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-primary/5",
+                headerStat:
+                    "bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 px-6 py-4",
+                listingButton:
+                    "w-full bg-primary/5 hover:bg-primary text-primary hover:text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 group/btn border border-primary/10",
+            };
+    }
+}
+
+const DEFAULT_PROFILE_STATS: ProfileStats = {
+    totalListings: 0,
+    activeListings: 0,
+    featuredListings: 0,
+    totalViews: 0,
+    phoneClicks: 0,
+    favorites: 0,
+};
+
+function getProfileBadges(profile: UserProfile, stats: ProfileStats) {
+    const badges = [];
+
+    if (profile.builderPlan?.isActive) {
+        if (profile.builderPlan.tier === "builder-elite") {
+            badges.push("Premium Builder");
+        }
+
+        if (profile.builderPlan.tier === "builder-growth") {
+            badges.push("Verified Builder");
+        }
+
+        if (profile.builderPlan.tier === "builder-starter") {
+            badges.push("Builder Starter");
+        }
+    }
+
+    if (profile.phone) {
+        badges.push("Phone Available");
+    }
+
+    if (stats.activeListings > 0) {
+        badges.push(`${stats.activeListings} Active Listings`);
+    }
+
+    if (stats.featuredListings > 0) {
+        badges.push(`${stats.featuredListings} Featured Listings`);
+    }
+
+    return badges;
+}
+
 export default function PublicProfilePage() {
     const { id } = useParams();
     const router = useRouter();
@@ -69,14 +180,7 @@ export default function PublicProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const [stats, setStats] = useState<ProfileStats>({
-        totalListings: 0,
-        activeListings: 0,
-        featuredListings: 0,
-        totalViews: 0,
-        phoneClicks: 0,
-        favorites: 0,
-    });
+    const [stats, setStats] = useState<ProfileStats>(DEFAULT_PROFILE_STATS);
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -88,7 +192,7 @@ export default function PublicProfilePage() {
 
                 setProfile(data.user);
                 setProperties(data.properties);
-                setStats(data.stats);
+                setStats(data.stats ?? DEFAULT_PROFILE_STATS);
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -119,43 +223,12 @@ export default function PublicProfilePage() {
         );
     }
 
-    function getProfileBadges(profile: UserProfile, stats: ProfileStats) {
-        const badges = [];
-
-        if (profile.builderPlan?.isActive) {
-            if (profile.builderPlan.tier === "builder-elite") {
-                badges.push("Premium Builder");
-            }
-
-            if (profile.builderPlan.tier === "builder-growth") {
-                badges.push("Verified Builder");
-            }
-
-            if (profile.builderPlan.tier === "builder-starter") {
-                badges.push("Builder Starter");
-            }
-        }
-
-        if (profile.phone) {
-            badges.push("Phone Available");
-        }
-
-        if (stats.activeListings > 0) {
-            badges.push(`${stats.activeListings} Active Listings`);
-        }
-
-        if (stats.featuredListings > 0) {
-            badges.push(`${stats.featuredListings} Featured Listings`);
-        }
-
-        return badges;
-    }
-
     const profileBadges = getProfileBadges(profile, stats);
+    const profileTheme = getProfileTheme(profile);
 
     return (
         <ProtectedRoute>
-            <main className="min-h-screen bg-[#F8FAFA] pt-32 pb-20">
+            <main className={profileTheme.page}>
                 <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
                     {/* BACK NAVIGATION */}
@@ -171,9 +244,9 @@ export default function PublicProfilePage() {
 
                         {/* LEFT COLUMN: Profile info */}
                         <div className="lg:col-span-1">
-                            <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-xl shadow-gray-200/40 sticky top-32">
+                            <div className={profileTheme.profileCard}>
                                 <div className="text-center mb-8">
-                                    <div className="w-32 h-32 bg-primary/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 text-primary relative">
+                                    <div className={profileTheme.avatar}>
                                         <User size={64} />
 
                                         {profile.builderPlan?.isActive && (
@@ -188,7 +261,7 @@ export default function PublicProfilePage() {
                                     </h1>
 
                                     <div className="flex flex-col items-center gap-2">
-                                        <span className="px-5 py-1.5 bg-primary/5 text-primary text-xs font-black uppercase tracking-[0.15em] rounded-full border border-primary/10">
+                                        <span className={profileTheme.roleBadge}>
                                             {profile.role || "PropYours User"}
                                         </span>
                                         {profile.company && (
@@ -218,14 +291,14 @@ export default function PublicProfilePage() {
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => profile.phone && (window.location.href = `tel:${profile.phone}`)}
-                                        className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95"
+                                        className={profileTheme.primaryButton}
                                     >
                                         <Phone size={20} />
                                         Call {profile.role}
                                     </button>
                                     <button
                                         onClick={() => window.location.href = `mailto:${profile.email}`}
-                                        className="w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/10 active:scale-95"
+                                        className={profileTheme.secondaryButton}
                                     >
                                         <Mail size={20} />
                                         Email {profile.role}
@@ -254,12 +327,12 @@ export default function PublicProfilePage() {
                                 <div>
                                     <h2 className="text-4xl font-black text-gray-900 tracking-tighter">Active Listings</h2>
                                     <p className="text-gray-500 font-bold mt-1 uppercase text-xs tracking-widest">
-                                        {properties.length} Total Properties Available
+                                        {stats.activeListings} Active Properties Available
                                     </p>
                                 </div>
-                                <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 px-6 py-4">
+                                <div className={profileTheme.headerStat}>
                                     <div className="text-center">
-                                        <p className="text-2xl font-black text-primary leading-none">{properties.length}</p>
+                                        <p className="text-2xl font-black text-primary leading-none">{stats.activeListings}</p>
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Status</p>
                                     </div>
                                 </div>
@@ -273,7 +346,7 @@ export default function PublicProfilePage() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: idx * 0.1 }}
-                                            className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all group border-b-4 border-b-primary/5"
+                                            className={profileTheme.listingCard}
                                         >
                                             <div className="relative h-56 overflow-hidden">
                                                 <Image
@@ -331,7 +404,7 @@ export default function PublicProfilePage() {
 
                                                 <Link
                                                     href={`/property/${prop._id}`}
-                                                    className="w-full bg-[#FAFBFC] hover:bg-primary text-gray-400 hover:text-white font-black py-4 rounded-2xl text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 group/btn border border-gray-100"
+                                                    className={profileTheme.listingButton}
                                                 >
                                                     View Listing
                                                     <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
