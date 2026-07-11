@@ -496,46 +496,112 @@ export default function ManagePropertiesPage() {
 
                                         {(() => {
                                             const isPromoted =
-                                                property.promotedUntil &&
-                                                new Date(property.promotedUntil).getTime() > Date.now();
+                                                Boolean(property.promotedUntil) &&
+                                                new Date(
+                                                    property.promotedUntil
+                                                ).getTime() > Date.now();
+
+                                            const isExpired =
+                                                Boolean(property.listingExpiresAt) &&
+                                                new Date(
+                                                    property.listingExpiresAt
+                                                ).getTime() <= Date.now();
+
+                                            const isInactive =
+                                                property.status !== "active";
+
+                                            const boostsRemaining =
+                                                planSummary?.boostsRemaining ?? 0;
+
+                                            const planIncludesBoosts =
+                                                (planSummary?.boostsPerMonth ?? 0) > 0;
+
+                                            const canPromote =
+                                                planIncludesBoosts &&
+                                                boostsRemaining > 0 &&
+                                                !isPromoted &&
+                                                !isExpired &&
+                                                !isInactive;
+
+                                            let buttonLabel =
+                                                "Promote Listing";
+
+                                            if (isPromoted) {
+                                                buttonLabel = "Boost Active";
+                                            } else if (isExpired) {
+                                                buttonLabel = "Listing Expired";
+                                            } else if (isInactive) {
+                                                buttonLabel = "Listing Inactive";
+                                            } else if (!planIncludesBoosts) {
+                                                buttonLabel = "Not Included";
+                                            } else if (boostsRemaining <= 0) {
+                                                buttonLabel = "No Boosts Left";
+                                            }
 
                                             return (
-                                                <button
-                                                    onClick={() => handlePromote(property._id)}
-                                                    disabled={isPromoted || (user?.plan?.boostsRemaining || 0) <= 0}
-                                                    className={`
-                w-full
-                flex items-center justify-center gap-2
-                py-3.5 px-4
-                rounded-2xl
-                font-black text-sm uppercase tracking-widest
-                shadow-lg
-                active:scale-[0.98]
-                transition-all
-                ${
-                                                        isPromoted
-                                                            ? "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed border border-gray-200"
-                                                            : (user?.plan?.boostsRemaining || 0) <= 0
-                                                                ? "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed border border-gray-200"
-                                                                : "bg-yellow-400 text-yellow-950 shadow-yellow-200/60 hover:bg-yellow-300 hover:scale-[1.02]"
-                                                    }
-            `}
-                                                >
-                                                    <span>{isPromoted ? "Boost Active" : "Promote Listing"}</span>
+                                                <div className="space-y-2">
+                                                    {isPromoted &&
+                                                        property.promotedUntil && (
+                                                            <p className="text-xs font-bold text-yellow-600">
+                                                                Promoted until{" "}
+                                                                {new Date(
+                                                                    property.promotedUntil
+                                                                ).toLocaleDateString(
+                                                                    "en-IN",
+                                                                    {
+                                                                        day: "numeric",
+                                                                        month: "long",
+                                                                        year: "numeric",
+                                                                    }
+                                                                )}
+                                                            </p>
+                                                        )}
 
-                                                    <span
-                                                        className={`
-        px-2 py-0.5 rounded-full text-[11px] font-black
-        ${
-                                                            isPromoted
-                                                                ? "bg-gray-200 text-gray-500"
-                                                                : "bg-white/40 text-yellow-950"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handlePromote(
+                                                                property._id
+                                                            )
                                                         }
-    `}
+                                                        disabled={!canPromote}
+                                                        className={`
+                    w-full
+                    flex items-center justify-center gap-2
+                    py-3.5 px-4
+                    rounded-2xl
+                    font-black text-sm uppercase tracking-widest
+                    shadow-lg
+                    active:scale-[0.98]
+                    transition-all
+                    ${
+                                                            canPromote
+                                                                ? "bg-yellow-400 text-yellow-950 shadow-yellow-200/60 hover:bg-yellow-300 hover:scale-[1.02]"
+                                                                : "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed border border-gray-200"
+                                                        }
+                `}
                                                     >
-    {user?.plan?.boostsRemaining || 0} left
-</span>
-                                                </button>
+                                                        <span>{buttonLabel}</span>
+
+                                                        {planIncludesBoosts && (
+                                                            <span
+                                                                className={`
+                            px-2 py-0.5
+                            rounded-full
+                            text-[11px]
+                            font-black
+                            ${
+                                                                    canPromote
+                                                                        ? "bg-white/40 text-yellow-950"
+                                                                        : "bg-gray-200 text-gray-500"
+                                                                }
+                        `}
+                                                            >
+                        {boostsRemaining} left
+                    </span>
+                                                        )}
+                                                    </button>
+                                                </div>
                                             );
                                         })()}
 

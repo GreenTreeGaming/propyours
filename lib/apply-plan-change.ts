@@ -100,10 +100,6 @@ export async function applyPlanChange({
             const previousBalance =
                 user.plan?.boostsRemaining ?? 0;
 
-            const previousMonthlyAllowance =
-                PLAN_CATALOG[previousTier].entitlements
-                    .promoteBoostsPerMonth;
-
             const newMonthlyAllowance =
                 status === "active"
                     ? limits.promoteBoostsPerMonth
@@ -227,8 +223,6 @@ export async function applyPlanChange({
                         newStatus: status,
                         previousTier,
                         newTier: tier,
-                        previousMonthlyAllowance,
-                        newMonthlyAllowance,
                     });
 
                 await BoostTransaction.create(
@@ -469,20 +463,29 @@ export async function applyPlanChange({
     }
 }
 
+const PLAN_RANK: Record<
+    PlanTier,
+    number
+> = {
+    silver: 1,
+    gold: 2,
+    platinum: 3,
+
+    "builder-starter": 1,
+    "builder-growth": 2,
+    "builder-elite": 3,
+};
+
 function getPlanChangeType({
                                previousStatus,
                                newStatus,
                                previousTier,
                                newTier,
-                               previousMonthlyAllowance,
-                               newMonthlyAllowance,
                            }: {
     previousStatus?: PlanStatus;
     newStatus: PlanStatus;
     previousTier: PlanTier;
     newTier: PlanTier;
-    previousMonthlyAllowance: number;
-    newMonthlyAllowance: number;
 }): PlanChangeType {
     if (newStatus !== "active") {
         return "plan_expired";
@@ -492,11 +495,18 @@ function getPlanChangeType({
         return "plan_activated";
     }
 
-    if (previousTier !== newTier) {
-        return newMonthlyAllowance >=
-        previousMonthlyAllowance
-            ? "plan_upgraded"
-            : "plan_downgraded";
+    if (
+        PLAN_RANK[newTier] >
+        PLAN_RANK[previousTier]
+    ) {
+        return "plan_upgraded";
+    }
+
+    if (
+        PLAN_RANK[newTier] <
+        PLAN_RANK[previousTier]
+    ) {
+        return "plan_downgraded";
     }
 
     return "plan_activated";
