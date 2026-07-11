@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 
 type PropertyListing = {
     _id: string;
@@ -29,6 +30,7 @@ type PropertyListing = {
     size?: number;
     sizeUnit?: string;
     purpose?: string;
+    negotiable?: boolean;
     images?: string[];
 };
 
@@ -371,8 +373,15 @@ export default function PublicProfilePage() {
                                                     <h3 className="font-black text-gray-900 text-xl leading-tight truncate flex-1 pr-2">
                                                         {prop.address}
                                                     </h3>
-                                                    <div className="text-primary font-black text-lg leading-none">
-                                                        ₹{(prop.price || 0).toLocaleString()}
+                                                    <div className="shrink-0 text-right">
+                                                        <div className="text-lg font-black leading-none text-primary">
+                                                            ₹{(prop.price || 0).toLocaleString("en-IN")}
+                                                        </div>
+
+                                                        <PriceNegotiabilityBadge
+                                                            negotiable={prop.negotiable}
+                                                            className="mt-2"
+                                                        />
                                                     </div>
                                                 </div>
 

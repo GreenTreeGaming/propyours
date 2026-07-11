@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadDropzone } from "@/lib/uploadthing";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import {
     PLAN_CATALOG,
     isPlanTier,
@@ -378,6 +379,7 @@ export default function PostPropertyPage() {
                     ownershipType: form.ownershipType,
                     price: Number(form.price),
                     priceType: form.priceType,
+                    negotiable: form.negotiable,
                     bedrooms: Number(form.bedrooms) || undefined,
                     bathrooms: Number(form.bathrooms) || undefined,
                     floors: Number(form.floors) || undefined,
@@ -653,9 +655,92 @@ export default function PostPropertyPage() {
                                         {currentStep === 3 && (
                                             <div className="space-y-6">
                                                 <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">Asking Price (₹) <span className="text-red-500">*</span></label>
-                                                    <input type="number" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" placeholder="e.g. 5000000" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                                                    <label className="text-sm font-semibold text-gray-600">
+                                                        Asking Price (₹){" "}
+                                                        <span className="text-red-500">*</span>
+                                                    </label>
+
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        className="w-full rounded-xl border border-gray-200 px-4 py-3.5 outline-none transition-all focus:ring-4 focus:ring-primary/10"
+                                                        placeholder="e.g. 5000000"
+                                                        value={form.price}
+                                                        onChange={(event) =>
+                                                            setForm((current) => ({
+                                                                ...current,
+                                                                price: event.target.value,
+                                                            }))
+                                                        }
+                                                    />
                                                 </div>
+
+                                                <fieldset className="space-y-3">
+                                                    <legend className="text-sm font-semibold text-gray-600">
+                                                        Is this price negotiable?
+                                                    </legend>
+
+                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        {[
+                                                            {
+                                                                value: true,
+                                                                label: "Negotiable",
+                                                                description: "Buyers can submit an offer.",
+                                                            },
+                                                            {
+                                                                value: false,
+                                                                label: "Fixed price",
+                                                                description: "The listed amount is final.",
+                                                            },
+                                                        ].map((option) => {
+                                                            const isSelected =
+                                                                form.negotiable === option.value;
+
+                                                            return (
+                                                                <button
+                                                                    key={String(option.value)}
+                                                                    type="button"
+                                                                    aria-pressed={isSelected}
+                                                                    onClick={() =>
+                                                                        setForm((current) => ({
+                                                                            ...current,
+                                                                            negotiable: option.value,
+                                                                        }))
+                                                                    }
+                                                                    className={[
+                                                                        "rounded-2xl border-2 p-4 text-left transition-all",
+                                                                        isSelected
+                                                                            ? "border-primary bg-primary/5 shadow-sm"
+                                                                            : "border-gray-100 bg-white hover:border-primary/30",
+                                                                    ].join(" ")}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                <span
+                                    className={[
+                                        "flex h-5 w-5 items-center justify-center rounded-full border-2",
+                                        isSelected
+                                            ? "border-primary"
+                                            : "border-gray-300",
+                                    ].join(" ")}
+                                >
+                                    {isSelected && (
+                                        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                                    )}
+                                </span>
+
+                                                                        <span className="font-black text-gray-900">
+                                    {option.label}
+                                </span>
+                                                                    </div>
+
+                                                                    <p className="mt-2 pl-8 text-xs font-medium text-gray-500">
+                                                                        {option.description}
+                                                                    </p>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </fieldset>
                                             </div>
                                         )}
                                         {currentStep === 4 && (
@@ -1033,13 +1118,23 @@ export default function PostPropertyPage() {
                                                     <div className="space-y-6">
                                                         <div className="flex items-center justify-between">
                                                             <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Pricing & Specs</h3>
-                                                            <button type="button" onClick={() => setCurrentStep(2)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
+                                                            <button type="button" onClick={() => setCurrentStep(3)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
                                                         </div>
                                                         <div className="bg-gray-50/50 rounded-3xl p-6 space-y-4 border border-gray-100">
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div>
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Asking Price</p>
-                                                                    <p className="text-xl font-black text-gray-900">₹ {Number(form.price).toLocaleString()}</p>
+                                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                                                                        Asking Price
+                                                                    </p>
+
+                                                                    <p className="text-xl font-black text-gray-900">
+                                                                        ₹ {Number(form.price).toLocaleString("en-IN")}
+                                                                    </p>
+
+                                                                    <PriceNegotiabilityBadge
+                                                                        negotiable={form.negotiable}
+                                                                        className="mt-2"
+                                                                    />
                                                                 </div>
                                                                 <div>
                                                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Dimensions</p>

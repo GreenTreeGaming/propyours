@@ -36,6 +36,7 @@ import {
     Area
 } from 'recharts';
 import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 
 function formatBoostResetDate(
     value: string
@@ -481,7 +482,16 @@ export default function ManagePropertiesPage() {
                                         </div>
 
                                         <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                                            <p className="text-xl font-black text-primary">₹{property.price?.toLocaleString()}</p>
+                                            <div>
+                                                <p className="text-xl font-black text-primary">
+                                                    ₹{property.price?.toLocaleString("en-IN")}
+                                                </p>
+
+                                                <PriceNegotiabilityBadge
+                                                    negotiable={property.negotiable}
+                                                    className="mt-2"
+                                                />
+                                            </div>
                                             <div className="flex items-center gap-4 text-gray-400">
                                                 <div className="flex items-center gap-1">
                                                     <Bed size={16} />

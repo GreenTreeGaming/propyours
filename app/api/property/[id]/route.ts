@@ -99,6 +99,20 @@ export async function PUT(
         const { id } = await params;
         const body = await req.json();
 
+        if (
+            "negotiable" in body &&
+            typeof body.negotiable !== "boolean"
+        ) {
+            return NextResponse.json(
+                {
+                    error: "Negotiable must be either true or false.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
         const property = await Property.findById(id);
 
         if (!property) {
@@ -196,6 +210,7 @@ export async function PUT(
             ownershipType: body.ownershipType,
             price: body.price,
             priceType: body.priceType,
+            negotiable: body.negotiable,
             bedrooms: body.bedrooms,
             bathrooms: body.bathrooms,
             floors: body.floors,

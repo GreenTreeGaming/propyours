@@ -44,6 +44,22 @@ export default function ComparePage() {
 
     const attributes: Attribute[] = [
         { label: "Price", key: "price", icon: CircleDollarSign, format: (v: any) => `₹${v.toLocaleString()}` },
+        {
+            label: "Price flexibility",
+            key: "negotiable",
+            icon: CircleDollarSign,
+            format: (value: unknown) => {
+                if (value === true) {
+                    return "Negotiable";
+                }
+
+                if (value === false) {
+                    return "Fixed price";
+                }
+
+                return "N/A";
+            },
+        },
         { label: "Location", key: "locality", icon: MapPin, format: (v: any, p: any) => `${v}, ${p.city}` },
         { label: "Property Type", key: "propertyType", icon: Home },
         { label: "Total Area", key: "size", icon: Maximize, format: (v: any, p: any) => `${v} ${p.sizeUnit}` },

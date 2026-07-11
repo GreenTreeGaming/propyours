@@ -102,6 +102,26 @@ export async function POST(req: Request) {
 
         const body = await req.json();
 
+        if (
+            body.negotiable !== undefined &&
+            typeof body.negotiable !== "boolean"
+        ) {
+            return NextResponse.json(
+                {
+                    error: "Negotiable must be either true or false.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+// Keep compatibility with older clients that do not send this field.
+        const negotiable =
+            typeof body.negotiable === "boolean"
+                ? body.negotiable
+                : true;
+
         const images = cleanStringArray(body.images);
 
         if (images.length > limits.maxImages) {
@@ -210,6 +230,7 @@ export async function POST(req: Request) {
             ownershipType: body.ownershipType,
             price: body.price,
             priceType: body.priceType,
+            negotiable,
             bedrooms: body.bedrooms,
             bathrooms: body.bathrooms,
             floors: body.floors,

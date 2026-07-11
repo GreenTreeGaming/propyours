@@ -26,6 +26,7 @@ import {
   TAMIL_NADU_CITIES,
   TAMIL_NADU_LOCATIONS,
 } from "@/lib/locations";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 
 interface Property {
   _id: string;
@@ -37,6 +38,7 @@ interface Property {
   bedrooms: number;
   images?: string[];
   promotedUntil?: string;
+  negotiable?: boolean;
   planSnapshot?: {
     homepageFeatured?: boolean;
     badgeLevel?: "premium" | "verified" | string;
@@ -1212,6 +1214,11 @@ export default function HomePage() {
                                 {formatPrice(spotlightProperty.price)}
                               </p>
 
+                              <PriceNegotiabilityBadge
+                                  negotiable={spotlightProperty.negotiable}
+                                  className="mt-2"
+                              />
+
                               <p className="mt-2 text-sm text-slate-300">
                                 {spotlightProperty.bedrooms === 0
                                     ? spotlightProperty.propertyType
@@ -1292,6 +1299,11 @@ export default function HomePage() {
                                         <p className="text-lg font-black text-white">
                                           {formatPrice(property.price)}
                                         </p>
+
+                                        <PriceNegotiabilityBadge
+                                            negotiable={property.negotiable}
+                                            className="mt-1.5"
+                                        />
 
                                         <p className="mt-1 truncate text-xs text-slate-400">
                                           {property.bedrooms === 0

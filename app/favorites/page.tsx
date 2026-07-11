@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, MapPin } from "lucide-react";
 import { getStoredUser } from "@/lib/browser-user";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 
 type FavoriteProperty = {
     _id: string;
@@ -15,6 +16,7 @@ type FavoriteProperty = {
     propertyType: string;
     purpose: string;
     price: number;
+    negotiable?: boolean;
     bedrooms?: number;
     size: number;
     images?: string[];
@@ -202,6 +204,10 @@ export default function FavoritesPage() {
                                                 <p className="text-2xl font-black text-primary">
                                                     ₹{property.price?.toLocaleString()}
                                                 </p>
+                                                <PriceNegotiabilityBadge
+                                                    negotiable={property.negotiable}
+                                                    className="mt-2"
+                                                />
                                             </div>
                                             <div className="text-right text-sm font-semibold text-gray-500">
                                                 <p>{property.bedrooms === 0 ? "Studio" : `${property.bedrooms || 0} BHK`}</p>

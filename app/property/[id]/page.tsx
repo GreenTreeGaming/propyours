@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import {
     Bed,
     Bath,
@@ -116,6 +117,7 @@ export default function PropertyDetailsPage() {
                 address: property.address,
                 images: property.images || [],
                 price: property.price || 0,
+                negotiable: property.negotiable,
                 size: property.size || 0,
                 sizeUnit: property.sizeUnit || "sqft",
                 propertyType: property.propertyType || "Residential",
@@ -583,11 +585,9 @@ export default function PropertyDetailsPage() {
                                             ₹{property.price?.toLocaleString()}
                                         </h2>
 
-                                        {property.negotiable && (
-                                            <span className="inline-flex items-center text-[11px] font-bold text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-full">
-                                                ★ NEGOTIABLE
-                                            </span>
-                                        )}
+                                        <PriceNegotiabilityBadge
+                                            negotiable={property.negotiable}
+                                        />
                                     </div>
                                 </div>
 

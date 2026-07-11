@@ -7,6 +7,7 @@ type CompareProperty = {
     address: string;
     images?: string[];
     price: number;
+    negotiable?: boolean;
     size: number;
     sizeUnit: string;
     propertyType: string;

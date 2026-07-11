@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Image from "next/image";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import Link from "next/link";
 import {
   usePathname,
@@ -397,11 +398,9 @@ function PropertyCard({
               </span>
               </div>
 
-              {property.negotiable ? (
-                  <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700">
-                Negotiable
-              </span>
-              ) : null}
+              <PriceNegotiabilityBadge
+                  negotiable={property.negotiable}
+              />
             </div>
 
             <h2
