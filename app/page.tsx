@@ -2,648 +2,1677 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Search,
-  MapPin,
-  Building2,
-  Home as HomeIcon,
-  Store,
-  Armchair,
-  ChevronRight,
-  CheckCircle,
-  Layers,
-  HeadphonesIcon,
-  ChevronDown,
   ArrowRight,
-  Menu,
-  X
+  BadgeCheck,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  Eye,
+  PhoneCall,
+  Scale,
+  Home,
+  Landmark,
+  MapPin,
+  Search,
+  ShieldCheck,
+  Store,
+  Trees,
 } from "lucide-react";
-import { TAMIL_NADU_LOCATIONS, TAMIL_NADU_CITIES } from "@/lib/locations";
+import {
+  TAMIL_NADU_CITIES,
+  TAMIL_NADU_LOCATIONS,
+} from "@/lib/locations";
 
-export default function Home() {
-  const [activeTab, setActiveTab] = useState("Buy");
-  const [activePropertyTab, setActivePropertyTab] = useState("Featured");
-
-  // Search State
-  const [city, setCity] = useState("Chennai");
-  const [location, setLocation] = useState("");
-  const [propertyType, setPropertyType] = useState("");
-  const [bhk, setBhk] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
-  const cities = TAMIL_NADU_CITIES;
-  const locations = TAMIL_NADU_LOCATIONS[city as keyof typeof TAMIL_NADU_LOCATIONS] || [];
-  const propertyTypes = [
-    "Apartment", "Independent House", "Independent Floor",
-    "Duplex", "Villa", "Penthouse", "Plot",
-    "Farm House", "Agricultural Land"
-  ];
-  const bhkOptions = ["1", "2", "3", "4+", "Studio"];
-  const priceRanges = ["Under 50L", "50L - 1Cr", "1Cr - 2Cr", "2Cr - 5Cr", "Above 5Cr", "10Cr+"];
-
-  const toggleDropdown = (name: string) => {
-    setOpenDropdown(openDropdown === name ? null : name);
+interface Property {
+  _id: string;
+  propertyType: string;
+  address: string;
+  city: string;
+  locality?: string;
+  price: number;
+  bedrooms: number;
+  images?: string[];
+  promotedUntil?: string;
+  planSnapshot?: {
+    homepageFeatured?: boolean;
+    badgeLevel?: "premium" | "verified" | string;
+    rankingLevel?: "priority" | "top" | string;
   };
+}
 
+type SearchMode = "Buy" | "Rent" | "Commercial";
+
+type PropertySearchParams = {
+  city?: string;
+  location?: string;
+  type?: string;
+  maxPrice?: string;
+  minPrice?: string;
+  bhk?: string;
+  purpose?: string;
+  sort?: string;
+  filter?: string;
+};
+
+const PROPERTY_TYPES = [
+  "All Property Types",
+  "Apartment",
+  "Independent House",
+  "Independent Floor",
+  "Villa",
+  "Duplex",
+  "Penthouse",
+  "Plot",
+  "Agricultural Land",
+  "Farm House",
+];
+
+const BUDGETS = [
+  { label: "Any Budget", value: "" },
+  { label: "Under ₹25 Lakh", value: "2500000" },
+  { label: "Under ₹50 Lakh", value: "5000000" },
+  { label: "Under ₹1 Crore", value: "10000000" },
+  { label: "Under ₹2 Crore", value: "20000000" },
+  { label: "Under ₹5 Crore", value: "50000000" },
+];
+
+const POPULAR_SEARCHES: Array<{
+  label: string;
+  params: PropertySearchParams;
+}> = [
+  {
+    label: "Apartments in Chennai",
+    params: {
+      city: "Chennai",
+      type: "Apartment",
+    },
+  },
+  {
+    label: "Plots in Coimbatore",
+    params: {
+      city: "Coimbatore",
+      type: "Plot",
+    },
+  },
+  {
+    label: "Villas under ₹1 Cr",
+    params: {
+      type: "Villa",
+      maxPrice: "10000000",
+    },
+  },
+  {
+    label: "Agricultural land",
+    params: {
+      type: "Agricultural Land",
+    },
+  },
+];
+
+const PROPERTY_CATEGORIES = [
+  {
+    title: "Apartments",
+    description: "Flats, studios and gated communities",
+    icon: Building2,
+    type: "Apartment",
+  },
+  {
+    title: "Independent homes",
+    description: "Houses, villas, duplexes and floors",
+    icon: Home,
+    type: "Independent House",
+  },
+  {
+    title: "Plots & land",
+    description: "Residential plots and farm land",
+    icon: Trees,
+    type: "Plot",
+  },
+  {
+    title: "Commercial",
+    description: "Shops, offices and business spaces",
+    icon: Store,
+    type: "Commercial",
+  },
+];
+
+const TRUST_POINTS = [
+  {
+    title: "Clear property information",
+    description:
+        "See the price, location, property type and essential details before you enquire.",
+    icon: CheckCircle2,
+  },
+  {
+    title: "Verified-first discovery",
+    description:
+        "Promoted and verified listings are clearly identified, not hidden behind confusing labels.",
+    icon: BadgeCheck,
+  },
+  {
+    title: "Built for Tamil Nadu",
+    description:
+        "Search cities and localities using familiar names across the state.",
+    icon: MapPin,
+  },
+];
+
+function formatPrice(price: number): string {
+  if (price >= 10_000_000) {
+    return `₹${(price / 10_000_000).toFixed(price % 10_000_000 === 0 ? 0 : 2)} Cr`;
+  }
+
+  if (price >= 100_000) {
+    return `₹${(price / 100_000).toFixed(price % 100_000 === 0 ? 0 : 1)} L`;
+  }
+
+  return `₹${price.toLocaleString("en-IN")}`;
+}
+
+function getPropertyBadge(property: Property): string | null {
+  if (
+      property.promotedUntil &&
+      new Date(property.promotedUntil).getTime() > Date.now()
+  ) {
+    return "Featured";
+  }
+
+  if (property.planSnapshot?.badgeLevel === "premium") {
+    return "Premium";
+  }
+
+  if (property.planSnapshot?.badgeLevel === "verified") {
+    return "Verified";
+  }
+
+  if (property.planSnapshot?.homepageFeatured) {
+    return "Featured";
+  }
+
+  return null;
+}
+
+export default function HomePage() {
   const router = useRouter();
 
-  const handleSearch = () => {
-    const params = new URLSearchParams();
-    if (city) params.append("city", city);
-    if (location) params.append("location", location);
-    if (propertyType) params.append("type", propertyType);
-    if (propertyType === "Apartment" && bhk) params.append("bhk", bhk);
-    if (maxPrice) {
-      // Map simplified price ranges to actual values if needed, 
-      // but for now we'll just pass the string or try to parse it.
-      // Under 50L -> 5000000
-      let maxVal = "";
-      if (maxPrice.includes("50L")) maxVal = "5000000";
-      else if (maxPrice.includes("1Cr")) maxVal = "10000000";
-      else if (maxPrice.includes("2Cr")) maxVal = "20000000";
-      else if (maxPrice.includes("5Cr")) maxVal = "50000000";
-
-      if (maxVal) params.append("maxPrice", maxVal);
-    }
-
-    router.push(`/buy?${params.toString()}`);
-  };
-
-  const propertyTabs = ["Featured", "New Launch", "Popular", "Affordable"];
-
-  const [realProperties, setRealProperties] = useState<any[]>([]);
+  const [mode, setMode] = useState<SearchMode>("Buy");
+  const [city, setCity] = useState("Chennai");
+  const [locality, setLocality] = useState("");
+  const [propertyType, setPropertyType] = useState("All Property Types");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const localities = useMemo(
+      () =>
+          TAMIL_NADU_LOCATIONS[
+              city as keyof typeof TAMIL_NADU_LOCATIONS
+              ] ?? [],
+      [city],
+  );
+
   useEffect(() => {
-    const fetchProperties = async () => {
+    const controller = new AbortController();
+
+    async function loadFeaturedProperties() {
       try {
-        const response = await fetch("/api/property/homepage-featured");
-        const data = await response.json();
+        const response = await fetch("/api/property/homepage-featured", {
+          signal: controller.signal,
+        });
 
-        if (Array.isArray(data)) {
-          setRealProperties(data);
+        if (!response.ok) {
+          throw new Error(
+              `Featured properties request failed with ${response.status}`,
+          );
         }
+
+        const payload: unknown = await response.json();
+
+        if (!Array.isArray(payload)) {
+          throw new Error("Featured properties response was invalid.");
+        }
+
+        setFeaturedProperties(payload as Property[]);
       } catch (error) {
-        console.error("Error fetching properties:", error);
+        if (
+            error instanceof DOMException &&
+            error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error("Unable to load featured properties:", error);
+        setFeaturedProperties([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
-    };
-    fetchProperties();
-  }, []);
-
-  const formatPrice = (price: number) => {
-    if (price >= 10000000) return `₹ ${(price / 10000000).toFixed(2)} Cr`;
-    if (price >= 100000) return `₹ ${(price / 100000).toFixed(2)} L`;
-    return `₹ ${price.toLocaleString()}`;
-  };
-
-  const getListingBadges = (property: any) => {
-    const badges: string[] = [];
-
-    if (property.planSnapshot?.homepageFeatured) {
-      badges.push("Homepage Featured");
     }
 
-    if (property.promotedUntil && new Date(property.promotedUntil).getTime() > Date.now()) {
-      badges.push("Promoted");
+    void loadFeaturedProperties();
+
+    return () => controller.abort();
+  }, []);
+
+  function navigateToResults(params: PropertySearchParams) {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (typeof value === "string" && value.length > 0) {
+        searchParams.set(key, value);
+      }
+    });
+
+    const query = searchParams.toString();
+    router.push(query ? `/buy?${query}` : "/buy");
+  }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    navigateToResults({
+      city,
+      location: locality,
+      type:
+          propertyType === "All Property Types"
+              ? ""
+              : propertyType,
+      maxPrice,
+      purpose:
+          mode === "Buy"
+              ? "sale"
+              : mode === "Rent"
+                  ? "rent"
+                  : "commercial",
+    });
+  }
+
+  function searchByCategory(type: string) {
+    if (type === "Commercial") {
+      navigateToResults({ purpose: "commercial", city });
+      return;
+    }
+
+    navigateToResults({ type, city });
+  }
+
+  const curatedProperties = useMemo(
+      () => curateHomepageProperties(featuredProperties, 5),
+      [featuredProperties],
+  );
+
+  const spotlightProperty = curatedProperties[0];
+  const supportingProperties = curatedProperties.slice(1, 5);
+
+  function getHomepagePriority(property: Property): number {
+    let score = 0;
+
+    if (property.planSnapshot?.homepageFeatured) {
+      score += 50;
+    }
+
+    if (
+        property.promotedUntil &&
+        new Date(property.promotedUntil).getTime() > Date.now()
+    ) {
+      score += 40;
     }
 
     if (property.planSnapshot?.badgeLevel === "premium") {
-      badges.push("Premium");
+      score += 30;
     } else if (property.planSnapshot?.badgeLevel === "verified") {
-      badges.push("Verified Owner");
+      score += 20;
     }
 
     if (property.planSnapshot?.rankingLevel === "priority") {
-      badges.push("Priority");
+      score += 15;
     } else if (property.planSnapshot?.rankingLevel === "top") {
-      badges.push("Top Ranked");
+      score += 10;
     }
 
-    return badges;
-  };
+    if (property.images?.[0]) {
+      score += 5;
+    }
+
+    return score;
+  }
+
+  function curateHomepageProperties(
+      properties: Property[],
+      limit = 5,
+  ): Property[] {
+    const sortedProperties = [...properties].sort(
+        (first, second) =>
+            getHomepagePriority(second) - getHomepagePriority(first),
+    );
+
+    const selected: Property[] = [];
+    const selectedIds = new Set<string>();
+    const selectedTypes = new Set<string>();
+
+    // Prefer variety across property types.
+    for (const property of sortedProperties) {
+      if (selected.length >= limit) {
+        break;
+      }
+
+      if (selectedTypes.has(property.propertyType)) {
+        continue;
+      }
+
+      selected.push(property);
+      selectedIds.add(property._id);
+      selectedTypes.add(property.propertyType);
+    }
+
+    // Fill any remaining slots with the next highest-priority properties.
+    for (const property of sortedProperties) {
+      if (selected.length >= limit) {
+        break;
+      }
+
+      if (selectedIds.has(property._id)) {
+        continue;
+      }
+
+      selected.push(property);
+      selectedIds.add(property._id);
+    }
+
+    return selected;
+  }
 
   return (
-    <main className="flex-1 bg-white pt-24 font-body">
-      {/* Hero Section */}
-      <section className="relative bg-[#fafafa] z-[60]">
-        {/* Abstract Background Curve */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          <svg className="absolute top-0 right-0 h-full w-[60%] text-[#f0f5f5]" preserveAspectRatio="none" viewBox="0 0 100 100" fill="currentColor">
-            <path d="M0,0 C40,40 20,100 100,100 L100,0 Z"></path>
-          </svg>
-        </div>
+      <main className="min-h-screen bg-white pt-[72px] text-slate-950">
+        <section className="relative overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#f5faf9_0%,#ffffff_78%)]">
+          {/* Background decoration */}
+          <div
+              className="pointer-events-none absolute -right-48 -top-64 h-[620px] w-[620px] rounded-full bg-teal-100/60 blur-3xl"
+              aria-hidden="true"
+          />
+          <div
+              className="pointer-events-none absolute -left-64 top-48 h-[520px] w-[520px] rounded-full bg-amber-50 blur-3xl"
+              aria-hidden="true"
+          />
 
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-16 lg:pt-20 pb-0 relative z-30 flex flex-col lg:flex-row items-center">
+          <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-12 sm:px-6 lg:px-8 lg:pb-20 lg:pt-16">
+            {/* Main hero content */}
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.86fr)] lg:gap-16">
+              {/* Copy */}
+              <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="max-w-2xl"
+              >
+                <h1 className="mt-6 font-heading text-4xl font-black leading-[1.06] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-[3.8rem]">
+                  Find the right property.
+                  <span className="mt-1 block text-primary">
+            Know what you are choosing.
+          </span>
+                </h1>
 
-          <div className="w-full lg:w-3/5 pr-0 lg:pr-10">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-4 font-heading"
-            >
-              Find Your <span className="text-primary">Dream Home</span>
-            </motion.h1>
+                <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+                  Discover apartments, independent houses, villas, plots,
+                  agricultural land and commercial spaces with clear information
+                  before you enquire.
+                </p>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-lg text-gray-600 mb-8 max-w-lg"
-            >
-              Explore verified properties, connect with trusted builders, and design your perfect space.
-            </motion.p>
+                <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
+                  {[
+                    "Multiple property types",
+                    "City and locality search",
+                    "Clear listing information",
+                  ].map((item) => (
+                      <div
+                          key={item}
+                          className="flex items-center gap-2 text-sm font-semibold text-slate-600"
+                      >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <CheckCircle2 size={13} aria-hidden="true" />
+              </span>
+                        {item}
+                      </div>
+                  ))}
+                </div>
+              </motion.div>
 
-            {/* Search Bar Container */}
+              {/* Image */}
+              <motion.div
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.08 }}
+                  className="mx-auto w-full max-w-[540px] lg:mx-0 lg:justify-self-end"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border-[6px] border-white bg-slate-200 shadow-[0_28px_75px_rgba(15,23,42,0.18)]">
+                  <Image
+                      src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=86&w=1200"
+                      alt="Modern property interior"
+                      fill
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 540px"
+                      className="object-cover"
+                  />
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
+
+                  <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/90 px-3.5 py-2 text-xs font-bold text-slate-900 shadow-md backdrop-blur">
+                    <ShieldCheck
+                        size={15}
+                        className="text-emerald-600"
+                        aria-hidden="true"
+                    />
+                    Clear property details
+                  </div>
+
+                  <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-7">
+                    <p className="text-sm font-bold text-teal-200">
+                      More choices. Better clarity.
+                    </p>
+
+                    <p className="mt-2 max-w-md text-2xl font-black leading-tight">
+                      Property options for every plan and every stage of life.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Full-width search panel */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="relative z-[100] mt-12 bg-white p-3 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 flex flex-col md:flex-row items-center gap-2 max-w-4xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.14 }}
+                className="relative z-20 mt-10"
             >
-              <div className="flex-1 min-w-0 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-200">
-
-                {/* Buy Dropdown */}
-                <div
-                  className="px-3 py-2 flex items-center justify-between min-w-[80px] cursor-pointer hover:bg-gray-50 rounded-l-xl relative group"
-                  onClick={() => toggleDropdown('buy')}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <HomeIcon size={14} className="text-gray-400" />
-                    <span className="font-bold text-gray-800 text-xs">{activeTab}</span>
-                  </div>
-                  <ChevronDown size={12} className={`text-gray-500 transition-transform ${openDropdown === 'buy' ? 'rotate-180' : ''}`} />
-
-                  <AnimatePresence>
-                    {openDropdown === 'buy' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 mt-2 w-48 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60] overflow-hidden"
-                      >
-                          {["Buy", "Rent", "Sell", "PG/CO-Living"].map(tab => (
-                            <div key={tab} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-sm font-bold transition-colors cursor-pointer" onClick={(e) => { 
-                              e.stopPropagation(); 
-                              if (tab === "Sell") {
-                                router.push("/sell");
-                              } else {
-                                setActiveTab(tab); 
-                              }
-                              setOpenDropdown(null); 
-                            }}>{tab}</div>
-                          ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* City */}
-                <div
-                  className="px-3 py-2 flex-1 min-w-0 md:basis-[100px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
-                  onClick={() => toggleDropdown('city')}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <MapPin size={14} className="text-primary flex-shrink-0" />
-                    <span className={`text-xs truncate ${city ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                      {city || "City"}
-                    </span>
-                  </div>
-                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'city' ? 'rotate-180' : ''}`} />
-
-                  <AnimatePresence>
-                    {openDropdown === 'city' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 mt-2 w-48 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60]"
-                      >
-                        {cities.map(c => (
-                          <div
-                            key={c}
-                            className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold transition-colors cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCity(c);
-                              setLocation("");
-                              setOpenDropdown(null);
-                            }}
-                          >
-                            {c}
-                          </div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Location */}
-                <div
-                  className="px-3 py-2 flex-1 min-w-0 md:basis-[120px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
-                  onClick={() => toggleDropdown('location')}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <MapPin size={14} className="text-primary flex-shrink-0" />
-                    <span className={`text-xs truncate ${location ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                      {location || "Location"}
-                    </span>
-                  </div>
-                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'location' ? 'rotate-180' : ''}`} />
-
-                  <AnimatePresence>
-                    {openDropdown === 'location' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 mt-2 w-72 bg-white shadow-2xl rounded-2xl border border-gray-100 py-3 z-[60]"
-                      >
-                        <div className="px-4 pb-3 border-b border-gray-50 mb-2">
-                          <div className="relative">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                              type="text"
-                              placeholder="Search areas..."
-                              className="w-full bg-gray-50 rounded-xl pl-9 pr-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-                        </div>
-                        <div className="max-h-64 overflow-y-auto custom-scrollbar px-2 space-y-1">
-                          {locations.map(loc => (
-                            <div
-                              key={loc}
-                              className="px-4 py-2.5 hover:bg-primary/5 hover:text-primary text-xs font-black rounded-xl transition-all cursor-pointer flex items-center justify-between group"
-                              onClick={(e) => { e.stopPropagation(); setLocation(loc); setOpenDropdown(null); }}
+              <form
+                  onSubmit={handleSearch}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_22px_65px_rgba(15,23,42,0.12)]"
+              >
+                {/* Search modes */}
+                <div className="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                  <div className="inline-flex w-fit rounded-xl bg-slate-100 p-1">
+                    {(["Buy", "Rent", "Commercial"] as SearchMode[]).map(
+                        (item) => (
+                            <button
+                                key={item}
+                                type="button"
+                                onClick={() => setMode(item)}
+                                className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
+                                    mode === item
+                                        ? "bg-white text-primary shadow-sm"
+                                        : "text-slate-500 hover:text-slate-900"
+                                }`}
                             >
-                              {loc}
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          ))}
-                        </div>
-                      </motion.div>
+                              {item}
+                            </button>
+                        ),
                     )}
-                  </AnimatePresence>
+                  </div>
+
+                  <p className="text-sm text-slate-500">
+                    Search properties available for{" "}
+                    <span className="font-bold text-slate-800">
+              {mode.toLowerCase()}
+            </span>
+                  </p>
                 </div>
 
-                {/* Property Type */}
-                <div
-                  className="px-3 py-2 flex-1 min-w-0 md:basis-[120px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
-                  onClick={() => toggleDropdown('type')}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <Building2 size={14} className="text-primary flex-shrink-0" />
-                    <span className={`text-xs truncate ${propertyType ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                      {propertyType || "Type"}
-                    </span>
-                  </div>
-                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'type' ? 'rotate-180' : ''}`} />
+                {/* Filters */}
+                <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-12 lg:items-end">
+                  {/* City */}
+                  <label className="min-w-0 lg:col-span-2">
+            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              City
+            </span>
 
-                  <AnimatePresence>
-                    {openDropdown === 'type' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 mt-2 w-64 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60] max-h-64 overflow-y-auto"
-                      >
-                        {propertyTypes.map(type => (
-                          <div key={type} className="px-5 py-3 hover:bg-primary/5 hover:text-primary text-xs font-black transition-colors cursor-pointer" onClick={(e) => {
-                            e.stopPropagation();
-                            setPropertyType(type);
-                            if (type !== "Apartment") setBhk("");
-                            setOpenDropdown(null);
-                          }}>{type}</div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                    <span className="relative block">
+              <MapPin
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary"
+                  aria-hidden="true"
+              />
 
-                {/* BHK (Only visible if Apartment is selected) */}
-                {propertyType === "Apartment" && (
-                  <div
-                    className="px-3 py-2 flex-1 min-w-0 md:basis-[80px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
-                    onClick={() => toggleDropdown('bhk')}
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className={`text-xs truncate ${bhk ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                        {bhk || "BHK"}
-                      </span>
-                    </div>
-                    <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'bhk' ? 'rotate-180' : ''}`} />
+              <select
+                  value={city}
+                  onChange={(event) => {
+                    setCity(event.target.value);
+                    setLocality("");
+                  }}
+                  className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                  aria-label="Select city"
+              >
+                {TAMIL_NADU_CITIES.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                ))}
+              </select>
 
-                    <AnimatePresence>
-                      {openDropdown === 'bhk' && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                          className="absolute top-full left-0 mt-2 w-32 bg-white shadow-2xl rounded-2xl border border-gray-100 py-2 z-[60]"
-                        >
-                          {bhkOptions.map(option => (
-                            <div key={option} className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold transition-colors cursor-pointer" onClick={(e) => { e.stopPropagation(); setBhk(option); setOpenDropdown(null); }}>{option}</div>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
+              <ChevronRight
+                  size={15}
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400"
+                  aria-hidden="true"
+              />
+            </span>
+                  </label>
 
-                {/* Max Price */}
-                <div
-                  className="px-3 py-2 flex-1 min-w-0 md:basis-[100px] flex items-center justify-between cursor-pointer hover:bg-gray-50 relative"
-                  onClick={() => toggleDropdown('price')}
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-primary font-bold text-sm leading-none flex-shrink-0">₹</span>
-                    <span className={`text-xs truncate ${maxPrice ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                      {maxPrice || "Max Price"}
-                    </span>
-                  </div>
-                  <ChevronDown size={12} className={`text-gray-400 transition-transform ${openDropdown === 'price' ? 'rotate-180' : ''}`} />
+                  {/* Locality */}
+                  <label className="min-w-0 lg:col-span-3">
+            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              Locality
+            </span>
 
-                  <AnimatePresence>
-                    {openDropdown === 'price' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                        className="absolute top-full left-0 mt-2 w-full bg-white shadow-2xl rounded-xl border border-gray-100 py-2 z-[60]"
-                      >
-                        {priceRanges.map(price => (
-                          <div key={price} className="px-4 py-2 hover:bg-primary/5 hover:text-primary text-xs font-bold cursor-pointer" onClick={(e) => { e.stopPropagation(); setMaxPrice(price); setOpenDropdown(null); }}>{price}</div>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                    <span className="relative block">
+              <Search
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary"
+                  aria-hidden="true"
+              />
 
-                {/* Search Button */}
-                <div className="p-1.5 flex items-stretch flex-shrink-0">
+              <input
+                  value={locality}
+                  onChange={(event) => setLocality(event.target.value)}
+                  list="homepage-localities"
+                  placeholder={`Search in ${city}`}
+                  className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                  aria-label="Search locality"
+              />
+
+              <datalist id="homepage-localities">
+                {localities.map((item) => (
+                    <option key={item} value={item} />
+                ))}
+              </datalist>
+            </span>
+                  </label>
+
+                  {/* Property type */}
+                  <label className="min-w-0 lg:col-span-3">
+            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              Property type
+            </span>
+
+                    <span className="relative block">
+              <Building2
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary"
+                  aria-hidden="true"
+              />
+
+              <select
+                  value={propertyType}
+                  onChange={(event) =>
+                      setPropertyType(event.target.value)
+                  }
+                  className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                  aria-label="Select property type"
+              >
+                {PROPERTY_TYPES.map((item) => (
+                    <option key={item} value={item}>
+                      {item === "All Property Types"
+                          ? "Any property"
+                          : item}
+                    </option>
+                ))}
+              </select>
+
+              <ChevronRight
+                  size={15}
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400"
+                  aria-hidden="true"
+              />
+            </span>
+                  </label>
+
+                  {/* Budget */}
+                  <label className="min-w-0 lg:col-span-2">
+            <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+              Max budget
+            </span>
+
+                    <span className="relative block">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base font-black text-primary">
+                ₹
+              </span>
+
+              <select
+                  value={maxPrice}
+                  onChange={(event) =>
+                      setMaxPrice(event.target.value)
+                  }
+                  className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                  aria-label="Select maximum budget"
+              >
+                {BUDGETS.map((item) => (
+                    <option key={item.label} value={item.value}>
+                      {item.value
+                          ? item.label
+                              .replace("Under ", "Up to ")
+                              .replace("Lakh", "L")
+                              .replace("Crore", "Cr")
+                          : "Any budget"}
+                    </option>
+                ))}
+              </select>
+
+              <ChevronRight
+                  size={15}
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400"
+                  aria-hidden="true"
+              />
+            </span>
+                  </label>
+
+                  {/* Search */}
                   <button
-                    className="w-full md:w-auto bg-primary hover:bg-primary-dark text-white rounded-xl px-7 py-2 text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm shadow-primary/20"
-                    onClick={handleSearch}
+                      type="submit"
+                      className="flex h-14 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark focus:outline-none focus:ring-4 focus:ring-primary/20 sm:col-span-2 lg:col-span-2"
                   >
-                    <Search size={16} />
+                    <Search size={18} aria-hidden="true" />
                     Search
+                    <ArrowRight size={17} aria-hidden="true" />
                   </button>
                 </div>
+              </form>
+
+              {/* Popular searches */}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+          Popular
+        </span>
+
+                {POPULAR_SEARCHES.map((item) => (
+                    <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => navigateToResults(item.params)}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-primary hover:text-primary"
+                    >
+                      {item.label}
+                    </button>
+                ))}
               </div>
             </motion.div>
-
-            {/* Popular Searches */}
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="flex items-center gap-3 mt-6 flex-wrap"
-            >
-              <span className="text-sm text-gray-500">Popular:</span>
-              {["ADYAR", "OMR", "Apartments"].map((tag) => (
-                <span
-                  key={tag}
-                  className="text-[10px] uppercase font-bold tracking-wider bg-white border border-gray-200 text-gray-400 px-3 py-1.5 rounded-full hover:border-primary hover:text-primary cursor-pointer transition-colors shadow-sm"
-                  onClick={() => tag === "Apartments" ? setPropertyType(tag) : setLocation(tag)}
-                >
-                  {tag}
-                </span>
-              ))}
-            </motion.div>
           </div>
+        </section>
 
-          {/* Hero Image */}
-          <div className="w-full lg:w-2/5 mt-12 lg:mt-0 relative h-[400px]">
-            <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 border-4 border-white">
-              <Image
-                src="https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&q=80&w=1000"
-                alt="Modern Living Room"
-                fill
-                className="object-cover"
-                priority
+        <section className="relative z-20 mx-auto -mt-8 max-w-7xl px-5 sm:px-6 lg:px-8">
+          <div className="rounded-[2rem] border border-slate-200/80 bg-white/95 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-4">
+            <div className="mb-3 flex flex-col gap-2 px-2 py-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
+                  Quick actions
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  Choose what you would like to do next.
+                </p>
+              </div>
+
+              <span className="hidden text-xs font-semibold text-slate-400 sm:block">
+        Simple tools for every property journey
+      </span>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+              {/* Buy */}
+              <Link
+                  href="/buy"
+                  className="group relative overflow-hidden rounded-2xl bg-slate-950 p-6 text-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(15,23,42,0.28)] lg:col-span-4"
+              >
+                <div
+                    className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-teal-400/20 blur-3xl"
+                    aria-hidden="true"
+                />
+
+                <div className="relative flex h-full min-h-[170px] flex-col justify-between">
+                  <div className="flex items-start justify-between gap-5">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+              <Home size={22} aria-hidden="true" />
+            </span>
+
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-teal-200">
+              Most popular
+            </span>
+                  </div>
+
+                  <div className="mt-8">
+                    <h3 className="text-xl font-black tracking-tight">
+                      Buy a property
+                    </h3>
+
+                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-300">
+                      Explore apartments, houses, plots, land and commercial
+                      properties for sale.
+                    </p>
+
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-teal-300">
+              Browse properties
+              <ArrowRight
+                  size={17}
+                  className="transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
               />
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Links Bar (Now inside Hero for better stacking) */}
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 mt-10 relative z-20 translate-y-12">
-          <div className="bg-white rounded-[1.5rem] shadow-lg border border-gray-100 p-2 md:p-3 flex flex-col md:flex-row justify-between divide-y md:divide-y-0 md:divide-x divide-gray-100">
-
-            <Link href="/buy" className="flex items-center gap-3 px-4 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
-              <div className="w-11 h-11 rounded-full bg-[#f0f7f7] flex items-center justify-center text-primary border border-primary/10 flex-shrink-0">
-                <HomeIcon size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">Buy a Home</h3>
-                <p className="text-[10px] text-gray-500">Explore verified properties</p>
-              </div>
-            </Link>
-
-            <Link href="/sell" className="flex items-center gap-3 px-4 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
-              <div className="w-11 h-11 rounded-full bg-[#f0f7f7] flex items-center justify-center text-primary border border-primary/10 flex-shrink-0">
-                <Store size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">Sell a Property</h3>
-                <p className="text-[10px] text-gray-500">List your property for free</p>
-              </div>
-            </Link>
-
-            <div className="flex items-center gap-3 px-6 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
-              <div className="w-11 h-11 rounded-full bg-[#f5f0fb] flex items-center justify-center text-[#8a5bd6] border border-[#8a5bd6]/10 flex-shrink-0">
-                <Armchair size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">Interior Designers</h3>
-                <p className="text-[10px] text-gray-500">Find top interior experts</p>
-              </div>
-            </div>
-
-            <Link href="/builders" className="flex items-center gap-3 px-6 py-3 md:py-1 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors flex-1">
-              <div className="w-11 h-11 rounded-full bg-[#fffcf0] flex items-center justify-center text-[#d19b33] border border-[#d19b33]/10 flex-shrink-0">
-                <Building2 size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-sm">Top Builders</h3>
-                <p className="text-[10px] text-gray-500">Discover trusted builders</p>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Explore Properties */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Explore Properties in Tamil Nadu</h2>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-full p-1 bg-white inline-flex">
-              {propertyTabs.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActivePropertyTab(tab)}
-                  className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activePropertyTab === tab ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Link href="/buy" className="flex items-center gap-1 text-primary hover:text-primary-dark font-medium text-sm transition-colors group">
-            View All Properties <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-
-        <div className="relative">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : realProperties.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {realProperties.map((prop, idx) => (
-                <div key={prop._id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group">
-                  <div className="relative h-48 overflow-hidden">
-                    <Image
-                      src={prop.images?.[0] || "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=600"}
-                      alt={prop.address}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-2">
-                      <div className="bg-white/90 backdrop-blur text-[10px] font-bold px-3 py-1.5 rounded-full text-gray-700 uppercase tracking-wider shadow-sm">
-                        {prop.propertyType}
-                      </div>
-
-                      {getListingBadges(prop).slice(0, 2).map((badge) => (
-                          <span
-                              key={badge}
-                              className="w-fit rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary shadow-sm"
-                          >
-      {badge}
-    </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="font-bold text-gray-900 text-lg mb-1 line-clamp-1">{prop.address}</h3>
-                    <div className="flex items-center gap-1.5 text-gray-500 text-xs mb-3">
-                      <MapPin size={12} /> {prop.city}
-                    </div>
-                    <div className="text-lg font-bold text-gray-900 mb-1">{formatPrice(prop.price)}</div>
-                    <div className="text-sm text-gray-500 mb-5">{prop.bedrooms === 0 ? "Studio" : `${prop.bedrooms} BHK`} {prop.propertyType}</div>
-                    <Link href={`/property/${prop._id}`} className="w-full bg-[#f0f7f7] hover:bg-primary text-primary hover:text-white font-semibold py-2.5 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
-                      View Details <ArrowRight size={14} />
-                    </Link>
+            </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
-              <p className="text-gray-500 font-medium">No properties listed yet.</p>
-              <Link href="/post-property" className="text-primary font-bold hover:underline mt-2 inline-block">Post your property</Link>
-            </div>
-          )}
-
-          <button className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white shadow-lg border border-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:text-primary z-10 hidden xl:flex hover:scale-105 transition-all">
-            <ChevronRight size={20} />
-          </button>
-        </div>
-      </section>
-
-      {/* Trusted By & Why Choose Section */}
-      <section className="bg-[#fafafa] py-16 border-t border-gray-100 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-16">
-            <div className="flex-1">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2 font-heading">Trusted Partnerships</h2>
-              <p className="text-gray-500 mb-10 text-sm">We partner with the industry's most reputable builders and talented designers.</p>
-
-              <div className="flex flex-col sm:flex-row gap-6 mb-12">
-                <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Top Builders</h4>
-                  <div className="flex items-center gap-8 justify-between">
-                    <div className="text-lg font-black text-gray-300 hover:text-primary transition-colors cursor-default">CASAGRAND</div>
-                    <div className="text-lg font-black text-gray-300 hover:text-primary transition-colors cursor-default">BRIGADE</div>
-                    <div className="text-lg font-black text-gray-300 hover:text-primary transition-colors cursor-default">PRESTIGE</div>
-                  </div>
-                </div>
-
-                <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Interior Designers</h4>
-                  <div className="flex items-center gap-8 justify-start">
-                    <div className="text-lg font-black text-gray-300 hover:text-primary transition-colors cursor-default">V-CREATE</div>
-                    <div className="text-lg font-black text-gray-300 hover:text-primary transition-colors cursor-default">HOMELANE</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2 font-heading">Why Choose Propyours?</h3>
-                  <p className="text-gray-500 text-sm">Transparent and legally secure real estate journey.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <div className="flex gap-3">
-                    <CheckCircle className="text-primary flex-shrink-0" size={24} />
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm mb-1">Verified</h4>
-                      <p className="text-xs text-gray-500">Authentic listings.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <Layers className="text-primary flex-shrink-0" size={24} />
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm mb-1">Platform</h4>
-                      <p className="text-xs text-gray-500">All-in-one ecosystem.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <HeadphonesIcon className="text-primary flex-shrink-0" size={24} />
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-sm mb-1">Expertise</h4>
-                      <p className="text-xs text-gray-500">20 years legal backing.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="hidden lg:block w-[400px] relative pointer-events-none">
-              <div className="absolute top-0 right-10 w-[240px] h-[500px] bg-white rounded-[2.5rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden z-20 translate-y-10">
-                <div className="w-1/2 h-5 bg-gray-900 absolute top-0 left-1/4 rounded-b-2xl"></div>
-                <div className="h-full w-full bg-gray-50 flex flex-col relative">
-                  <div className="h-14 bg-white border-b border-gray-100 flex items-center px-4 justify-between">
-                    <div className="font-bold text-primary text-xs flex items-center gap-1"><HomeIcon size={12} /> PROPYOURS</div>
-                    <Menu size={16} />
-                  </div>
-                  <div className="p-4 flex-1">
-                    <div className="text-lg font-bold">Find Your</div>
-                    <div className="text-lg font-bold text-primary mb-2">Dream Home</div>
-                    <div className="h-20 bg-gray-200 rounded-xl mb-4 w-full"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white py-12">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="bg-[#eff5f5] rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between">
-            <div className="mb-6 md:mb-0">
-              <h3 className="text-xl font-bold text-gray-900 mb-1">Ready for the next step?</h3>
-              <p className="text-gray-600 text-sm">List your property and connect with buyers.</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link href="/sell" className="bg-white text-primary border border-primary px-6 py-3 rounded-lg font-bold text-sm hover:bg-primary/5 transition-colors shadow-sm">
-                List Property
               </Link>
-              <button className="bg-primary text-white border border-primary px-6 py-3 rounded-lg font-bold text-sm hover:bg-primary-dark transition-colors shadow-md">
-                List Business
+
+              {/* Sell */}
+              <Link
+                  href="/sell"
+                  className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#ecfdf9_0%,#ffffff_72%)] p-6 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"
+              >
+                <div className="flex h-full min-h-[170px] flex-col justify-between">
+                  <div className="flex items-start justify-between gap-5">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+              <Store size={22} aria-hidden="true" />
+            </span>
+
+                    <span className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary">
+              List online
+            </span>
+                  </div>
+
+                  <div className="mt-8">
+                    <h3 className="text-xl font-black tracking-tight text-slate-950">
+                      Sell your property
+                    </h3>
+
+                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">
+                      Create a clear listing and connect with serious buyers across
+                      Tamil Nadu.
+                    </p>
+
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
+              Start listing
+              <ArrowRight
+                  size={17}
+                  className="transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+              />
+            </span>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Builders */}
+              <Link
+                  href="/builders"
+                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"
+              >
+                <div className="flex items-start justify-between">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
+            <Building2 size={20} aria-hidden="true" />
+          </span>
+
+                  <ArrowRight
+                      size={17}
+                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"
+                      aria-hidden="true"
+                  />
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="font-black text-slate-950">
+                    Trusted builders
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-5 text-slate-500">
+                    Discover builders and their latest projects.
+                  </p>
+
+                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">
+            Explore projects
+          </span>
+                </div>
+              </Link>
+
+              {/* Compare */}
+              <Link
+                  href="/compare"
+                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"
+              >
+                <div className="flex items-start justify-between">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
+            <Landmark size={20} aria-hidden="true" />
+          </span>
+
+                  <ArrowRight
+                      size={17}
+                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"
+                      aria-hidden="true"
+                  />
+                </div>
+
+                <div className="mt-8">
+                  <h3 className="font-black text-slate-950">
+                    Compare options
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-5 text-slate-500">
+                    Review properties side by side before deciding.
+                  </p>
+
+                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">
+            Start comparing
+          </span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="relative overflow-hidden bg-white">
+          <div
+              className="pointer-events-none absolute -left-40 top-40 h-96 w-96 rounded-full bg-teal-50 blur-3xl"
+              aria-hidden="true"
+          />
+
+          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+            {/* Section heading */}
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.16em] text-primary">
+                  Browse your way
+                </p>
+
+                <h2 className="mt-3 max-w-3xl font-heading text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
+                  Start with the property type that fits your plan.
+                </h2>
+
+                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                  Whether you are looking for a place to live, land to build on,
+                  or space for your business, begin with a category and refine
+                  the details later.
+                </p>
+              </div>
+
+              <Link
+                  href="/buy"
+                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-primary shadow-sm transition hover:border-primary hover:bg-teal-50"
+              >
+                Browse all properties
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+            </div>
+
+            {/* Bento grid */}
+            <div className="mt-12 grid gap-5 lg:grid-cols-12 lg:grid-rows-2">
+              {/* Apartments — primary category */}
+              <button
+                  type="button"
+                  onClick={() => searchByCategory("Apartment")}
+                  className="group relative min-h-[420px] overflow-hidden rounded-[2rem] text-left shadow-[0_24px_65px_rgba(15,23,42,0.14)] lg:col-span-5 lg:row-span-2"
+              >
+                <Image
+                    src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&q=86&w=1100"
+                    alt="Modern apartment interior"
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 42vw"
+                    className="object-cover transition duration-700 group-hover:scale-105"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-transparent" />
+
+                <div className="absolute left-6 top-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-white backdrop-blur">
+                  <Building2 size={23} aria-hidden="true" />
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 p-7 text-white sm:p-8">
+          <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold backdrop-blur">
+            Popular choice
+          </span>
+
+                  <h3 className="mt-4 text-3xl font-black tracking-tight">
+                    Apartments
+                  </h3>
+
+                  <p className="mt-3 max-w-sm text-sm leading-6 text-slate-200">
+                    Explore flats, studios, gated communities and newly launched
+                    projects across Tamil Nadu.
+                  </p>
+
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-teal-200">
+            Explore apartments
+            <ArrowRight
+                size={17}
+                className="transition group-hover:translate-x-1"
+                aria-hidden="true"
+            />
+          </span>
+                </div>
+              </button>
+
+              {/* Independent homes */}
+              <button
+                  type="button"
+                  onClick={() => searchByCategory("Independent House")}
+                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#f0fdfa_0%,#ffffff_68%)] p-7 text-left transition hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"
+              >
+                <div className="flex items-start justify-between gap-5">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+            <Home size={23} aria-hidden="true" />
+          </span>
+
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition group-hover:border-primary group-hover:text-primary">
+            <ArrowRight
+                size={18}
+                className="transition group-hover:translate-x-0.5"
+                aria-hidden="true"
+            />
+          </span>
+                </div>
+
+                <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">
+                  Independent homes
+                </h3>
+
+                <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
+                  Houses, villas, duplexes and independent floors for families
+                  who want more space and privacy.
+                </p>
+
+                <div className="mt-7 flex flex-wrap gap-2">
+                  {["Villas", "Duplexes", "Independent floors"].map((item) => (
+                      <span
+                          key={item}
+                          className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+                      >
+              {item}
+            </span>
+                  ))}
+                </div>
+              </button>
+
+              {/* Plots and land */}
+              <button
+                  type="button"
+                  onClick={() => searchByCategory("Plot")}
+                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#fffbeb_0%,#ffffff_70%)] p-7 text-left transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl lg:col-span-3"
+              >
+                <div className="flex items-start justify-between gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <Trees size={23} aria-hidden="true" />
+          </span>
+
+                  <ArrowRight
+                      size={18}
+                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-amber-600"
+                      aria-hidden="true"
+                  />
+                </div>
+
+                <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">
+                  Plots & land
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Residential plots, agricultural land and farm land for your
+                  next investment or build.
+                </p>
+
+                <span className="mt-7 inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
+          Build or invest
+        </span>
+              </button>
+
+              {/* Commercial */}
+              <button
+                  type="button"
+                  onClick={() => searchByCategory("Commercial")}
+                  className="group relative overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-left text-white transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.25)] lg:col-span-7"
+              >
+                <div
+                    className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-teal-500/20 blur-3xl"
+                    aria-hidden="true"
+                />
+
+                <div className="relative flex h-full flex-col justify-between gap-8 sm:flex-row sm:items-end">
+                  <div>
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300">
+              <Store size={23} aria-hidden="true" />
+            </span>
+
+                    <h3 className="mt-6 text-2xl font-black tracking-tight">
+                      Commercial property
+                    </h3>
+
+                    <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300">
+                      Find shops, offices, showrooms and business spaces in
+                      locations that support your next move.
+                    </p>
+                  </div>
+
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition group-hover:bg-teal-300">
+            Explore commercial
+            <ArrowRight size={17} aria-hidden="true" />
+          </span>
+                </div>
               </button>
             </div>
+
+            {/* Guidance strip */}
+            <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+          <Search size={19} aria-hidden="true" />
+        </span>
+
+                <div>
+                  <p className="font-black text-slate-900">
+                    Not sure which category to choose?
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Start with a city or locality and view every available
+                    property type in that area.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                  href="/buy"
+                  className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-primary hover:text-primary-dark"
+              >
+                Search by location
+                <ArrowRight size={17} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+
+        <section className="relative overflow-hidden bg-slate-950">
+          <div
+              className="pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full bg-teal-500/15 blur-3xl"
+              aria-hidden="true"
+          />
+
+          <div
+              className="pointer-events-none absolute -bottom-60 -left-40 h-[480px] w-[480px] rounded-full bg-sky-500/10 blur-3xl"
+              aria-hidden="true"
+          />
+
+          <section className="relative overflow-hidden bg-slate-950">
+            <div
+                className="pointer-events-none absolute -right-52 -top-52 h-[560px] w-[560px] rounded-full bg-teal-500/15 blur-3xl"
+                aria-hidden="true"
+            />
+
+            <div
+                className="pointer-events-none absolute -bottom-72 -left-48 h-[540px] w-[540px] rounded-full bg-sky-500/10 blur-3xl"
+                aria-hidden="true"
+            />
+
+            <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+              {/* Header */}
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-teal-300">
+                    Curated property picks
+                  </div>
+
+                  <h2 className="mt-4 max-w-2xl font-heading text-3xl font-black tracking-[-0.03em] text-white sm:text-4xl">
+                    Properties that are worth a closer look.
+                  </h2>
+
+                  <p className="mt-4 max-w-2xl text-base leading-7 text-slate-400">
+                    A varied selection of apartments, houses, plots, land and
+                    commercial spaces from across Tamil Nadu.
+                  </p>
+                </div>
+
+                <Link
+                    href="/buy"
+                    className="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-black text-white transition hover:border-teal-300/50 hover:bg-white/10"
+                >
+                  View all properties
+                  <ArrowRight size={17} aria-hidden="true" />
+                </Link>
+              </div>
+
+              <div className="mt-12">
+                {loading ? (
+                    <div className="grid gap-5 lg:grid-cols-12">
+                      <div className="min-h-[560px] animate-pulse rounded-[2rem] bg-white/10 lg:col-span-7" />
+
+                      <div className="grid grid-flow-col auto-cols-[82%] gap-4 overflow-hidden sm:auto-cols-[48%] lg:col-span-5 lg:grid-flow-row lg:grid-cols-2 lg:grid-rows-2">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <div
+                                key={index}
+                                className="min-h-[270px] animate-pulse rounded-2xl bg-white/10"
+                            />
+                        ))}
+                      </div>
+                    </div>
+                ) : spotlightProperty ? (
+                    <div className="grid gap-5 lg:grid-cols-12">
+                      {/* Featured property */}
+                      <Link
+                          href={`/property/${spotlightProperty._id}`}
+                          className="group relative min-h-[500px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-[0_35px_90px_rgba(0,0,0,0.35)] sm:min-h-[560px] lg:col-span-7"
+                      >
+                        <Image
+                            src={
+                                spotlightProperty.images?.[0] ??
+                                "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=85&w=1400"
+                            }
+                            alt={spotlightProperty.address}
+                            fill
+                            sizes="(max-width: 1024px) 100vw, 58vw"
+                            className="object-cover transition duration-700 group-hover:scale-105"
+                        />
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-slate-950/5" />
+
+                        {/* Main-card badges */}
+                        <div className="absolute inset-x-0 top-0 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
+                          <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/90 px-3 py-2 text-xs font-black text-slate-900 shadow-lg backdrop-blur">
+                  <ShieldCheck
+                      size={14}
+                      className="text-emerald-600"
+                      aria-hidden="true"
+                  />
+                  Spotlight
+                </span>
+
+                            <span className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-xs font-bold text-white backdrop-blur">
+                  {spotlightProperty.propertyType}
+                </span>
+                          </div>
+
+                          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition group-hover:bg-primary">
+                <ArrowRight size={19} aria-hidden="true" />
+              </span>
+                        </div>
+
+                        {/* Main-card details */}
+                        <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-teal-200">
+                            <MapPin size={16} aria-hidden="true" />
+
+                            <span>
+                  {spotlightProperty.locality
+                      ? `${spotlightProperty.locality}, ${spotlightProperty.city}`
+                      : spotlightProperty.city}
+                </span>
+                          </div>
+
+                          <h3 className="mt-3 max-w-xl text-2xl font-black leading-tight tracking-tight sm:text-3xl">
+                            {spotlightProperty.address}
+                          </h3>
+
+                          <div className="mt-6 flex flex-col gap-5 border-t border-white/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                              <p className="text-3xl font-black">
+                                {formatPrice(spotlightProperty.price)}
+                              </p>
+
+                              <p className="mt-2 text-sm text-slate-300">
+                                {spotlightProperty.bedrooms === 0
+                                    ? spotlightProperty.propertyType
+                                    : `${spotlightProperty.bedrooms} BHK ${spotlightProperty.propertyType}`}
+                              </p>
+                            </div>
+
+                            <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition group-hover:bg-teal-300">
+                  View property
+                  <ArrowRight size={17} aria-hidden="true" />
+                </span>
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* Four supporting properties */}
+                      <div className="min-w-0 lg:col-span-5">
+                        <div className="grid snap-x snap-mandatory grid-flow-col auto-cols-[84%] gap-4 overflow-x-auto pb-3 sm:auto-cols-[48%] lg:h-full lg:grid-flow-row lg:grid-cols-2 lg:grid-rows-2 lg:overflow-visible lg:pb-0">
+                          {supportingProperties.map((property, index) => {
+                            const badge = getPropertyBadge(property);
+
+                            return (
+                                <Link
+                                    key={property._id}
+                                    href={`/property/${property._id}`}
+                                    className="group flex min-h-[280px] snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] transition hover:-translate-y-1 hover:border-teal-300/30 hover:bg-white/[0.09] hover:shadow-2xl"
+                                >
+                                  <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[46%]">
+                                    <Image
+                                        src={
+                                            property.images?.[0] ??
+                                            "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800"
+                                        }
+                                        alt={property.address}
+                                        fill
+                                        sizes="(max-width: 640px) 84vw, (max-width: 1024px) 48vw, 20vw"
+                                        className="object-cover transition duration-500 group-hover:scale-105"
+                                    />
+
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+
+                                    <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-slate-950/55 text-xs font-black text-white backdrop-blur">
+                        {String(index + 2).padStart(2, "0")}
+                      </span>
+
+                                    {badge ? (
+                                        <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wide text-primary shadow backdrop-blur">
+                          {badge}
+                        </span>
+                                    ) : null}
+
+                                    <span className="absolute bottom-3 left-3 max-w-[calc(100%-24px)] truncate rounded-full border border-white/15 bg-slate-950/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur">
+                        {property.propertyType}
+                      </span>
+                                  </div>
+
+                                  <div className="flex min-h-0 flex-1 flex-col p-4">
+                                    <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-200">
+                                      <MapPin
+                                          size={13}
+                                          className="shrink-0"
+                                          aria-hidden="true"
+                                      />
+
+                                      <span className="truncate">
+                          {property.locality
+                              ? `${property.locality}, ${property.city}`
+                              : property.city}
+                        </span>
+                                    </div>
+
+                                    <h3 className="mt-3 line-clamp-2 text-sm font-black leading-5 text-white sm:text-base">
+                                      {property.address}
+                                    </h3>
+
+                                    <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+                                      <div className="min-w-0">
+                                        <p className="text-lg font-black text-white">
+                                          {formatPrice(property.price)}
+                                        </p>
+
+                                        <p className="mt-1 truncate text-xs text-slate-400">
+                                          {property.bedrooms === 0
+                                              ? property.propertyType
+                                              : `${property.bedrooms} BHK ${property.propertyType}`}
+                                        </p>
+                                      </div>
+
+                                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-teal-200 transition group-hover:bg-primary group-hover:text-white">
+                          <ArrowRight size={16} aria-hidden="true" />
+                        </span>
+                                    </div>
+                                  </div>
+                                </Link>
+                            );
+                          })}
+
+                          {/* Fill empty space if the API returns fewer than five */}
+                          {supportingProperties.length < 4 ? (
+                              <Link
+                                  href="/buy"
+                                  className="group flex min-h-[280px] snap-start flex-col justify-between rounded-2xl border border-dashed border-white/20 bg-white/[0.04] p-5 transition hover:border-teal-300/30 hover:bg-white/[0.08]"
+                              >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-400/10 text-teal-300">
+                    <Building2 size={21} aria-hidden="true" />
+                  </span>
+
+                                <div className="mt-10">
+                                  <h3 className="font-black text-white">
+                                    Explore more properties
+                                  </h3>
+
+                                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                                    Browse every available listing across Tamil Nadu.
+                                  </p>
+
+                                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-teal-300">
+                      Browse all
+                      <ArrowRight
+                          size={16}
+                          className="transition group-hover:translate-x-1"
+                          aria-hidden="true"
+                      />
+                    </span>
+                                </div>
+                              </Link>
+                          ) : null}
+                        </div>
+
+                        <p className="mt-3 text-center text-xs font-semibold text-slate-500 lg:hidden">
+                          Swipe to explore more properties
+                        </p>
+                      </div>
+                    </div>
+                ) : (
+                    <div className="rounded-[2rem] border border-dashed border-white/20 bg-white/[0.04] px-6 py-16 text-center">
+                      <Building2
+                          size={36}
+                          className="mx-auto text-teal-300"
+                          aria-hidden="true"
+                      />
+
+                      <h3 className="mt-5 text-xl font-black text-white">
+                        Selected properties will appear here
+                      </h3>
+
+                      <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-400">
+                        Browse current listings or publish a property to make it
+                        available to buyers.
+                      </p>
+
+                      <div className="mt-7 flex flex-wrap justify-center gap-3">
+                        <Link
+                            href="/buy"
+                            className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white"
+                        >
+                          Browse properties
+                        </Link>
+
+                        <Link
+                            href="/post-property"
+                            className="rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-black text-white"
+                        >
+                          List a property
+                        </Link>
+                      </div>
+                    </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section className="relative overflow-hidden border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7faf9_100%)]">
+          <div
+              className="pointer-events-none absolute -left-52 top-20 h-[480px] w-[480px] rounded-full bg-teal-100/55 blur-3xl"
+              aria-hidden="true"
+          />
+
+          <div
+              className="pointer-events-none absolute -right-48 bottom-0 h-[440px] w-[440px] rounded-full bg-sky-100/45 blur-3xl"
+              aria-hidden="true"
+          />
+
+          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+            {/* Section heading */}
+            <div className="max-w-3xl">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-primary">
+                A clearer property journey
+              </p>
+
+              <h2 className="mt-4 font-heading text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl lg:text-5xl">
+                Move from searching to deciding
+                <span className="block text-primary">
+          with fewer unanswered questions.
+        </span>
+              </h2>
+
+              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                Propyours helps you discover suitable properties, review the
+                important details and decide what deserves a closer look.
+              </p>
+            </div>
+
+            {/* Main experience card */}
+            <div className="mt-12 overflow-hidden rounded-[2.25rem] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.11)]">
+              <div className="grid lg:grid-cols-12">
+                {/* Guided journey */}
+                <div className="relative overflow-hidden bg-slate-950 p-6 text-white sm:p-9 lg:col-span-7 lg:p-12">
+                  <div
+                      className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-500/20 blur-3xl"
+                      aria-hidden="true"
+                  />
+
+                  <div className="relative">
+                    <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-400/15 text-teal-300">
+                <Eye size={21} aria-hidden="true" />
+              </span>
+
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-teal-300">
+                          Designed for clarity
+                        </p>
+
+                        <p className="mt-1 text-sm text-slate-400">
+                          A simple path from discovery to enquiry
+                        </p>
+                      </div>
+                    </div>
+
+                    <h3 className="mt-8 max-w-xl text-3xl font-black leading-tight tracking-[-0.025em] sm:text-4xl">
+                      Understand your options before making the first call.
+                    </h3>
+
+                    <div className="relative mt-10 space-y-4">
+                      {/* Connecting line */}
+                      <div
+                          className="pointer-events-none absolute bottom-11 left-11 top-11 hidden w-px bg-gradient-to-b from-teal-400/80 via-teal-400/45 to-teal-400/15 sm:block"
+                          aria-hidden="true"
+                      />
+
+                      {[
+                        {
+                          number: "01",
+                          title: "Discover",
+                          description:
+                              "Search by city, locality, property type and budget.",
+                          icon: Search,
+                          href: "/buy",
+                          action: "Start searching",
+                        },
+                        {
+                          number: "02",
+                          title: "Compare",
+                          description:
+                              "Review suitable options side by side before shortlisting.",
+                          icon: Scale,
+                          href: "/compare",
+                          action: "Compare options",
+                        },
+                        {
+                          number: "03",
+                          title: "Connect",
+                          description:
+                              "Open the full listing and enquire only when it feels relevant.",
+                          icon: PhoneCall,
+                          href: "/buy",
+                          action: "Explore listings",
+                        },
+                      ].map((step) => {
+                        const Icon = step.icon;
+
+                        return (
+                            <Link
+                                key={step.number}
+                                href={step.href}
+                                className="group relative flex gap-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 transition hover:border-teal-300/30 hover:bg-white/[0.09] sm:items-center sm:p-5"
+                            >
+                    <span className="relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-teal-300/20 bg-slate-950 text-teal-300 shadow-lg ring-4 ring-slate-950">
+                      <Icon size={21} aria-hidden="true" />
+                    </span>
+
+                              <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-3">
+                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">
+                          Step {step.number}
+                        </span>
+
+                        <span className="text-lg font-black text-white">
+                          {step.title}
+                        </span>
+                      </span>
+
+                      <span className="mt-1.5 block text-sm leading-6 text-slate-400">
+                        {step.description}
+                      </span>
+                    </span>
+
+                              <span className="hidden shrink-0 items-center gap-2 text-xs font-black text-teal-300 sm:flex">
+                      {step.action}
+                                <ArrowRight
+                                    size={15}
+                                    className="transition group-hover:translate-x-1"
+                                    aria-hidden="true"
+                                />
+                    </span>
+                            </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Information preview */}
+                <div className="relative bg-[linear-gradient(145deg,#f0fdfa_0%,#ffffff_62%)] p-6 sm:p-9 lg:col-span-5 lg:p-12">
+                  <div className="flex items-center justify-between gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+              <BadgeCheck size={23} aria-hidden="true" />
+            </span>
+
+                    <span className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-primary shadow-sm">
+              Before you enquire
+            </span>
+                  </div>
+
+                  <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">
+                    See the information that helps you shortlist.
+                  </h3>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    Property pages are structured to make the important facts easier
+                    to find without burying them beneath unnecessary jargon.
+                  </p>
+
+                  <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                    {[
+                      {
+                        title: "Price and budget",
+                        description: "Understand the asking price early.",
+                        icon: CheckCircle2,
+                      },
+                      {
+                        title: "Location",
+                        description: "See the city and locality clearly.",
+                        icon: MapPin,
+                      },
+                      {
+                        title: "Property type",
+                        description: "Know exactly what is being listed.",
+                        icon: Building2,
+                      },
+                      {
+                        title: "Listing labels",
+                        description: "Recognise featured or verified listings.",
+                        icon: BadgeCheck,
+                      },
+                    ].map((item) => {
+                      const Icon = item.icon;
+
+                      return (
+                          <div
+                              key={item.title}
+                              className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm"
+                          >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                    <Icon size={17} aria-hidden="true" />
+                  </span>
+
+                            <h4 className="mt-4 text-sm font-black text-slate-900">
+                              {item.title}
+                            </h4>
+
+                            <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                              {item.description}
+                            </p>
+                          </div>
+                      );
+                    })}
+                  </div>
+
+                  <Link
+                      href="/buy"
+                      className="mt-8 inline-flex items-center gap-2 text-sm font-black text-primary transition hover:text-primary-dark"
+                  >
+                    Explore property listings
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Owner CTA */}
+              <div className="border-t border-slate-200 bg-white p-4 sm:p-6">
+                <div className="relative overflow-hidden rounded-[1.75rem] bg-[linear-gradient(120deg,#0f766e_0%,#0d9488_56%,#115e59_100%)] px-6 py-7 text-white sm:px-8 sm:py-8">
+                  <div
+                      className="pointer-events-none absolute -right-10 -top-20 h-56 w-56 rounded-full border-[35px] border-white/5"
+                      aria-hidden="true"
+                  />
+
+                  <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex max-w-2xl items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/15">
+                <Store size={22} aria-hidden="true" />
+              </span>
+
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.15em] text-teal-100">
+                          For property owners
+                        </p>
+
+                        <h3 className="mt-2 text-2xl font-black tracking-tight">
+                          Have a property to sell or rent?
+                        </h3>
+
+                        <p className="mt-2 text-sm leading-6 text-teal-50/80">
+                          Create a clear listing and make it easier for serious
+                          property seekers to understand what you are offering.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                      <Link
+                          href="/pricing"
+                          className="inline-flex items-center justify-center rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15"
+                      >
+                        View listing plans
+                      </Link>
+
+                      <Link
+                          href="/post-property"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-black text-slate-950 shadow-lg transition hover:bg-teal-50"
+                      >
+                        List your property
+                        <ArrowRight size={17} aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Small reassurance row */}
+            <div className="mt-6 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs font-semibold text-slate-500">
+              {[
+                "Search at your own pace",
+                "Compare before enquiring",
+                "Clear property categories",
+              ].map((item) => (
+                  <span key={item} className="flex items-center gap-2">
+          <CheckCircle2
+              size={15}
+              className="text-primary"
+              aria-hidden="true"
+          />
+                    {item}
+        </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
   );
 }
