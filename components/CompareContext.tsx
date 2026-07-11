@@ -35,12 +35,35 @@ type CompareContextType = {
 const CompareContext = createContext<CompareContextType | undefined>(undefined);
 
 export function CompareProvider({ children }: { children: React.ReactNode }) {
-    const [compareList, setCompareList] = useState<CompareProperty[]>([]);
+    const [compareList, setCompareList] =
+        useState<CompareProperty[]>(() => {
+            if (
+                typeof window ===
+                "undefined"
+            ) {
+                return [];
+            }
 
-    useEffect(() => {
-        const saved = localStorage.getItem("propyours_compare");
-        if (saved) setCompareList(JSON.parse(saved));
-    }, []);
+            const saved =
+                localStorage.getItem(
+                    "propyours_compare"
+                );
+
+            if (!saved) {
+                return [];
+            }
+
+            try {
+                const parsed =
+                    JSON.parse(saved);
+
+                return Array.isArray(parsed)
+                    ? parsed
+                    : [];
+            } catch {
+                return [];
+            }
+        });
 
     useEffect(() => {
         localStorage.setItem("propyours_compare", JSON.stringify(compareList));
@@ -55,11 +78,19 @@ export function CompareProvider({ children }: { children: React.ReactNode }) {
             alert("This property is already in your comparison list.");
             return;
         }
-        setCompareList([...compareList, property]);
+        setCompareList((current) => [
+            ...current,
+            property,
+        ]);
     };
 
     const removeFromCompare = (id: string) => {
-        setCompareList(compareList.filter((p) => p._id !== id));
+        setCompareList((current) =>
+            current.filter(
+                (property) =>
+                    property._id !== id
+            )
+        );
     };
 
     const clearCompare = () => setCompareList([]);

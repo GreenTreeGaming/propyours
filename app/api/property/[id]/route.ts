@@ -6,15 +6,23 @@ import { getPublicPropertyFilter } from "@/lib/property-filters";
 import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 
-function cleanStringArray(value: unknown) {
+function cleanStringArray(
+    value: unknown
+): string[] {
     if (!Array.isArray(value)) {
         return [];
     }
 
     return value
-        .filter((item) => typeof item === "string")
+        .filter(
+            (item): item is string =>
+                typeof item === "string"
+        )
         .map((item) => item.trim())
-        .filter(Boolean);
+        .filter(
+            (item): item is string =>
+                item.length > 0
+        );
 }
 
 function isValidImageUrl(url: string) {
@@ -118,10 +126,12 @@ export async function PUT(
 
         const limits = getPlanLimits(user);
 
-        const images =
+        const images: string[] =
             "images" in body
                 ? cleanStringArray(body.images)
-                : property.images || [];
+                : cleanStringArray(
+                    property.images
+                );
 
         if (images.length > limits.maxImages) {
             return NextResponse.json(
@@ -141,10 +151,14 @@ export async function PUT(
             );
         }
 
-        const videoLinks =
+        const videoLinks: string[] =
             "videoLinks" in body
-                ? cleanStringArray(body.videoLinks)
-                : property.videoLinks || [];
+                ? cleanStringArray(
+                    body.videoLinks
+                )
+                : cleanStringArray(
+                    property.videoLinks
+                );
 
         if (videoLinks.length > limits.maxVideoLinks) {
             return NextResponse.json(

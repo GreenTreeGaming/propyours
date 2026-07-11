@@ -42,6 +42,21 @@ interface Property {
   promotedUntil?: string;
 }
 
+type LocationSuggestion =
+    | {
+  type: "city";
+  label: string;
+}
+    | {
+  type: "area";
+  label: string;
+  city: string;
+}
+    | {
+  type: "property";
+  label: string;
+};
+
 function BuyPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -272,29 +287,28 @@ function BuyPageContent() {
     return null;
   };
 
-  const searchableItems = [
-    ...cities.map(city => ({
-      type: "city",
-      label: city
+  const searchableItems: LocationSuggestion[] = [
+    ...cities.map((city) => ({
+      type: "city" as const,
+      label: city,
     })),
 
-    ...Object.entries(TAMIL_NADU_LOCATIONS)
-        .flatMap(([city, areas]) =>
-            areas
-                .filter(area => area !== "All")
-                .map(area => ({
-                  type: "area",
-                  label: area,
-                  city
-                }))
-        ),
+    ...Object.entries(TAMIL_NADU_LOCATIONS).flatMap(([city, areas]) =>
+        areas
+            .filter((area) => area !== "All")
+            .map((area) => ({
+              type: "area" as const,
+              label: area,
+              city,
+            }))
+    ),
 
     ...propertyTypes
-        .filter(type => type !== "All")
-        .map(type => ({
-          type: "property",
-          label: type
-        }))
+        .filter((type) => type !== "All")
+        .map((type) => ({
+          type: "property" as const,
+          label: type,
+        })),
   ];
 
   const suggestions = searchTerm.length > 0
@@ -308,10 +322,7 @@ function BuyPageContent() {
       : [];
 
   const handleSuggestionClick = (
-      item: {
-        type: string;
-        label: string;
-      }
+      item: LocationSuggestion
   ) => {
     if (item.type === "city") {
       setSelectedCity(item.label);

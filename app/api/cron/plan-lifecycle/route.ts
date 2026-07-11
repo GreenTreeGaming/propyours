@@ -6,6 +6,24 @@ import {
 } from "@/lib/process-plan-lifecycle";
 
 export async function GET(request: Request) {
+    const cronSecret =
+        process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+        console.error(
+            "CRON_SECRET is not configured"
+        );
+
+        return NextResponse.json(
+            {
+                error: "Cron is not configured",
+            },
+            {
+                status: 500,
+            }
+        );
+    }
+
     const authorization =
         request.headers.get(
             "authorization"
@@ -13,7 +31,7 @@ export async function GET(request: Request) {
 
     if (
         authorization !==
-        `Bearer ${process.env.CRON_SECRET}`
+        `Bearer ${cronSecret}`
     ) {
         return NextResponse.json(
             {

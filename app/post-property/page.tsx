@@ -88,34 +88,94 @@ const AMENITY_CATEGORIES = [
     }
 ];
 
+const DEFAULT_FORM = {
+    purpose: "Sell",
+    propertyType: "Independent House",
+    description: "",
+    address: "",
+    locality: "",
+    city: "",
+    state: "Tamil Nadu",
+    landmark: "",
+    uds: "",
+    size: "",
+    sizeUnit: "sqft",
+    dimensions: "",
+    ownershipType: "Freehold",
+    price: "",
+    priceType: "Total",
+    negotiable: true,
+    bedrooms: "",
+    bathrooms: "",
+    floors: "",
+    amenities: [] as string[],
+    images: [] as string[],
+    videoLinks: [] as string[],
+};
+
 export default function PostPropertyPage() {
     const router = useRouter();
-    const [currentStep, setCurrentStep] = useState(1);
-    const [form, setForm] = useState({
-        purpose: "Sell",
-        propertyType: "Independent House",
-        description: "",
-        address: "",
-        locality: "",
-        city: "",
-        state: "Tamil Nadu",
-        landmark: "",
-        uds: "",
-        size: "",
-        sizeUnit: "sqft",
-        dimensions: "",
-        ownershipType: "Freehold",
-        price: "",
-        priceType: "Total",
-        negotiable: true,
-        bedrooms: "",
-        bathrooms: "",
-        floors: "",
-        amenities: [] as string[],
-        images: [] as string[],
-        videoLinks: [] as string[],
+
+    const [currentStep, setCurrentStep] = useState(() => {
+        if (typeof window === "undefined") {
+            return 1;
+        }
+
+        const savedStep =
+            localStorage.getItem(
+                "post-property-step"
+            );
+
+        if (!savedStep) {
+            return 1;
+        }
+
+        const parsedStep =
+            Number.parseInt(savedStep, 10);
+
+        if (
+            Number.isNaN(parsedStep) ||
+            parsedStep < 1 ||
+            parsedStep > 5
+        ) {
+            return 1;
+        }
+
+        return parsedStep;
     });
 
+    const [form, setForm] = useState(() => {
+        if (typeof window === "undefined") {
+            return DEFAULT_FORM;
+        }
+
+        const savedForm =
+            localStorage.getItem(
+                "post-property-form"
+            );
+
+        if (!savedForm) {
+            return DEFAULT_FORM;
+        }
+
+        try {
+            const parsed =
+                JSON.parse(savedForm);
+
+            return {
+                ...DEFAULT_FORM,
+                ...parsed,
+                state: "Tamil Nadu",
+            };
+        } catch (error) {
+            console.error(
+                "Failed to load saved form",
+                error
+            );
+
+            return DEFAULT_FORM;
+        }
+    });
     const LAND_TYPES = ["Plot", "Agricultural Land"];
     const isLand = LAND_TYPES.includes(form.propertyType);
 
@@ -222,36 +282,25 @@ export default function PostPropertyPage() {
 
     useEffect(() => {
         const syncUser = () => {
-            const currentUser = getStoredUser();
+            const currentUser =
+                getStoredUser();
+
             setUser(currentUser);
-            if (!currentUser && currentStep > 1) {
-                // If user logs out, ProtectedRoute will handle redirect, 
-                // but we also clear local state here
-                setUser(null);
-            }
         };
 
         syncUser();
-        window.addEventListener("storage", syncUser);
 
-        const savedForm = localStorage.getItem("post-property-form");
-        const savedStep = localStorage.getItem("post-property-step");
+        window.addEventListener(
+            "storage",
+            syncUser
+        );
 
-        if (savedForm) {
-            try {
-                const parsed = JSON.parse(savedForm);
-                // Ensure state remains Tamil Nadu even if saved data is old
-                setForm(prev => ({ ...prev, ...parsed, state: "Tamil Nadu" }));
-            } catch (e) {
-                console.error("Failed to load saved form", e);
-            }
-        }
-
-        if (savedStep) {
-            setCurrentStep(parseInt(savedStep));
-        }
-
-        return () => window.removeEventListener("storage", syncUser);
+        return () => {
+            window.removeEventListener(
+                "storage",
+                syncUser
+            );
+        };
     }, []);
 
     useEffect(() => {
@@ -272,15 +321,15 @@ export default function PostPropertyPage() {
     }, [currentStep]);
 
     const handleNext = () => {
-        if (currentStep < 5) setCurrentStep(currentStep + 1);
+        setCurrentStep((step) =>
+            Math.min(step + 1, 5)
+        );
     };
 
     const handleBack = () => {
-        if (currentStep > 1) setCurrentStep(currentStep - 1);
-    };
-
-    const handleStateChange = (state: string) => {
-        setForm(prev => ({ ...prev, state, city: "", locality: "" }));
+        setCurrentStep((step) =>
+            Math.max(step - 1, 1)
+        );
     };
 
     const handleCityChange = (city: string) => {
@@ -658,7 +707,7 @@ export default function PostPropertyPage() {
                                                                 Property Photos
                                                             </h3>
                                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                                Add up to 10 images
+                                                                Add up to {maxImages} images
                                                             </p>
                                                         </div>
                                                     </div>

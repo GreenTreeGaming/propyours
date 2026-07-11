@@ -25,8 +25,8 @@ export async function processPlanLifecycle(
 
         user.plan.status = "expired";
         user.plan.boostsRemaining = 0;
-        user.plan.boostsResetAt =
-            undefined;
+        user.plan.boostsResetAt = undefined;
+        user.plan.lastBoostResetAt = undefined;
 
         await user.save();
 
