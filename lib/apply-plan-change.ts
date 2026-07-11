@@ -155,7 +155,7 @@ export async function applyPlanChange({
 
         await Property.updateOne(
             { _id: property._id },
-            limits.promoteBoosts <= 0
+            limits.promoteBoostsPerMonth <= 0
                 ? {
                     $set: setUpdates,
                     $unset: {
@@ -172,7 +172,7 @@ export async function applyPlanChange({
      * If new plan has no boosts, remove promotedUntil from every property,
      * not just active ones.
      */
-    if (limits.promoteBoosts <= 0) {
+    if (limits.promoteBoostsPerMonth <= 0) {
         await Property.updateMany(
             { userId },
             {
