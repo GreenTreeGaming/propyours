@@ -111,6 +111,10 @@ const DEFAULT_FORM = {
     amenities: [] as string[],
     images: [] as string[],
     videoLinks: [] as string[],
+    brochure: null as {
+        url: string;
+        fileName: string;
+    } | null,
 };
 
 type PropertyForm = typeof DEFAULT_FORM;
@@ -260,6 +264,10 @@ export default function PostPropertyPage() {
     const [message, setMessage] = useState("");
     const [user, setUser] = useState<any>(null);
 
+    const isDeveloper =
+        user?.role === "Builder" ||
+        user?.plan?.audience === "builder";
+
     const hasActivePaidPlan =
         user?.plan?.status === "active";
 
@@ -376,6 +384,7 @@ export default function PostPropertyPage() {
                     amenities: form.amenities,
                     images: form.images,
                     videoLinks: form.videoLinks.filter(Boolean),
+                    brochure: form.brochure,
                 }),
             });
 
@@ -771,6 +780,87 @@ export default function PostPropertyPage() {
                                                         </div>
                                                     )}
 
+                                                    {isDeveloper && (
+                                                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                                                            <div>
+                                                                <h3 className="text-lg font-black text-gray-900 tracking-tight">
+                                                                    Property Brochure
+                                                                </h3>
+
+                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                                    Upload one PDF brochure, up to 8 MB
+                                                                </p>
+                                                            </div>
+
+                                                            {!form.brochure ? (
+                                                                <UploadDropzone
+                                                                    endpoint="developerBrochureUploader"
+                                                                    config={{ mode: "auto" }}
+                                                                    onUploadBegin={() => {
+                                                                        setMessage("Uploading brochure...");
+                                                                    }}
+                                                                    onClientUploadComplete={(res) => {
+                                                                        const uploadedFile = res?.[0];
+
+                                                                        const url =
+                                                                            uploadedFile?.ufsUrl ||
+                                                                            uploadedFile?.url;
+
+                                                                        if (!url) {
+                                                                            setMessage(
+                                                                                "Upload completed, but no brochure URL was returned."
+                                                                            );
+                                                                            return;
+                                                                        }
+
+                                                                        setForm((prev) => ({
+                                                                            ...prev,
+                                                                            brochure: {
+                                                                                url,
+                                                                                fileName:
+                                                                                    uploadedFile.name ||
+                                                                                    "Property brochure.pdf",
+                                                                            },
+                                                                        }));
+
+                                                                        setMessage("Brochure uploaded successfully.");
+                                                                    }}
+                                                                    onUploadError={(error: Error) => {
+                                                                        setMessage(
+                                                                            error.message ||
+                                                                            "Brochure upload failed."
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate text-sm font-bold text-gray-800">
+                                                                            {form.brochure.fileName}
+                                                                        </p>
+
+                                                                        <p className="text-xs text-gray-500">
+                                                                            PDF brochure uploaded
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setForm((prev) => ({
+                                                                                ...prev,
+                                                                                brochure: null,
+                                                                            }))
+                                                                        }
+                                                                        className="rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     {/* VIDEO LINKS */}
                                                     <div className="space-y-4 pt-6 border-t border-gray-100">
                                                         <div>
@@ -1015,6 +1105,15 @@ export default function PostPropertyPage() {
                                                         <p className="text-xs font-bold text-gray-500">
                                                             Video Links: {form.videoLinks.length}/{maxVideoLinks}
                                                         </p>
+
+                                                        {isDeveloper && (
+                                                            <p className="text-xs font-bold text-gray-500">
+                                                                Brochure:{" "}
+                                                                {form.brochure
+                                                                    ? form.brochure.fileName
+                                                                    : "Not uploaded"}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 

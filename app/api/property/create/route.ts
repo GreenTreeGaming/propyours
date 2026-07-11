@@ -63,6 +63,27 @@ export async function POST(req: Request) {
             );
         }
 
+        const isDeveloper =
+            user.role === "Builder" ||
+            user.plan?.audience === "builder";
+
+        function isValidUploadThingUrl(url: string) {
+            try {
+                const parsed = new URL(url);
+
+                return (
+                    parsed.protocol === "https:" &&
+                    (
+                        parsed.hostname.endsWith("utfs.io") ||
+                        parsed.hostname.endsWith("ufs.sh") ||
+                        parsed.hostname.includes("uploadthing")
+                    )
+                );
+            } catch {
+                return false;
+            }
+        }
+
         const limits = getPlanLimits(user);
 
         const activeCount = await Property.countDocuments({
@@ -123,6 +144,53 @@ export async function POST(req: Request) {
             );
         }
 
+        type BrochureData = {
+            url: string;
+            fileName: string;
+        };
+
+        let brochure: BrochureData | undefined;
+
+        if (body.brochure != null) {
+            if (!isDeveloper) {
+                return NextResponse.json(
+                    {
+                        error: "Only developers can attach property brochures.",
+                    },
+                    {
+                        status: 403,
+                    }
+                );
+            }
+
+            if (
+                typeof body.brochure !== "object" ||
+                typeof body.brochure.url !== "string" ||
+                !isValidUploadThingUrl(body.brochure.url)
+            ) {
+                return NextResponse.json(
+                    {
+                        error: "Invalid brochure.",
+                    },
+                    {
+                        status: 400,
+                    }
+                );
+            }
+
+            const fileName =
+                typeof body.brochure.fileName === "string"
+                    ? body.brochure.fileName.trim()
+                    : "";
+
+            brochure = {
+                url: body.brochure.url,
+                fileName:
+                    fileName.slice(0, 200) ||
+                    "Property brochure.pdf",
+            };
+        }
+
         const listingExpiresAt = new Date();
         listingExpiresAt.setDate(listingExpiresAt.getDate() + limits.listingDays);
 
@@ -149,6 +217,7 @@ export async function POST(req: Request) {
 
             images,
             videoLinks,
+            brochure,
 
             featured: limits.featured,
             listingExpiresAt,

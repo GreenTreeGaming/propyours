@@ -19,7 +19,9 @@ import {
     UserCircle,
     Info,
     BarChart3,
-    Calculator
+    Calculator,
+    Download,
+    FileText,
 } from "lucide-react";
 import EMICalculator from "@/components/EMICalculator";
 import { motion } from "framer-motion";
@@ -43,6 +45,10 @@ type PropertyRecord = {
     address: string;
     images?: string[];
     videoLinks?: string[];
+    brochure?: {
+        url?: string;
+        fileName?: string;
+    };
     purpose?: string;
     propertyType?: string;
     bedrooms?: number;
@@ -678,6 +684,39 @@ export default function PropertyDetailsPage() {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            )}
+
+                            {property.brochure?.url && (
+                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-8">
+                                    <a
+                                        href={property.brochure.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5 transition-all hover:bg-primary/10"
+                                    >
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+                                                <FileText size={22} />
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <p className="font-black text-gray-900">
+                                                    Property Brochure
+                                                </p>
+
+                                                <p className="text-sm font-medium text-gray-500 truncate">
+                                                    {property.brochure.fileName ||
+                                                        "Download project brochure"}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <Download
+                                            size={22}
+                                            className="text-primary shrink-0"
+                                        />
+                                    </a>
                                 </div>
                             )}
 

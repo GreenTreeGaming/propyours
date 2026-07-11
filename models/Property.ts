@@ -107,6 +107,18 @@ const PropertySchema = new mongoose.Schema(
             default: [],
         },
 
+        brochure: {
+            url: {
+                type: String,
+                required: false,
+            },
+            fileName: {
+                type: String,
+                required: false,
+                maxlength: 200,
+            },
+        },
+
         // 💳 Plan Snapshot
         planSnapshot: {
             tier: {
