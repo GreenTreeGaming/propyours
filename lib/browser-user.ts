@@ -19,7 +19,8 @@ export type StoredUserPlan = {
 };
 
 export type StoredUser = {
-    id: string;
+    id?: string;
+    _id?: string;
     name: string;
     email: string;
     role?: string;

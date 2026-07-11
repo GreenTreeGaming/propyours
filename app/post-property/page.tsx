@@ -113,6 +113,8 @@ const DEFAULT_FORM = {
     videoLinks: [] as string[],
 };
 
+type PropertyForm = typeof DEFAULT_FORM;
+
 export default function PostPropertyPage() {
     const router = useRouter();
 
@@ -144,7 +146,7 @@ export default function PostPropertyPage() {
         return parsedStep;
     });
 
-    const [form, setForm] = useState(() => {
+    const [form, setForm] = useState<PropertyForm>(() => {
         if (typeof window === "undefined") {
             return DEFAULT_FORM;
         }
@@ -159,8 +161,7 @@ export default function PostPropertyPage() {
         }
 
         try {
-            const parsed =
-                JSON.parse(savedForm);
+            const parsed = JSON.parse(savedForm) as Partial<PropertyForm>;
 
             return {
                 ...DEFAULT_FORM,
@@ -262,13 +263,15 @@ export default function PostPropertyPage() {
     const hasActivePaidPlan =
         user?.plan?.status === "active";
 
+    const storedTier: unknown = user?.plan?.tier;
+
     const currentTier =
-        isPlanTier(user?.plan?.tier) &&
+        isPlanTier(storedTier) &&
         (
-            user.plan.tier === "silver" ||
+            storedTier === "silver" ||
             hasActivePaidPlan
         )
-            ? user.plan.tier
+            ? storedTier
             : "silver";
 
     const currentPlan =

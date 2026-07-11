@@ -134,15 +134,6 @@ export const developerComparison:
     ),
 
     row(
-        "Scheduled Promote Boosts",
-        (plan) =>
-            yesNo(
-                plan.entitlements
-                    .scheduledBoosts
-            )
-    ),
-
-    row(
         "Analytics Level",
         (plan) =>
             toTitle(
