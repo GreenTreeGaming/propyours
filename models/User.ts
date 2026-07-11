@@ -104,6 +104,17 @@ const UserSchema = new Schema(
             boostsRemaining: {
                 type: Number,
                 default: 0,
+                min: 0,
+            },
+
+            boostsResetAt: {
+                type: Date,
+                required: false,
+            },
+
+            lastBoostResetAt: {
+                type: Date,
+                required: false,
             },
 
             paymentId: {

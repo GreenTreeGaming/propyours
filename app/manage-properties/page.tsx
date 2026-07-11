@@ -37,6 +37,19 @@ import {
 } from 'recharts';
 import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
 
+function formatBoostResetDate(
+    value: string
+) {
+    return new Date(value).toLocaleDateString(
+        "en-IN",
+        {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+        }
+    );
+}
+
 
 export default function ManagePropertiesPage() {
     const [properties, setProperties] = useState<any[]>([]);
@@ -45,50 +58,159 @@ export default function ManagePropertiesPage() {
     const [selectedProperty, setSelectedProperty] = useState<any>(null);
     const [showAnalytics, setShowAnalytics] = useState(false);
 
-    const handlePromote = async (propertyId: string) => {
+    type PlanSummary = {
+        tier: string;
+        status: string;
+        boostsRemaining: number;
+        boostsPerMonth: number;
+        boostsResetAt: string | null;
+    };
+
+    const [planSummary, setPlanSummary] =
+        useState<PlanSummary | null>(null);
+
+    const fetchPlanSummary = async () => {
         try {
-            const res = await fetch(`/api/property/${propertyId}/promote`, {
-                method: "POST",
-                credentials: "include",
-            });
+            const res = await fetch(
+                "/api/account/plan",
+                {
+                    credentials: "include",
+                    cache: "no-store",
+                }
+            );
 
             const data = await res.json();
 
             if (!res.ok) {
-                alert(data.error || "Failed to promote property.");
+                console.error(
+                    data.error ||
+                    "Failed to load plan summary"
+                );
+                return;
+            }
+
+            setPlanSummary(data);
+        } catch (error) {
+            console.error(
+                "Failed to load plan summary:",
+                error
+            );
+        }
+    };
+
+    const handlePromote = async (
+        propertyId: string
+    ) => {
+        try {
+            const res = await fetch(
+                `/api/property/${propertyId}/promote`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                }
+            );
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(
+                    data.error ||
+                    "Failed to promote property."
+                );
                 return;
             }
 
             setProperties((prev) =>
                 prev.map((property) =>
-                    property._id === propertyId ? data.property : property
+                    property._id === propertyId
+                        ? data.property
+                        : property
                 )
             );
 
-            setUser((prev: any) => ({
-                ...prev,
-                plan: {
-                    ...prev.plan,
-                    boostsRemaining: data.boostsRemaining,
-                },
-            }));
+            setPlanSummary((current) =>
+                current
+                    ? {
+                        ...current,
+                        boostsRemaining:
+                        data.boostsRemaining,
+                        boostsResetAt:
+                        data.boostsResetAt,
+                    }
+                    : current
+            );
 
-            alert("Property promoted successfully.");
+            setUser((prev: any) => {
+                if (!prev) return prev;
+
+                const updatedUser = {
+                    ...prev,
+                    plan: {
+                        ...prev.plan,
+                        boostsRemaining:
+                        data.boostsRemaining,
+                        boostsResetAt:
+                        data.boostsResetAt,
+                    },
+                };
+
+                localStorage.setItem(
+                    "user",
+                    JSON.stringify(updatedUser)
+                );
+
+                return updatedUser;
+            });
+
+            alert(
+                "Property promoted successfully."
+            );
         } catch (error) {
-            console.error("Failed to promote property:", error);
-            alert("Something went wrong. Please try again.");
+            console.error(
+                "Failed to promote property:",
+                error
+            );
+
+            alert(
+                "Something went wrong. Please try again."
+            );
         }
     };
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            fetchProperties(parsedUser.id || parsedUser._id);
-        } else {
-            setLoading(false);
-        }
+        const loadPage = async () => {
+            const storedUser =
+                localStorage.getItem("user");
+
+            if (!storedUser) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const parsedUser =
+                    JSON.parse(storedUser);
+
+                setUser(parsedUser);
+
+                await Promise.all([
+                    fetchProperties(
+                        parsedUser.id ||
+                        parsedUser._id
+                    ),
+                    fetchPlanSummary(),
+                ]);
+            } catch (error) {
+                console.error(
+                    "Failed to load manage properties page:",
+                    error
+                );
+
+                setLoading(false);
+            }
+        };
+
+        void loadPage();
     }, []);
 
     const fetchProperties = async (userId: string) => {
@@ -197,11 +319,48 @@ export default function ManagePropertiesPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
                     <div>
-                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Manage Properties</h1>
-                        <p className="text-gray-500 font-medium">You have posted {properties.length} properties</p>
-                        <p className="text-xs font-black uppercase tracking-widest text-yellow-600 mt-2">
-                            {user?.plan?.boostsRemaining || 0} boost token{(user?.plan?.boostsRemaining || 0) === 1 ? "" : "s"} remaining
+                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+                            Manage Properties
+                        </h1>
+
+                        <p className="text-gray-500 font-medium">
+                            You have posted {properties.length}{" "}
+                            properties
                         </p>
+
+                        {planSummary && (
+                            <div className="mt-2 space-y-1">
+                                {planSummary.boostsPerMonth >
+                                0 ? (
+                                    <>
+                                        <p className="text-xs font-black uppercase tracking-widest text-yellow-600">
+                                            {
+                                                planSummary.boostsRemaining
+                                            }{" "}
+                                            of{" "}
+                                            {
+                                                planSummary.boostsPerMonth
+                                            }{" "}
+                                            boosts remaining
+                                        </p>
+
+                                        {planSummary.boostsResetAt && (
+                                            <p className="text-xs text-gray-500">
+                                                Resets on{" "}
+                                                {formatBoostResetDate(
+                                                    planSummary.boostsResetAt
+                                                )}
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-gray-500">
+                                        No monthly boosts included
+                                        in your current plan.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <Link
                         href="/post-property"
