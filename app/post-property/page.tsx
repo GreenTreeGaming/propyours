@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { UploadDropzone } from "@/lib/uploadthing";
-import { PLAN_LIMITS, type PlanTier } from "@/lib/plans";
+import {
+    PLAN_CATALOG,
+    isPlanTier,
+} from "@/lib/plan-catalog";
 import {
     Home,
     Building2,
@@ -196,11 +199,26 @@ export default function PostPropertyPage() {
     const [message, setMessage] = useState("");
     const [user, setUser] = useState<any>(null);
 
-    const currentTier = (user?.plan?.tier || "silver") as PlanTier;
-    const currentPlanLimits = PLAN_LIMITS[currentTier] || PLAN_LIMITS.silver;
+    const hasActivePaidPlan =
+        user?.plan?.status === "active";
 
-    const maxImages = currentPlanLimits.maxImages;
-    const maxVideoLinks = currentPlanLimits.maxVideoLinks;
+    const currentTier =
+        isPlanTier(user?.plan?.tier) &&
+        (
+            user.plan.tier === "silver" ||
+            hasActivePaidPlan
+        )
+            ? user.plan.tier
+            : "silver";
+
+    const currentPlan =
+        PLAN_CATALOG[currentTier];
+
+    const maxImages =
+        currentPlan.entitlements.maxImages;
+
+    const maxVideoLinks =
+        currentPlan.entitlements.maxVideoLinks;
 
     useEffect(() => {
         const syncUser = () => {

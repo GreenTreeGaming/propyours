@@ -44,11 +44,5 @@ export function getPlanLimits(user: any) {
         audience: plan.audience,
 
         ...plan.entitlements,
-
-        /**
-         * Temporary compatibility aliases.
-         * Existing code currently expects these property names.
-         */
-        promoteBoosts: plan.entitlements.promoteBoostsPerMonth,
     };
 }

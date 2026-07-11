@@ -55,7 +55,7 @@ export async function applyPlanChange({
         source,
         startedAt: new Date(),
         expiresAt: expiresAt || undefined,
-        boostsRemaining: status === "active" ? limits.promoteBoosts : 0,
+        boostsRemaining: status === "active" ? limits.promoteBoostsPerMonth : 0,
         ...(paymentId ? { paymentId } : {}),
     };
 
