@@ -1,104 +1,169 @@
-"use client"
-
-import { Home as HomeIcon } from "lucide-react";
-import { FaFacebook, FaInstagram, FaTwitter, FaLinkedin } from "react-icons/fa";
+import Link from "next/link";
 import Image from "next/image";
+import { Home as HomeIcon } from "lucide-react";
+import {
+  FaFacebook,
+  FaInstagram,
+  FaLinkedin,
+  FaXTwitter,
+} from "react-icons/fa6";
+
+const footerSections = [
+  {
+    title: "Company",
+    links: [
+      { label: "About Us", href: "/about" },
+      { label: "Contact", href: "/contact" },
+      // Add this only after creating /careers.
+      // { label: "Careers", href: "/careers" },
+    ],
+  },
+  {
+    title: "Services",
+    links: [
+      { label: "Buy Home", href: "/buy" },
+      { label: "Sell Property", href: "/sell" },
+      { label: "Builders", href: "/builders" },
+      // Add this only after creating a real designers page.
+      // { label: "Designers", href: "/designers" },
+    ],
+  },
+  {
+    title: "Locations",
+    links: [
+      { label: "Chennai", href: "/buy?city=Chennai" },
+      { label: "OMR", href: "/buy?location=OMR" },
+      { label: "ECR", href: "/buy?location=ECR" },
+    ],
+  },
+  {
+    title: "Discover",
+    links: [
+      { label: "Featured", href: "/buy?featured=true" },
+      { label: "New Listings", href: "/buy?sort=newest" },
+      { label: "Popular", href: "/buy?sort=popular" },
+    ],
+  },
+];
+
+const socialLinks = [
+  {
+    label: "Facebook",
+    href: process.env.NEXT_PUBLIC_FACEBOOK_URL,
+    icon: FaFacebook,
+  },
+  {
+    label: "Instagram",
+    href: process.env.NEXT_PUBLIC_INSTAGRAM_URL,
+    icon: FaInstagram,
+  },
+  {
+    label: "X",
+    href: process.env.NEXT_PUBLIC_X_URL,
+    icon: FaXTwitter,
+  },
+  {
+    label: "LinkedIn",
+    href: process.env.NEXT_PUBLIC_LINKEDIN_URL,
+    icon: FaLinkedin,
+  },
+].filter(
+    (
+        item
+    ): item is typeof item & {
+      href: string;
+    } => Boolean(item.href)
+);
 
 export default function Footer() {
-
   return (
-    <footer className="bg-white pt-20 pb-10 border-t border-gray-100">
-      <div className="container-wide px-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-12 mb-16">
-
-          {/* Logo & Info */}
-          <div className="max-w-xs">
-            <div className="flex items-center gap-2 mb-6 cursor-pointer" onClick={() => window.location.href = "/"}>
-              <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+      <footer className="border-t border-gray-100 bg-white pb-10 pt-20">
+        <div className="container-wide px-6">
+          <div className="mb-16 flex flex-col items-start justify-between gap-12 lg:flex-row">
+            <div className="max-w-xs">
+              <Link
+                  href="/"
+                  aria-label="PropYours home"
+                  className="mb-6 flex items-center gap-2"
+              >
+              <span className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white">
                 <HomeIcon size={18} strokeWidth={2.5} />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-primary-dark uppercase">PROPYOURS</span>
+              </span>
+
+                <span className="text-xl font-bold tracking-tight text-primary-dark">
+                PROPYOURS
+              </span>
+              </Link>
+
+              <p className="text-sm text-gray-500">
+                Premium real estate and property services across Tamil Nadu.
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-gray-400 text-sm mb-4">
-              <span className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-[10px]">101</span>
-              <span>PropYours Premium Real Estate</span>
+
+            <div className="grid flex-1 grid-cols-2 gap-8 md:grid-cols-4">
+              {footerSections.map((section) => (
+                  <nav key={section.title} aria-label={section.title}>
+                    <h2 className="mb-4 text-sm font-bold text-gray-900">
+                      {section.title}
+                    </h2>
+
+                    <ul className="space-y-2 text-sm text-gray-500">
+                      {section.links.map((link) => (
+                          <li key={link.href}>
+                            <Link
+                                href={link.href}
+                                className="transition-colors hover:text-primary"
+                            >
+                              {link.label}
+                            </Link>
+                          </li>
+                      ))}
+                    </ul>
+                  </nav>
+              ))}
             </div>
+
+            {socialLinks.length > 0 && (
+                <div>
+                  <h2 className="mb-4 text-sm font-bold text-gray-900">
+                    Connect
+                  </h2>
+
+                  <div className="flex items-center gap-4">
+                    {socialLinks.map(({ label, href, icon: Icon }) => (
+                        <a
+                            key={label}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Visit PropYours on ${label}`}
+                            className="text-gray-400 transition-colors hover:text-primary"
+                        >
+                          <Icon size={20} aria-hidden="true" />
+                        </a>
+                    ))}
+                  </div>
+                </div>
+            )}
           </div>
 
-          {/* Links Columns */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 flex-1">
-            <div className="space-y-4">
-              <h5 className="font-bold text-gray-900 text-sm">Company</h5>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-primary">About Us</a></li>
-                <li><a href="#" className="hover:text-primary">Careers</a></li>
-                <li><a href="#" className="hover:text-primary">Contact</a></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h5 className="font-bold text-gray-900 text-sm">Services</h5>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-primary">Buy Home</a></li>
-                <li><a href="#" className="hover:text-primary">Sell Property</a></li>
-                <li><a href="#" className="hover:text-primary">Designers</a></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h5 className="font-bold text-gray-900 text-sm">Quick Links</h5>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-primary">Chennai</a></li>
-                <li><a href="#" className="hover:text-primary">OMR</a></li>
-                <li><a href="#" className="hover:text-primary">ECR</a></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h5 className="font-bold text-gray-900 text-sm">Quick Links</h5>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-primary">Featured</a></li>
-                <li><a href="#" className="hover:text-primary">New Launch</a></li>
-                <li><a href="#" className="hover:text-primary">Popular</a></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h5 className="font-bold text-gray-900 text-sm">Connect</h5>
-              <div className="flex items-center gap-4 text-gray-400">
-                <FaFacebook size={20} className="hover:text-primary cursor-pointer transition-colors" />
-                <FaInstagram size={20} className="hover:text-primary cursor-pointer transition-colors" />
-                <FaTwitter size={20} className="hover:text-primary cursor-pointer transition-colors" />
-                <FaLinkedin size={20} className="hover:text-primary cursor-pointer transition-colors" />
-              </div>
-            </div>
-          </div>
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 text-xs text-gray-400 md:flex-row">
+            <p>
+              © {new Date().getFullYear()} PropYours Real Estate Solutions India
+              Pvt Ltd. All rights reserved.
+            </p>
 
-          {/* App Store Buttons */}
-          <div className="flex flex-col gap-3">
-            <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-zinc-800 transition-colors w-44 h-12 relative overflow-hidden group border border-zinc-800">
-              <Image
-                src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
-                alt="Google Play"
-                fill
-                className="object-contain p-2"
-              />
-            </div>
-            <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-3 cursor-pointer hover:bg-zinc-800 transition-colors w-44 h-12 relative overflow-hidden group border border-zinc-800">
-              <Image
-                src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
-                alt="App Store"
-                fill
-                className="object-contain p-2"
-              />
+            <div className="flex items-center gap-6 font-medium">
+              <Link href="/privacy" className="hover:text-gray-600">
+                Privacy Policy
+              </Link>
+
+              <Link href="/terms" className="hover:text-gray-600">
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>
-
-        <div className="pt-8 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
-          <p>© 2026 Propyours Real Estate Solutions India Pvt Ltd. All rights reserved.</p>
-          <div className="flex items-center gap-6 font-medium">
-            <a href="#" className="hover:text-gray-600">Privacy Policy</a>
-            <a href="#" className="hover:text-gray-600">Terms of Service</a>
-          </div>
-        </div>
-      </div>
-    </footer>
+      </footer>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, Suspense, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -40,6 +44,8 @@ interface Property {
 
 function BuyPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +56,9 @@ function BuyPageContent() {
   const [selectedBHK, setSelectedBHK] = useState(searchParams.get("bhk") || "All");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
-  const [sortBy, setSortBy] = useState("newest");
+  const [sortBy, setSortBy] = useState(
+      searchParams.get("sort") ?? "default"
+  );
 
   const [searchTerm, setSearchTerm] = useState(
       searchParams.get("location") || ""
@@ -81,25 +89,75 @@ function BuyPageContent() {
     setSelectedBHK(searchParams.get("bhk") || "All");
     setMaxPrice(searchParams.get("maxPrice") || "");
     setSearchTerm(searchParams.get("location") || "");
+    setSortBy(searchParams.get("sort") ?? "default");
   }, [searchParams]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchProperties = async () => {
+      setLoading(true);
+
       try {
-        const response = await fetch("/api/property");
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setProperties(data);
+        const apiParams = new URLSearchParams();
+
+        const filter = searchParams.get("filter");
+        const sort = searchParams.get("sort");
+
+        if (filter) {
+          apiParams.set("filter", filter);
         }
+
+        if (sort) {
+          apiParams.set("sort", sort);
+        }
+
+        const queryString = apiParams.toString();
+
+        const endpoint = queryString
+            ? `/api/property?${queryString}`
+            : "/api/property";
+
+        const response = await fetch(endpoint, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(
+              `Property request failed with status ${response.status}`
+          );
+        }
+
+        const data: unknown = await response.json();
+
+        if (!Array.isArray(data)) {
+          throw new Error("Property API returned an invalid response");
+        }
+
+        setProperties(data);
       } catch (error) {
+        if (
+            error instanceof DOMException &&
+            error.name === "AbortError"
+        ) {
+          return;
+        }
+
         console.error("Error fetching properties:", error);
+        setProperties([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchProperties();
-  }, []);
+    void fetchProperties();
+
+    return () => {
+      controller.abort();
+    };
+  }, [searchParams]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -146,15 +204,46 @@ function BuyPageContent() {
 
     return matchesCity && matchesSearch && matchesType && matchesBHK && matchesMinPrice && matchesMaxPrice;
   }).sort((a, b) => {
-    if (sortBy === "price-low") return a.price - b.price;
-    if (sortBy === "price-high") return b.price - a.price;
-    return new Date(b._id).getTime() - new Date(a._id).getTime();
+    if (sortBy === "price-low") {
+      return a.price - b.price;
+    }
+
+    if (sortBy === "price-high") {
+      return b.price - a.price;
+    }
+
+    return 0;
   });
 
   const formatPrice = (price: number) => {
     if (price >= 10000000) return `₹ ${(price / 10000000).toFixed(2)} Cr`;
     if (price >= 100000) return `₹ ${(price / 100000).toFixed(2)} L`;
     return `₹ ${price.toLocaleString()}`;
+  };
+
+  const handleSortChange = (value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    setSortBy(value);
+
+    if (
+        value === "default" ||
+        value === "price-low" ||
+        value === "price-high"
+    ) {
+      params.delete("sort");
+    } else {
+      params.set("sort", value);
+    }
+
+    const queryString = params.toString();
+
+    router.replace(
+        queryString ? `${pathname}?${queryString}` : pathname,
+        {
+          scroll: false,
+        }
+    );
   };
 
   const clearFilters = () => {
@@ -164,9 +253,13 @@ function BuyPageContent() {
     setSelectedBHK("All");
     setMinPrice("");
     setMaxPrice("");
-    setSortBy("newest");
+    setSortBy("default");
     setSearchTerm("");
     setShowSuggestions(false);
+
+    router.replace(pathname, {
+      scroll: false,
+    });
   };
 
   const getCityForArea = (area: string) => {
@@ -293,8 +386,11 @@ function BuyPageContent() {
                     type="text"
                     value={searchTerm}
                     placeholder="Chennai, Adyar, OMR, Apartment..."
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
+                    onChange={(event) => {
+                      const value = event.target.value;
+
+                      setSearchTerm(value);
+                      setSearchQuery(value);
                       setShowSuggestions(true);
                     }}
                     className="w-full pl-12 pr-4 py-3.5 bg-gray-50 rounded-2xl border-none focus:ring-4 focus:ring-primary/10 font-bold"
@@ -460,23 +556,30 @@ function BuyPageContent() {
           {/* Secondary Filter Row */}
           <div className="mt-6 pt-6 border-t border-gray-50 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Sort By:</span>
-              <div className="flex gap-2">
+    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+      Sort By:
+    </span>
+
+              <div className="flex flex-wrap gap-2">
                 {[
+                  { id: "default", label: "Recommended" },
                   { id: "newest", label: "Newest" },
+                  { id: "popular", label: "Most Popular" },
                   { id: "price-low", label: "Price: Low to High" },
-                  { id: "price-high", label: "Price: High to Low" }
+                  { id: "price-high", label: "Price: High to Low" },
                 ].map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => setSortBy(option.id)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-bold border transition-all ${sortBy === option.id
-                      ? "bg-primary/5 border-primary text-primary"
-                      : "bg-white border-gray-100 text-gray-500 hover:border-gray-200"
-                      }`}
-                  >
-                    {option.label}
-                  </button>
+                    <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => handleSortChange(option.id)}
+                        className={`px-4 py-2 rounded-xl text-[10px] font-bold border transition-all ${
+                            sortBy === option.id
+                                ? "bg-primary/5 border-primary text-primary"
+                                : "bg-white border-gray-100 text-gray-500 hover:border-gray-200"
+                        }`}
+                    >
+                      {option.label}
+                    </button>
                 ))}
               </div>
             </div>
