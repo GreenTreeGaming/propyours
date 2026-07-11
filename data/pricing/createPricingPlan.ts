@@ -127,28 +127,8 @@ function buildIncludedFeatures(
         );
     }
 
-    if (limits.scheduledBoosts) {
-        features.push("Scheduled Promote Boosts");
-    }
-
     if (limits.leadNotifications) {
         features.push("Lead Notifications");
-    }
-
-    if (limits.leadExport) {
-        features.push("Lead Export");
-    }
-
-    if (limits.buyerDemographics) {
-        features.push("Buyer Demographics");
-    }
-
-    if (limits.whatsappSmsAlerts) {
-        features.push("WhatsApp & SMS Alerts");
-    }
-
-    if (limits.prioritySupport) {
-        features.push("Priority Support");
     }
 
     return features;
@@ -173,18 +153,6 @@ function buildExcludedFeatures(
 
     if (limits.analyticsLevel === "none") {
         features.push("Performance Analytics");
-    }
-
-    if (!limits.leadExport) {
-        features.push("Lead Export");
-    }
-
-    if (!limits.buyerDemographics) {
-        features.push("Buyer Demographics");
-    }
-
-    if (!limits.scheduledBoosts) {
-        features.push("Scheduled Promote Boosts");
     }
 
     return features;

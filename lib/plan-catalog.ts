@@ -63,13 +63,7 @@ export type PlanEntitlements = {
     analyticsLevel: AnalyticsLevel;
 
     promoteBoostsPerMonth: number;
-    scheduledBoosts: boolean;
-
     leadNotifications: boolean;
-    leadExport: boolean;
-    buyerDemographics: boolean;
-    whatsappSmsAlerts: boolean;
-    prioritySupport: boolean;
 };
 
 export type PlanPresentation = {
@@ -141,13 +135,8 @@ export const PLAN_CATALOG = {
             analyticsLevel: "none",
 
             promoteBoostsPerMonth: 0,
-            scheduledBoosts: false,
 
             leadNotifications: false,
-            leadExport: false,
-            buyerDemographics: false,
-            whatsappSmsAlerts: false,
-            prioritySupport: false,
         },
     },
 
@@ -173,7 +162,7 @@ export const PLAN_CATALOG = {
             iconKey: "crown",
 
             analyticsHighlight:
-                "Views, phone clicks, favorites and enquiry tracking",
+                "Views, phone clicks and favorites tracking",
         },
 
         entitlements: {
@@ -193,13 +182,8 @@ export const PLAN_CATALOG = {
             analyticsLevel: "basic",
 
             promoteBoostsPerMonth: 0,
-            scheduledBoosts: false,
 
             leadNotifications: true,
-            leadExport: false,
-            buyerDemographics: false,
-            whatsappSmsAlerts: false,
-            prioritySupport: false,
         },
     },
 
@@ -225,7 +209,7 @@ export const PLAN_CATALOG = {
             iconKey: "gem",
 
             analyticsHighlight:
-                "Advanced listing analytics and enquiry tracking",
+                "Daily performance, views, phone clicks, favorites and conversion tracking",
         },
 
         entitlements: {
@@ -245,13 +229,8 @@ export const PLAN_CATALOG = {
             analyticsLevel: "advanced",
 
             promoteBoostsPerMonth: 0,
-            scheduledBoosts: false,
 
             leadNotifications: true,
-            leadExport: true,
-            buyerDemographics: true,
-            whatsappSmsAlerts: true,
-            prioritySupport: true,
         },
     },
 
@@ -294,13 +273,8 @@ export const PLAN_CATALOG = {
             analyticsLevel: "basic",
 
             promoteBoostsPerMonth: 0,
-            scheduledBoosts: false,
 
             leadNotifications: false,
-            leadExport: false,
-            buyerDemographics: false,
-            whatsappSmsAlerts: false,
-            prioritySupport: false,
         },
     },
 
@@ -346,13 +320,8 @@ export const PLAN_CATALOG = {
             analyticsLevel: "project",
 
             promoteBoostsPerMonth: 5,
-            scheduledBoosts: false,
 
             leadNotifications: true,
-            leadExport: false,
-            buyerDemographics: false,
-            whatsappSmsAlerts: false,
-            prioritySupport: false,
         },
     },
 
@@ -378,7 +347,7 @@ export const PLAN_CATALOG = {
             iconKey: "crown",
 
             analyticsHighlight:
-                "Portfolio views, contact clicks, favorites and regional performance",
+                "Portfolio views, contact clicks, favorites and 30-day performance",
         },
 
         entitlements: {
@@ -401,13 +370,7 @@ export const PLAN_CATALOG = {
             analyticsLevel: "portfolio",
 
             promoteBoostsPerMonth: 15,
-            scheduledBoosts: true,
-
             leadNotifications: true,
-            leadExport: false,
-            buyerDemographics: false,
-            whatsappSmsAlerts: false,
-            prioritySupport: true,
         },
     },
 } as const satisfies Record<PlanTier, PlanDefinition>;
