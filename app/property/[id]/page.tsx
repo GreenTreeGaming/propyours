@@ -1,47 +1,104 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
-import {
-    Bed,
-    Bath,
-    Maximize,
-    Layers,
-    User,
-    Phone,
-    Mail,
-    ArrowLeft,
-    Share2,
-    Heart,
-    CheckCircle2,
-    Check,
-    Building2,
-    UserCircle,
-    Info,
-    BarChart3,
-    Calculator,
-    Download,
-    FileText,
-} from "lucide-react";
-import EMICalculator from "@/components/EMICalculator";
-import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import SharePropertyModal from "@/components/SharePropertyModal";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import {
+    AlertTriangle,
+    ArrowLeft,
+    ArrowRight,
+    BadgeCheck,
+    Bath,
+    BedDouble,
+    Building2,
+    CalendarDays,
+    Check,
+    CheckCircle2,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    Expand,
+    ExternalLink,
+    Eye,
+    FileText,
+    Heart,
+    Home,
+    Landmark,
+    Layers,
+    Loader2,
+    Mail,
+    Map as MapIcon,
+    MapPin,
+    MessageCircle,
+    Phone,
+    RefreshCw,
+    Ruler,
+    Share2,
+    ShieldCheck,
+    Sparkles,
+    Store,
+    Trees,
+    UserCircle,
+    Video,
+    X,
+    type LucideIcon,
+} from "lucide-react";
+import {
+    AnimatePresence,
+    motion,
+} from "framer-motion";
+import {
+    useParams,
+    useRouter,
+} from "next/navigation";
+
+import EMICalculator from "@/components/EMICalculator";
+import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import SharePropertyModal from "@/components/SharePropertyModal";
+import {
+    useCompare,
+} from "@/components/CompareContext";
 import {
     getStoredUser,
     updateStoredUserFavorites,
+    type StoredUser,
 } from "@/lib/browser-user";
-import { useCompare } from "@/components/CompareContext";
 
-type FavoriteRecord = {
+type PropertyCategory =
+    | "residential"
+    | "land"
+    | "commercial";
+
+type AnalyticsLevel =
+    | "none"
+    | "basic"
+    | "advanced"
+    | "project"
+    | "portfolio";
+
+interface FavoriteRecord {
     _id: string;
-};
+}
 
-type PropertyRecord = {
+interface PropertyOwner {
+    _id?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+    bio?: string;
+    company?: string;
+    city?: string;
+    phone?: string;
+}
+
+interface PropertyRecord {
     _id: string;
     address: string;
     images?: string[];
@@ -49,933 +106,3448 @@ type PropertyRecord = {
     brochure?: {
         url?: string;
         fileName?: string;
-    };
+    } | null;
     purpose?: string;
     propertyType?: string;
-    bedrooms?: number;
+    commercialType?: string | null;
+    bedrooms?: number | null;
     locality?: string;
     city?: string;
+    state?: string;
     price?: number;
+    priceType?: string;
     negotiable?: boolean;
-    bathrooms?: number;
+    bathrooms?: number | null;
     size?: number;
     sizeUnit?: string;
-    floors?: number;
+    floors?: number | null;
     description?: string;
-    uds?: number;
+    uds?: number | null;
     ownershipType?: string;
     dimensions?: string;
     landmark?: string;
-    userId?: {
-        _id?: string;
-        name?: string;
-        email?: string;
-        role?: string;
-        bio?: string;
-        company?: string;
-        city?: string;
-        phone?: string;
-    };
+    userId?: PropertyOwner;
     amenities?: string[];
+    promotedUntil?: string;
+    listingExpiresAt?: string;
+    featured?: boolean;
+    status?: string;
+    createdAt?: string;
+    updatedAt?: string;
     planSnapshot?: {
+        tier?: string;
         homepageFeatured?: boolean;
-        rankingLevel?: "standard" | "featured" | "priority" | "top";
-        compareVisibility?: "standard" | "highlighted" | "priority";
-        badgeLevel?: "none" | "verified" | "premium";
-        analyticsLevel?: "none" | "basic" | "advanced" | "project" | "portfolio";
+        rankingLevel?:
+            | "standard"
+            | "featured"
+            | "priority"
+            | "top";
+        compareVisibility?:
+            | "standard"
+            | "highlighted"
+            | "priority";
+        badgeLevel?:
+            | "none"
+            | "verified"
+            | "premium";
+        analyticsLevel?: AnalyticsLevel;
     };
+}
+
+interface FavoriteTogglePayload {
+    favorites?: string[];
+    error?: string;
+}
+
+interface LeadPayload {
+    success?: boolean;
+    error?: string;
+}
+
+interface DetailItem {
+    label: string;
+    value: string;
+    icon: LucideIcon;
+}
+
+interface AmenityGroup {
+    title: string;
+    items: string[];
+}
+
+const FALLBACK_IMAGE =
+    "/house1.jpeg";
+
+const SIZE_UNITS = [
+    {
+        value: "sqft",
+        label: "Sq Ft",
+    },
+    {
+        value: "sqyd",
+        label: "Sq Yd",
+    },
+    {
+        value: "sqm",
+        label: "Sq M",
+    },
+    {
+        value: "acre",
+        label: "Acre",
+    },
+    {
+        value: "kanal",
+        label: "Kanal",
+    },
+    {
+        value: "marla",
+        label: "Marla",
+    },
+] as const;
+
+const SIZE_FACTORS: Record<
+    string,
+    number
+> = {
+    sqft: 1,
+    sqyd: 9,
+    sqm: 10.7639,
+    acre: 43_560,
+    kanal: 5_445,
+    marla: 272.25,
 };
 
-export default function PropertyDetailsPage() {
-    const { id } = useParams();
-    const { compareList, addToCompare, removeFromCompare } = useCompare();
-    const [property, setProperty] = useState<PropertyRecord | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [favoriteLoading, setFavoriteLoading] = useState(false);
-    const [favoriteError, setFavoriteError] = useState("");
-    const [shareOpen, setShareOpen] = useState(false);
-    const [shareUrl, setShareUrl] = useState("");
-    const [showPhone, setShowPhone] = useState(false);
-    const [displayUnit, setDisplayUnit] = useState<string | null>(null);
-    const [showAnalytics, setShowAnalytics] = useState(false);
-    const [isOwner, setIsOwner] = useState(false);
-    const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+const LAND_PROPERTY_TYPES =
+    new Set([
+        "Plot",
+        "Agricultural Land",
+    ]);
 
-    const isInCompare = property ? compareList.some((p) => p._id === property._id) : false;
+const AMENITY_GROUP_RULES: Array<{
+    title: string;
+    keywords: string[];
+}> = [
+    {
+        title: "Security & access",
+        keywords: [
+            "security",
+            "cctv",
+            "intercom",
+            "fire",
+            "gated",
+            "gate",
+            "emergency",
+            "24x7 access",
+            "security cabin",
+        ],
+    },
+    {
+        title: "Parking & logistics",
+        keywords: [
+            "parking",
+            "loading",
+            "truck",
+            "service entry",
+            "road facing",
+            "main road",
+            "goods lift",
+            "internal road",
+            "approach road",
+        ],
+    },
+    {
+        title: "Business & convenience",
+        keywords: [
+            "internet",
+            "reception",
+            "conference",
+            "pantry",
+            "central ac",
+            "signage",
+            "display window",
+            "footfall",
+            "mall",
+            "ground floor",
+            "corner",
+            "laundry",
+            "servant",
+        ],
+    },
+    {
+        title: "Utilities",
+        keywords: [
+            "power",
+            "lift",
+            "water",
+            "borewell",
+            "pipeline",
+            "sewage",
+            "waste",
+            "electricity",
+            "drainage",
+            "street lights",
+            "washroom",
+        ],
+    },
+    {
+        title: "Lifestyle & surroundings",
+        keywords: [
+            "clubhouse",
+            "gym",
+            "pool",
+            "play",
+            "jogging",
+            "party",
+            "library",
+            "games",
+            "park",
+            "garden",
+            "vastu",
+            "compound",
+            "fencing",
+            "levelled",
+            "farm access",
+            "rain water",
+        ],
+    },
+];
 
-    const router = useRouter();
+function isAbortError(
+    error: unknown,
+): boolean {
+    return (
+        error instanceof Error &&
+        error.name === "AbortError"
+    );
+}
 
-    const handleCompareToggle = () => {
-        if (!property) return;
-        if (isInCompare) {
-            removeFromCompare(property._id);
-        } else {
-            addToCompare({
-                _id: property._id,
-                address: property.address,
-                images: property.images || [],
-                price: property.price || 0,
-                negotiable: property.negotiable,
-                size: property.size || 0,
-                sizeUnit: property.sizeUnit || "sqft",
-                propertyType: property.propertyType || "Residential",
-                bedrooms: property.bedrooms,
-                bathrooms: property.bathrooms,
-                locality: property.locality,
-                city: property.city,
-                amenities: property.amenities || [],
-                ownershipType: property.ownershipType,
-                planSnapshot: property.planSnapshot,
+function getUserId(
+    user: StoredUser | null,
+): string | null {
+    return user?.id ?? user?._id ?? null;
+}
+
+function normalizePropertyId(
+    value: string | string[] | undefined,
+): string | null {
+    if (Array.isArray(value)) {
+        return value[0] ?? null;
+    }
+
+    return value ?? null;
+}
+
+function getPropertyCategory(
+    property: PropertyRecord,
+): PropertyCategory {
+    if (
+        property.propertyType ===
+        "Commercial" ||
+        property.commercialType
+    ) {
+        return "commercial";
+    }
+
+    if (
+        LAND_PROPERTY_TYPES.has(
+            property.propertyType || "",
+        )
+    ) {
+        return "land";
+    }
+
+    return "residential";
+}
+
+function getPropertyTypeLabel(
+    property: PropertyRecord,
+): string {
+    return (
+        property.commercialType ||
+        property.propertyType ||
+        "Property"
+    );
+}
+
+function getPurposeLabel(
+    purpose?: string,
+): string {
+    if (purpose === "Sell") {
+        return "For sale";
+    }
+
+    if (purpose === "Rent") {
+        return "For rent";
+    }
+
+    if (
+        purpose === "PG/CO-Living"
+    ) {
+        return "PG / co-living";
+    }
+
+    return purpose || "Available";
+}
+
+function getLocationLabel(
+    property: PropertyRecord,
+): string {
+    return [
+        property.locality,
+        property.city,
+        property.state,
+    ]
+        .filter(Boolean)
+        .join(", ");
+}
+
+function getFullAddress(
+    property: PropertyRecord,
+): string {
+    return [
+        property.address,
+        property.locality,
+        property.city,
+        property.state,
+    ]
+        .filter(Boolean)
+        .join(", ");
+}
+
+function getMapsUrl(
+    property: PropertyRecord,
+): string {
+    const query =
+        encodeURIComponent(
+            getFullAddress(property),
+        );
+
+    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+function formatPrice(
+    value?: number,
+): string {
+    if (
+        value === undefined ||
+        !Number.isFinite(value)
+    ) {
+        return "Price unavailable";
+    }
+
+    if (value >= 10_000_000) {
+        const crores =
+            value / 10_000_000;
+
+        return `₹${crores.toFixed(
+            Number.isInteger(crores)
+                ? 0
+                : 2,
+        )} Cr`;
+    }
+
+    if (value >= 100_000) {
+        const lakhs =
+            value / 100_000;
+
+        return `₹${lakhs.toFixed(
+            Number.isInteger(lakhs)
+                ? 0
+                : 1,
+        )} L`;
+    }
+
+    return new Intl.NumberFormat(
+        "en-IN",
+        {
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 0,
+        },
+    ).format(value);
+}
+
+function formatDate(
+    value?: string,
+): string | null {
+    if (!value) {
+        return null;
+    }
+
+    const date = new Date(value);
+
+    if (
+        Number.isNaN(
+            date.getTime(),
+        )
+    ) {
+        return null;
+    }
+
+    return new Intl.DateTimeFormat(
+        "en-IN",
+        {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        },
+    ).format(date);
+}
+
+function formatAreaValue(
+    value: number,
+    unit: string,
+): string {
+    const maximumFractionDigits =
+        unit === "acre" ? 4 : 2;
+
+    return new Intl.NumberFormat(
+        "en-IN",
+        {
+            maximumFractionDigits,
+        },
+    ).format(value);
+}
+
+function convertSize(
+    value: number,
+    fromUnit: string,
+    toUnit: string,
+): number {
+    const squareFeet =
+        value *
+        (SIZE_FACTORS[fromUnit] || 1);
+
+    return (
+        squareFeet /
+        (SIZE_FACTORS[toUnit] || 1)
+    );
+}
+
+function isPromoted(
+    property: PropertyRecord,
+): boolean {
+    if (!property.promotedUntil) {
+        return false;
+    }
+
+    const promotedUntil =
+        new Date(
+            property.promotedUntil,
+        ).getTime();
+
+    return (
+        Number.isFinite(
+            promotedUntil,
+        ) &&
+        promotedUntil > Date.now()
+    );
+}
+
+function getListingBadges(
+    property: PropertyRecord,
+): string[] {
+    const badges: string[] = [];
+
+    if (
+        property.planSnapshot
+            ?.badgeLevel === "premium"
+    ) {
+        badges.push("Premium listing");
+    } else if (
+        property.planSnapshot
+            ?.badgeLevel === "verified"
+    ) {
+        badges.push("Verified profile");
+    }
+
+    if (isPromoted(property)) {
+        badges.push("Promoted");
+    }
+
+    if (
+        property.planSnapshot
+            ?.homepageFeatured
+    ) {
+        badges.push("Homepage featured");
+    }
+
+    if (
+        property.planSnapshot
+            ?.rankingLevel === "top"
+    ) {
+        badges.push("Top ranked");
+    } else if (
+        property.planSnapshot
+            ?.rankingLevel === "priority"
+    ) {
+        badges.push("Priority listing");
+    }
+
+    return badges;
+}
+
+function getVideoEmbedUrl(
+    value: string,
+): string | null {
+    try {
+        const url = new URL(value);
+        const hostname =
+            url.hostname.toLowerCase();
+
+        if (
+            hostname === "youtube.com" ||
+            hostname ===
+            "www.youtube.com"
+        ) {
+            const videoId =
+                url.searchParams.get("v");
+
+            if (videoId) {
+                return `https://www.youtube.com/embed/${encodeURIComponent(
+                    videoId,
+                )}`;
+            }
+
+            const segments =
+                url.pathname
+                    .split("/")
+                    .filter(Boolean);
+
+            if (
+                segments[0] === "shorts" &&
+                segments[1]
+            ) {
+                return `https://www.youtube.com/embed/${encodeURIComponent(
+                    segments[1],
+                )}`;
+            }
+        }
+
+        if (
+            hostname === "youtu.be"
+        ) {
+            const videoId =
+                url.pathname
+                    .split("/")
+                    .filter(Boolean)[0];
+
+            if (videoId) {
+                return `https://www.youtube.com/embed/${encodeURIComponent(
+                    videoId,
+                )}`;
+            }
+        }
+
+        if (
+            hostname === "vimeo.com" ||
+            hostname === "www.vimeo.com"
+        ) {
+            const videoId =
+                url.pathname
+                    .split("/")
+                    .filter(Boolean)[0];
+
+            if (videoId) {
+                return `https://player.vimeo.com/video/${encodeURIComponent(
+                    videoId,
+                )}`;
+            }
+        }
+
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function groupAmenities(
+    amenities: string[],
+): AmenityGroup[] {
+    const groups = new Map<
+        string,
+        string[]
+    >();
+    const uncategorized: string[] =
+        [];
+
+    for (const amenity of amenities) {
+        const normalized =
+            amenity.toLowerCase();
+
+        const matchingRule =
+            AMENITY_GROUP_RULES.find(
+                (rule) =>
+                    rule.keywords.some(
+                        (keyword) =>
+                            normalized.includes(
+                                keyword,
+                            ),
+                    ),
+            );
+
+        if (!matchingRule) {
+            uncategorized.push(
+                amenity,
+            );
+            continue;
+        }
+
+        const current =
+            groups.get(
+                matchingRule.title,
+            ) ?? [];
+
+        current.push(amenity);
+        groups.set(
+            matchingRule.title,
+            current,
+        );
+    }
+
+    const result =
+        AMENITY_GROUP_RULES.flatMap(
+            (rule) => {
+                const items =
+                    groups.get(rule.title);
+
+                return items &&
+                items.length > 0
+                    ? [
+                        {
+                            title: rule.title,
+                            items,
+                        },
+                    ]
+                    : [];
+            },
+        );
+
+    if (
+        uncategorized.length > 0
+    ) {
+        result.push({
+            title: "Other features",
+            items: uncategorized,
+        });
+    }
+
+    return result;
+}
+
+function getPrimaryDetails(
+    property: PropertyRecord,
+): DetailItem[] {
+    const category =
+        getPropertyCategory(property);
+    const details: DetailItem[] =
+        [];
+
+    if (
+        category === "residential"
+    ) {
+        if (
+            property.bedrooms !==
+            null &&
+            property.bedrooms !==
+            undefined
+        ) {
+            details.push({
+                label: "Bedrooms",
+                value:
+                    property.bedrooms === 0
+                        ? "Studio"
+                        : `${property.bedrooms} BHK`,
+                icon: BedDouble,
             });
         }
-    };
 
-    const convertSize = (value: number, fromUnit: string, toUnit: string) => {
-        const factors: Record<string, number> = {
-            sqft: 1,
-            sqyd: 9,
-            sqm: 10.7639,
-            acre: 43560,
-            kanal: 5445,
-            marla: 272.25,
-        };
+        if (
+            property.bathrooms !==
+            null &&
+            property.bathrooms !==
+            undefined
+        ) {
+            details.push({
+                label: "Bathrooms",
+                value: String(
+                    property.bathrooms,
+                ),
+                icon: Bath,
+            });
+        }
+    }
 
-        const sqftValue = value * (factors[fromUnit] || 1);
-        const result = sqftValue / (factors[toUnit] || 1);
+    if (
+        category === "commercial"
+    ) {
+        if (
+            property.bathrooms !==
+            null &&
+            property.bathrooms !==
+            undefined
+        ) {
+            details.push({
+                label: "Washrooms",
+                value: String(
+                    property.bathrooms,
+                ),
+                icon: Bath,
+            });
+        }
 
-        // Return rounded to 2 decimals, or 4 if it's very small (like acres)
-        return toUnit === "acre" ? result.toFixed(4) : Math.round(result * 100) / 100;
-    };
+        if (
+            property.floors !==
+            null &&
+            property.floors !==
+            undefined
+        ) {
+            details.push({
+                label: "Total floors",
+                value: String(
+                    property.floors,
+                ),
+                icon: Building2,
+            });
+        }
+    }
 
-    useEffect(() => {
-        if (!id) return;
+    if (
+        category === "land" &&
+        property.dimensions
+    ) {
+        details.push({
+            label: "Dimensions",
+            value:
+            property.dimensions,
+            icon: MapIcon,
+        });
+    }
 
-        const fetchProperty = async () => {
+    if (
+        category !== "commercial" &&
+        category !== "land" &&
+        property.floors !==
+        null &&
+        property.floors !==
+        undefined
+    ) {
+        details.push({
+            label: "Total floors",
+            value: String(
+                property.floors,
+            ),
+            icon: Layers,
+        });
+    }
+
+    if (property.ownershipType) {
+        details.push({
+            label: "Ownership",
+            value:
+            property.ownershipType,
+            icon: Landmark,
+        });
+    }
+
+    return details.slice(0, 4);
+}
+
+function getFactRows(
+    property: PropertyRecord,
+): Array<{
+    label: string;
+    value: string;
+}> {
+    const rows: Array<{
+        label: string;
+        value: string;
+    }> = [
+        {
+            label: "Listing purpose",
+            value: getPurposeLabel(
+                property.purpose,
+            ),
+        },
+        {
+            label: "Property type",
+            value:
+                getPropertyTypeLabel(
+                    property,
+                ),
+        },
+    ];
+
+    if (property.priceType) {
+        rows.push({
+            label: "Price type",
+            value:
+            property.priceType,
+        });
+    }
+
+    if (property.ownershipType) {
+        rows.push({
+            label: "Ownership",
+            value:
+            property.ownershipType,
+        });
+    }
+
+    if (
+        property.uds !== null &&
+        property.uds !== undefined
+    ) {
+        rows.push({
+            label: "UDS",
+            value: `${new Intl.NumberFormat(
+                "en-IN",
+            ).format(
+                property.uds,
+            )} sq ft`,
+        });
+    }
+
+    if (property.dimensions) {
+        rows.push({
+            label: "Dimensions",
+            value:
+            property.dimensions,
+        });
+    }
+
+    if (property.landmark) {
+        rows.push({
+            label: "Nearby landmark",
+            value:
+            property.landmark,
+        });
+    }
+
+    const listedDate =
+        formatDate(property.createdAt);
+
+    if (listedDate) {
+        rows.push({
+            label: "Listed on",
+            value: listedDate,
+        });
+    }
+
+    return rows;
+}
+
+function getWhatsAppUrl(
+    phone: string,
+    property: PropertyRecord,
+): string {
+    const digits =
+        phone.replace(/\D/g, "");
+
+    const message =
+        encodeURIComponent(
+            `Hi, I am interested in the ${getPropertyTypeLabel(
+                property,
+            )} at ${getFullAddress(
+                property,
+            )} listed on PropYours.`,
+        );
+
+    return `https://wa.me/${digits}?text=${message}`;
+}
+
+function PropertyPageSkeleton() {
+    return (
+        <main className="min-h-screen bg-[#f5f7f6] pb-20 pt-24">
+            <div className="mx-auto max-w-7xl space-y-7 px-5 sm:px-6 lg:px-8">
+                <div className="h-12 animate-pulse rounded-2xl bg-slate-200" />
+
+                <div className="grid h-[520px] gap-3 md:grid-cols-[2fr_1fr]">
+                    <div className="animate-pulse rounded-[2rem] bg-slate-200" />
+                    <div className="hidden gap-3 md:grid">
+                        <div className="animate-pulse rounded-[2rem] bg-slate-200" />
+                        <div className="animate-pulse rounded-[2rem] bg-slate-200" />
+                    </div>
+                </div>
+
+                <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+                    <div className="space-y-6">
+                        <div className="h-72 animate-pulse rounded-[2rem] bg-white" />
+                        <div className="h-64 animate-pulse rounded-[2rem] bg-white" />
+                        <div className="h-80 animate-pulse rounded-[2rem] bg-white" />
+                    </div>
+                    <div className="h-[520px] animate-pulse rounded-[2rem] bg-white" />
+                </div>
+            </div>
+        </main>
+    );
+}
+
+export default function PropertyDetailsPage() {
+    const params = useParams<{
+        id?: string | string[];
+    }>();
+    const router = useRouter();
+    const propertyId =
+        normalizePropertyId(
+            params?.id,
+        );
+
+    const {
+        compareList,
+        addToCompare,
+        removeFromCompare,
+    } = useCompare();
+
+    const [property, setProperty] =
+        useState<PropertyRecord | null>(
+            null,
+        );
+    const [loading, setLoading] =
+        useState(true);
+    const [loadError, setLoadError] =
+        useState("");
+    const [
+        contactError,
+        setContactError,
+    ] = useState("");
+    const [
+        favoriteError,
+        setFavoriteError,
+    ] = useState("");
+    const [
+        favoriteLoading,
+        setFavoriteLoading,
+    ] = useState(false);
+    const [isFavorite, setIsFavorite] =
+        useState(false);
+    const [shareOpen, setShareOpen] =
+        useState(false);
+    const [
+        analyticsOpen,
+        setAnalyticsOpen,
+    ] = useState(false);
+    const [
+        selectedImageIndex,
+        setSelectedImageIndex,
+    ] = useState<number | null>(
+        null,
+    );
+    const [
+        displayUnit,
+        setDisplayUnit,
+    ] = useState("sqft");
+    const [showPhone, setShowPhone] =
+        useState(false);
+    const [
+        contactLoading,
+        setContactLoading,
+    ] = useState<
+        "phone" | "email" | "whatsapp" | null
+    >(null);
+    const [shareUrl, setShareUrl] =
+        useState("");
+    const [isOwner, setIsOwner] =
+        useState(false);
+
+    const loadProperty = useCallback(
+        async (
+            signal?: AbortSignal,
+        ) => {
+            if (!propertyId) {
+                setLoadError(
+                    "Property not found.",
+                );
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            setLoadError("");
+
             try {
-                setLoading(true);
+                const response = await fetch(
+                    `/api/property/${propertyId}`,
+                    {
+                        cache: "no-store",
+                        credentials: "include",
+                        signal,
+                    },
+                );
 
-                const res = await fetch(`/api/property/${id}`);
-                const data = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(data.error || "Property not found");
+                if (signal?.aborted) {
+                    return;
                 }
 
-                setProperty(data);
-                setDisplayUnit(data.sizeUnit || "sqft");
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Failed to load property"
+                const payload: unknown =
+                    await response.json();
+
+                if (signal?.aborted) {
+                    return;
+                }
+
+                if (
+                    !response.ok ||
+                    typeof payload !==
+                    "object" ||
+                    payload === null
+                ) {
+                    const message =
+                        typeof payload ===
+                        "object" &&
+                        payload !== null &&
+                        "error" in payload &&
+                        typeof payload.error ===
+                        "string"
+                            ? payload.error
+                            : "Property not found.";
+
+                    throw new Error(message);
+                }
+
+                const nextProperty =
+                    payload as PropertyRecord;
+
+                setProperty(nextProperty);
+                setDisplayUnit(
+                    nextProperty.sizeUnit ||
+                    "sqft",
+                );
+            } catch (error) {
+                if (
+                    signal?.aborted ||
+                    isAbortError(error)
+                ) {
+                    return;
+                }
+
+                setLoadError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to load this property.",
                 );
             } finally {
-                setLoading(false);
+                if (!signal?.aborted) {
+                    setLoading(false);
+                }
             }
-        };
-
-        fetchProperty();
-    }, [id]);
+        },
+        [propertyId],
+    );
 
     useEffect(() => {
+        const controller =
+            new AbortController();
+
+        void loadProperty(
+            controller.signal,
+        );
+
+        return () =>
+            controller.abort();
+    }, [loadProperty]);
+
+    useEffect(() => {
+        if (
+            !property ||
+            !propertyId
+        ) {
+            return;
+        }
+
+        const user =
+            getStoredUser();
+        const userId =
+            getUserId(user);
+
+        setIsOwner(
+            Boolean(
+                userId &&
+                property.userId?._id ===
+                userId,
+            ),
+        );
+    }, [
+        property,
+        propertyId,
+    ]);
+
+    useEffect(() => {
+        if (
+            !propertyId ||
+            !property
+        ) {
+            return;
+        }
+
+        const sessionKey =
+            `viewed-property-${propertyId}`;
+
+        if (
+            sessionStorage.getItem(
+                sessionKey,
+            )
+        ) {
+            return;
+        }
+
+        sessionStorage.setItem(
+            sessionKey,
+            "true",
+        );
+
+        void fetch(
+            `/api/property/${propertyId}/analytics`,
+            {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    type: "view",
+                }),
+            },
+        ).catch((error) => {
+            console.error(
+                "Failed to record property view:",
+                error,
+            );
+        });
+    }, [
+        property,
+        propertyId,
+    ]);
+
+    useEffect(() => {
+        if (!propertyId) {
+            return;
+        }
+
+        const currentPropertyId = propertyId;
+
         const user = getStoredUser();
 
-        if (!user || !property) {
-            setIsOwner(false);
-            return;
-        }
-
-        setIsOwner(property.userId?._id === user.id);
-    }, [property]);
-
-    useEffect(() => {
-        if (!id || !property) return;
-
-        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
-        const sessionKey = `viewed-property-${normalizedId}`;
-
-        if (sessionStorage.getItem(sessionKey)) {
-            return;
-        }
-
-        sessionStorage.setItem(sessionKey, "true");
-
-        const recordView = async () => {
-            try {
-                await fetch(`/api/property/${normalizedId}/analytics`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ type: "view" }),
-                });
-            } catch (err) {
-                console.error("Failed to record view:", err);
-            }
-        };
-
-        recordView();
-    }, [id, !!property]);
-
-    useEffect(() => {
-        if (!id) return;
-
-        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
-        const storedUser = getStoredUser();
-
-        if (storedUser?.favorites?.includes(normalizedId)) {
+        if (
+            user?.favorites?.includes(
+                currentPropertyId,
+            )
+        ) {
             setIsFavorite(true);
         }
 
-        if (!storedUser) {
+        const userId =
+            getUserId(user);
+
+        if (!userId) {
             return;
         }
 
-        const fetchFavorites = async () => {
+        const controller =
+            new AbortController();
+
+        async function syncFavorites() {
             try {
-                const res = await fetch(`/api/user/${storedUser.id}/favorites`, {
-                    cache: "no-store",
-                    credentials: "include",
-                });
+                const response =
+                    await fetch(
+                        `/api/user/${userId}/favorites`,
+                        {
+                            cache: "no-store",
+                            credentials: "include",
+                            signal:
+                            controller.signal,
+                        },
+                    );
 
-                const data = await res.json();
+                if (
+                    !response.ok ||
+                    controller.signal.aborted
+                ) {
+                    return;
+                }
 
-                if (!res.ok) return;
+                const payload: unknown =
+                    await response.json();
 
-                const favoriteIds = (data as FavoriteRecord[]).map(
-                    (favorite) => favorite._id
+                if (
+                    controller.signal.aborted ||
+                    !Array.isArray(payload)
+                ) {
+                    return;
+                }
+
+                const favoriteIds =
+                    (
+                        payload as FavoriteRecord[]
+                    ).map(
+                        (favorite) =>
+                            favorite._id,
+                    );
+
+                updateStoredUserFavorites(
+                    favoriteIds,
                 );
 
-                updateStoredUserFavorites(favoriteIds);
-                setIsFavorite(favoriteIds.includes(normalizedId));
+                setIsFavorite(
+                    favoriteIds.includes(
+                        currentPropertyId,
+                    ),
+                );
             } catch (error) {
-                console.error("Failed to sync favorite state:", error);
+                if (
+                    !controller.signal.aborted &&
+                    !isAbortError(error)
+                ) {
+                    console.error(
+                        "Failed to sync favorite state:",
+                        error,
+                    );
+                }
             }
-        };
+        }
 
-        fetchFavorites();
-    }, [id]);
+        void syncFavorites();
+
+        return () =>
+            controller.abort();
+    }, [propertyId]);
 
     useEffect(() => {
-        if (typeof window === "undefined" || !id) return;
-
-        const normalizedId = (Array.isArray(id) ? id[0] : id) as string;
-
-        setShareUrl(`${window.location.origin}/property/${normalizedId}`);
-    }, [id]);
-
-    const createLead = async (source: "phone" | "email" | "favorite") => {
-        const rawId = Array.isArray(id) ? id[0] : id;
-
-        if (!rawId) return;
-
-        try {
-            await fetch(`/api/property/${rawId}/lead`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "include",
-                body: JSON.stringify({ source }),
-            });
-        } catch (error) {
-            console.error(`Failed to create ${source} lead:`, error);
-        }
-    };
-
-    const handleFavoriteToggle = async () => {
-        const user = getStoredUser();
-        const userId = user?.id || user?._id;
-        const rawId = Array.isArray(id) ? id[0] : id;
-
-        if (!user || !userId) {
-            router.push("/login");
+        if (
+            typeof window ===
+            "undefined" ||
+            !propertyId
+        ) {
             return;
         }
 
-        if (!rawId) return;
+        setShareUrl(
+            `${window.location.origin}/property/${propertyId}`,
+        );
+    }, [propertyId]);
 
-        const normalizedId: string = rawId;
+    useEffect(() => {
+        if (
+            selectedImageIndex ===
+            null
+        ) {
+            return;
+        }
+
+        const previousOverflow =
+            document.body.style
+                .overflow;
+        document.body.style.overflow =
+            "hidden";
+
+        function handleKeyDown(
+            event: KeyboardEvent,
+        ) {
+            if (event.key === "Escape") {
+                setSelectedImageIndex(
+                    null,
+                );
+            }
+
+            if (
+                event.key ===
+                "ArrowLeft"
+            ) {
+                setSelectedImageIndex(
+                    (current) => {
+                        if (
+                            current === null ||
+                            propertyImages.length ===
+                            0
+                        ) {
+                            return current;
+                        }
+
+                        return current === 0
+                            ? propertyImages.length -
+                            1
+                            : current - 1;
+                    },
+                );
+            }
+
+            if (
+                event.key ===
+                "ArrowRight"
+            ) {
+                setSelectedImageIndex(
+                    (current) => {
+                        if (
+                            current === null ||
+                            propertyImages.length ===
+                            0
+                        ) {
+                            return current;
+                        }
+
+                        return current ===
+                        propertyImages.length -
+                        1
+                            ? 0
+                            : current + 1;
+                    },
+                );
+            }
+        }
+
+        window.addEventListener(
+            "keydown",
+            handleKeyDown,
+        );
+
+        return () => {
+            document.body.style.overflow =
+                previousOverflow;
+            window.removeEventListener(
+                "keydown",
+                handleKeyDown,
+            );
+        };
+    });
+
+    const propertyImages =
+        useMemo(() => {
+            const images =
+                property?.images?.filter(
+                    Boolean,
+                ) ?? [];
+
+            return images.length > 0
+                ? images
+                : [FALLBACK_IMAGE];
+        }, [property?.images]);
+
+    const category = property
+        ? getPropertyCategory(
+            property,
+        )
+        : "residential";
+
+    const typeLabel = property
+        ? getPropertyTypeLabel(
+            property,
+        )
+        : "Property";
+
+    const locationLabel = property
+        ? getLocationLabel(property)
+        : "";
+
+    const badges = useMemo(
+        () =>
+            property
+                ? getListingBadges(
+                    property,
+                )
+                : [],
+        [property],
+    );
+
+    const primaryDetails =
+        useMemo(
+            () =>
+                property
+                    ? getPrimaryDetails(
+                        property,
+                    )
+                    : [],
+            [property],
+        );
+
+    const factRows = useMemo(
+        () =>
+            property
+                ? getFactRows(property)
+                : [],
+        [property],
+    );
+
+    const amenityGroups =
+        useMemo(
+            () =>
+                groupAmenities(
+                    property?.amenities ?? [],
+                ),
+            [property?.amenities],
+        );
+
+    const videoEmbeds =
+        useMemo(
+            () =>
+                (
+                    property?.videoLinks ??
+                    []
+                )
+                    .map((url) => ({
+                        sourceUrl: url,
+                        embedUrl:
+                            getVideoEmbedUrl(
+                                url,
+                            ),
+                    }))
+                    .filter(
+                        (
+                            video,
+                        ): video is {
+                            sourceUrl: string;
+                            embedUrl: string;
+                        } =>
+                            Boolean(
+                                video.embedUrl,
+                            ),
+                    ),
+            [property?.videoLinks],
+        );
+
+    const displayedArea =
+        useMemo(() => {
+            if (
+                !property?.size
+            ) {
+                return null;
+            }
+
+            const converted =
+                convertSize(
+                    property.size,
+                    property.sizeUnit ||
+                    "sqft",
+                    displayUnit,
+                );
+
+            return formatAreaValue(
+                converted,
+                displayUnit,
+            );
+        }, [
+            displayUnit,
+            property?.size,
+            property?.sizeUnit,
+        ]);
+
+    const isInCompare =
+        property
+            ? compareList.some(
+                (item) =>
+                    item._id ===
+                    property._id,
+            )
+            : false;
+
+    function redirectToLogin() {
+        const redirect =
+            propertyId
+                ? `/property/${propertyId}`
+                : "/buy";
+
+        router.push(
+            `/login?redirect=${encodeURIComponent(
+                redirect,
+            )}`,
+        );
+    }
+
+    async function createLead(
+        source:
+            | "phone"
+            | "email"
+            | "whatsapp"
+            | "favorite",
+    ): Promise<boolean> {
+        if (!propertyId) {
+            return false;
+        }
+
+        const user =
+            getStoredUser();
+
+        if (!getUserId(user)) {
+            redirectToLogin();
+            return false;
+        }
+
+        const response = await fetch(
+            `/api/property/${propertyId}/lead`,
+            {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    source,
+                }),
+            },
+        );
+
+        const payload =
+            (await response.json()) as
+                LeadPayload;
+
+        if (response.status === 401) {
+            redirectToLogin();
+            return false;
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                payload.error ||
+                "Unable to contact this seller.",
+            );
+        }
+
+        return true;
+    }
+
+    async function recordPhoneClick() {
+        if (!propertyId) {
+            return;
+        }
+
+        await fetch(
+            `/api/property/${propertyId}/analytics`,
+            {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type":
+                        "application/json",
+                },
+                body: JSON.stringify({
+                    type: "phoneClick",
+                }),
+            },
+        );
+    }
+
+    async function handleFavoriteToggle() {
+        if (
+            !propertyId ||
+            favoriteLoading
+        ) {
+            return;
+        }
+
+        const user =
+            getStoredUser();
+        const userId =
+            getUserId(user);
+
+        if (!userId) {
+            redirectToLogin();
+            return;
+        }
 
         setFavoriteLoading(true);
         setFavoriteError("");
 
         try {
-            const res = await fetch(`/api/user/${userId}/favorites`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
+            const response = await fetch(
+                `/api/user/${userId}/favorites`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify({
+                        propertyId,
+                    }),
                 },
-                credentials: "include",
-                body: JSON.stringify({ propertyId: normalizedId }),
-            });
+            );
 
-            const data = await res.json();
+            const payload =
+                (await response.json()) as
+                    FavoriteTogglePayload;
 
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to update favorites");
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "Unable to update favorites.",
+                );
             }
 
-            const updatedFavorites = data.favorites as string[];
-            updateStoredUserFavorites(updatedFavorites);
-            setIsFavorite(updatedFavorites.includes(normalizedId));
-            if (updatedFavorites.includes(normalizedId)) {
-                await createLead("favorite");
-            }
-        } catch (err) {
-            const message =
-                err instanceof Error ? err.message : "Failed to update favorites";
+            const favoriteIds =
+                Array.isArray(
+                    payload.favorites,
+                )
+                    ? payload.favorites
+                    : [];
 
-            setFavoriteError(message);
+            updateStoredUserFavorites(
+                favoriteIds,
+            );
+
+            const nextIsFavorite =
+                favoriteIds.includes(
+                    propertyId,
+                );
+
+            setIsFavorite(
+                nextIsFavorite,
+            );
+
+            if (nextIsFavorite) {
+                try {
+                    await createLead(
+                        "favorite",
+                    );
+                } catch (error) {
+                    console.error(
+                        "Favorite saved, but lead creation failed:",
+                        error,
+                    );
+                }
+            }
+        } catch (error) {
+            setFavoriteError(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to update favorites.",
+            );
         } finally {
             setFavoriteLoading(false);
         }
-    };
+    }
 
-    const getListingBadges = (property: any) => {
-        const badges: string[] = [];
-
-        if (property.planSnapshot?.homepageFeatured) {
-            badges.push("Homepage Featured");
+    function handleCompareToggle() {
+        if (!property) {
+            return;
         }
 
+        if (isInCompare) {
+            removeFromCompare(
+                property._id,
+            );
+            return;
+        }
+
+        addToCompare({
+            _id: property._id,
+            address:
+            property.address,
+            images:
+                property.images ?? [],
+            price:
+                property.price ?? 0,
+            negotiable:
+            property.negotiable,
+            size:
+                property.size ?? 0,
+            sizeUnit:
+                property.sizeUnit ??
+                "sqft",
+            propertyType:
+                property.propertyType ??
+                "Residential",
+            bedrooms:
+                property.bedrooms ??
+                undefined,
+            bathrooms:
+                property.bathrooms ??
+                undefined,
+            locality:
+            property.locality,
+            city: property.city,
+            amenities:
+                property.amenities ??
+                [],
+            ownershipType:
+            property.ownershipType,
+            planSnapshot:
+            property.planSnapshot,
+        });
+    }
+
+    async function handlePhone() {
         if (
-            property.promotedUntil &&
-            new Date(property.promotedUntil).getTime() > Date.now()
+            !property ||
+            contactLoading
         ) {
-            badges.push("Promoted");
+            return;
         }
 
-        if (property.planSnapshot?.badgeLevel === "premium") {
-            badges.push("Premium");
-        } else if (property.planSnapshot?.badgeLevel === "verified") {
-            badges.push("Verified Owner");
+        if (isOwner) {
+            setShowPhone(true);
+            return;
         }
 
-        if (property.planSnapshot?.rankingLevel === "top") {
-            badges.push("Top Ranked");
-        } else if (property.planSnapshot?.rankingLevel === "priority") {
-            badges.push("Priority");
-        }
+        setContactLoading("phone");
+        setContactError("");
 
-        return badges;
-    };
-
-    if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-    );
-
-    if (error || !property) return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-6 text-center">
-            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
-                <Info size={40} />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Property Not Found</h1>
-            <p className="text-gray-500 mb-8 max-w-md">We couldn&apos;t find the property you&apos;re looking for. It might have been removed or the link is incorrect.</p>
-            <Link href="/" className="bg-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
-                Go Back Home
-            </Link>
-        </div>
-    );
-
-    const propertyImages =
-        property.images && property.images.length > 0
-            ? property.images
-            : ["/loginimage.png", "/signuppageimage.png"];
-
-    const getVideoEmbedUrl = (url: string) => {
         try {
-            const parsedUrl = new URL(url);
+            const leadCreated =
+                await createLead("phone");
 
-            if (parsedUrl.hostname.includes("youtube.com")) {
-                const videoId = parsedUrl.searchParams.get("v");
-
-                if (videoId) {
-                    return `https://www.youtube.com/embed/${videoId}`;
-                }
+            if (!leadCreated) {
+                return;
             }
 
-            if (parsedUrl.hostname.includes("youtu.be")) {
-                const videoId = parsedUrl.pathname.replace("/", "");
-
-                if (videoId) {
-                    return `https://www.youtube.com/embed/${videoId}`;
-                }
-            }
-
-            return url;
-        } catch {
-            return url;
+            await recordPhoneClick();
+            setShowPhone(true);
+        } catch (error) {
+            setContactError(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to reveal the phone number.",
+            );
+        } finally {
+            setContactLoading(null);
         }
-    };
+    }
+
+    async function handleEmail() {
+        if (
+            !property ||
+            !property.userId?.email ||
+            contactLoading
+        ) {
+            return;
+        }
+
+        if (isOwner) {
+            window.location.href =
+                `mailto:${property.userId.email}`;
+            return;
+        }
+
+        setContactLoading("email");
+        setContactError("");
+
+        try {
+            const leadCreated =
+                await createLead("email");
+
+            if (!leadCreated) {
+                return;
+            }
+
+            window.location.href =
+                `mailto:${property.userId.email}`;
+        } catch (error) {
+            setContactError(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to start an email.",
+            );
+        } finally {
+            setContactLoading(null);
+        }
+    }
+
+    async function handleWhatsApp() {
+        if (
+            !property ||
+            !property.userId?.phone ||
+            contactLoading
+        ) {
+            return;
+        }
+
+        if (!isOwner) {
+            setContactLoading(
+                "whatsapp",
+            );
+            setContactError("");
+
+            try {
+                const leadCreated =
+                    await createLead(
+                        "whatsapp",
+                    );
+
+                if (!leadCreated) {
+                    return;
+                }
+            } catch (error) {
+                setContactError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to open WhatsApp.",
+                );
+                return;
+            } finally {
+                setContactLoading(null);
+            }
+        }
+
+        window.location.href =
+            getWhatsAppUrl(
+                property.userId.phone,
+                property,
+            );
+    }
+
+    if (loading) {
+        return (
+            <PropertyPageSkeleton />
+        );
+    }
+
+    if (
+        loadError ||
+        !property
+    ) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-[#f5f7f6] px-5 py-28 font-body">
+                <div className="w-full max-w-2xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white text-center shadow-[0_28px_80px_rgba(15,23,42,0.1)]">
+                    <div className="bg-slate-950 p-8 text-white">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15 text-red-300">
+              <AlertTriangle
+                  size={25}
+                  aria-hidden="true"
+              />
+            </span>
+
+                        <h1 className="mt-6 font-heading text-3xl font-black tracking-[-0.035em]">
+                            Property unavailable
+                        </h1>
+
+                        <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-400">
+                            {loadError ||
+                                "This property could not be found. It may have expired, been removed or no longer be public."}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 p-6 sm:flex-row sm:justify-center">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                void loadProperty()
+                            }
+                            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary"
+                        >
+                            <RefreshCw
+                                size={16}
+                                aria-hidden="true"
+                            />
+                            Try again
+                        </button>
+
+                        <Link
+                            href="/buy"
+                            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-black text-white shadow-lg shadow-primary/20"
+                        >
+                            Browse properties
+                            <ArrowRight
+                                size={16}
+                                aria-hidden="true"
+                            />
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    const categoryLabel =
+        category === "commercial"
+            ? "Commercial"
+            : category === "land"
+                ? "Land & plots"
+                : "Residential";
+    const CategoryIcon =
+        category === "commercial"
+            ? Store
+            : category === "land"
+                ? Trees
+                : Home;
+    const listedDate =
+        formatDate(
+            property.createdAt,
+        );
 
     return (
-        <ProtectedRoute>
-            <main className="min-h-screen bg-[#F8FAFA] pt-32 pb-20">
-                <div className="container-wide px-6">
+        <main className="min-h-screen bg-[#f5f7f6] pb-28 pt-20 font-body text-slate-950 lg:pb-20">
+            <div className="mx-auto max-w-7xl px-5 pt-7 sm:px-6 lg:px-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <Link
+                        href="/buy"
+                        className="inline-flex w-fit items-center gap-2 text-sm font-black text-slate-600 transition hover:text-primary"
+                    >
+                        <ArrowLeft
+                            size={17}
+                            aria-hidden="true"
+                        />
+                        Back to property search
+                    </Link>
 
-                    {/* BACK & ACTIONS */}
-                    <div className="flex items-center justify-between mb-8">
-                        <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors font-semibold">
-                            <ArrowLeft size={20} />
-                            Back to Search
-                        </Link>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={handleCompareToggle}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all shadow-sm font-bold text-xs uppercase tracking-widest ${isInCompare
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-white border-gray-100 text-gray-500 hover:text-primary"
-                                    }`}
-                            >
-                                <Layers size={18} />
-                                {isInCompare ? "Comparing" : "Compare"}
-                            </button>
-                            <button
-                                onClick={() => setShareOpen(true)}
-                                className="p-2.5 rounded-xl bg-white border border-gray-100 text-gray-500 hover:text-primary transition-all shadow-sm"
-                            >
-                                <Share2 size={20} />
-                            </button>
-                            <button
-                                onClick={handleFavoriteToggle}
-                                disabled={favoriteLoading}
-                                className={`p-2.5 rounded-xl border border-gray-100 bg-white transition-all shadow-sm hover:bg-gray-50 ${favoriteLoading ? "opacity-60 cursor-not-allowed" : ""
-                                    }`}
-                            >
-                                <Heart
-                                    size={20}
-                                    className={`transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-500 hover:text-red-500"}`}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ActionButton
+                            label={
+                                isInCompare
+                                    ? "Comparing"
+                                    : "Compare"
+                            }
+                            icon={Layers}
+                            active={isInCompare}
+                            onClick={
+                                handleCompareToggle
+                            }
+                        />
+
+                        <ActionButton
+                            label="Share"
+                            icon={Share2}
+                            onClick={() =>
+                                setShareOpen(true)
+                            }
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                void handleFavoriteToggle()
+                            }
+                            disabled={
+                                favoriteLoading
+                            }
+                            className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-xs font-black transition ${
+                                isFavorite
+                                    ? "border-red-100 bg-red-50 text-red-600"
+                                    : "border-slate-200 bg-white text-slate-700 hover:border-red-200 hover:text-red-600"
+                            } disabled:cursor-wait disabled:opacity-60`}
+                        >
+                            {favoriteLoading ? (
+                                <Loader2
+                                    size={16}
+                                    className="animate-spin"
+                                    aria-hidden="true"
                                 />
-                            </button>
-                            {isOwner && (
-                                <button
-                                    onClick={() => setShowAnalytics(true)}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all"
-                                >
-                                    <BarChart3 size={18} />
-                                    Analytics
-                                </button>
+                            ) : (
+                                <Heart
+                                    size={16}
+                                    fill={
+                                        isFavorite
+                                            ? "currentColor"
+                                            : "none"
+                                    }
+                                    aria-hidden="true"
+                                />
                             )}
-                        </div>
+                            {isFavorite
+                                ? "Saved"
+                                : "Save"}
+                        </button>
+
+                        {isOwner ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setAnalyticsOpen(true)
+                                }
+                                className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-lg shadow-primary/20"
+                            >
+                                <Eye
+                                    size={16}
+                                    aria-hidden="true"
+                                />
+                                Analytics
+                            </button>
+                        ) : null}
                     </div>
+                </div>
 
-                    {favoriteError && (
-                        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-500">
+                {favoriteError ? (
+                    <div className="mt-5 flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700">
+                        <AlertTriangle
+                            size={18}
+                            className="mt-0.5 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <p className="text-sm font-bold">
                             {favoriteError}
-                        </div>
+                        </p>
+                    </div>
+                ) : null}
+
+                <section className="mt-6">
+                    <PropertyGallery
+                        images={propertyImages}
+                        address={
+                            property.address
+                        }
+                        onOpen={
+                            setSelectedImageIndex
+                        }
+                    />
+                </section>
+
+                <section className="relative z-10 -mt-6 px-2 sm:px-5 lg:px-8">
+                    <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_75px_rgba(15,23,42,0.13)]">
+                        <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
+                            <div className="p-5 sm:p-7 lg:p-8">
+                                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-white">
+                    {getPurposeLabel(
+                        property.purpose,
                     )}
+                  </span>
 
-                    <div className="grid lg:grid-cols-3 gap-10">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                    <CategoryIcon
+                        size={11}
+                        aria-hidden="true"
+                    />
+                                        {categoryLabel}
+                  </span>
 
-                        {/* LEFT COLUMN: Main Details */}
-                        <div className="lg:col-span-2">
-
-                            {/* Image Gallery */}
-                            <div className="grid md:grid-cols-4 gap-4 h-[420px]">
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedImageIndex(0)}
-                                    className="relative md:col-span-3 rounded-3xl overflow-hidden shadow-sm group cursor-zoom-in text-left"
-                                >
-                                    <Image
-                                        src={propertyImages[0]}
-                                        alt={property.address || "Property"}
-                                        fill
-                                        sizes="(max-width: 768px) 100vw, 75vw"
-                                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                                </button>
-
-                                <div className="hidden md:grid col-span-1 grid-rows-3 gap-4 h-full">
-                                    {propertyImages.slice(1, 4).map((imageUrl, index) => (
-                                        <button
-                                            type="button"
-                                            key={imageUrl}
-                                            onClick={() => setSelectedImageIndex(index + 1)}
-                                            className="relative rounded-3xl overflow-hidden shadow-sm bg-gray-100 cursor-zoom-in text-left"
-                                        >
-                                            <Image
-                                                src={imageUrl}
-                                                alt={`${property.address || "Property"} photo ${index + 2}`}
-                                                fill
-                                                sizes="25vw"
-                                                className="object-cover"
+                                    {badges.map(
+                                        (badge) => (
+                                            <ListingBadge
+                                                key={badge}
+                                                label={badge}
                                             />
+                                        ),
+                                    )}
+                                </div>
 
-                                            {index === 2 && propertyImages.length > 4 && (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                    <div className="text-center text-white">
-                                                        <p className="text-3xl font-black">
-                                                            +{propertyImages.length - 4}
-                                                        </p>
-                                                        <p className="text-xs uppercase tracking-widest">
-                                                            More Photos
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </button>
-                                    ))}
+                                <h1 className="mt-5 max-w-4xl font-heading text-3xl font-black leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-5xl">
+                                    {property.address}
+                                </h1>
+
+                                <p className="mt-3 text-lg font-bold text-slate-500 sm:text-xl">
+                                    {category ===
+                                    "residential" &&
+                                    property.bedrooms !==
+                                    null &&
+                                    property.bedrooms !==
+                                    undefined
+                                        ? property.bedrooms ===
+                                        0
+                                            ? `Studio ${typeLabel}`
+                                            : `${property.bedrooms} BHK ${typeLabel}`
+                                        : typeLabel}
+                                    {locationLabel
+                                        ? ` in ${locationLabel}`
+                                        : ""}
+                                </p>
+
+                                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-slate-500">
+                                    {locationLabel ? (
+                                        <span className="inline-flex items-center gap-1.5">
+                      <MapPin
+                          size={14}
+                          className="text-primary"
+                          aria-hidden="true"
+                      />
+                                            {locationLabel}
+                    </span>
+                                    ) : null}
+
+                                    {listedDate ? (
+                                        <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays
+                          size={14}
+                          className="text-primary"
+                          aria-hidden="true"
+                      />
+                      Listed {listedDate}
+                    </span>
+                                    ) : null}
+
+                                    <span className="inline-flex items-center gap-1.5">
+                    <BadgeCheck
+                        size={14}
+                        className="text-primary"
+                        aria-hidden="true"
+                    />
+                    Listing ID{" "}
+                                        {property._id
+                                            .slice(-6)
+                                            .toUpperCase()}
+                  </span>
                                 </div>
                             </div>
 
-                            {/* Title & Price Header */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="
-        relative
-        mt-6
-        z-10
-        bg-white
-        rounded-3xl
-        p-8
-        border border-gray-100
-        shadow-xl
-        mb-8
-    "
-                            >
-                                <div className="flex flex-col gap-6">
-                                    {/* TITLE BLOCK */}
-                                    <div className="space-y-3 max-w-3xl">
-                                        <div className="flex flex-wrap items-center gap-2">
-        <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-sm">
-            {property.purpose || "FOR SALE"}
-        </span>
+                            <div className="relative overflow-hidden bg-slate-950 p-5 text-white sm:p-7 lg:p-8">
+                                <div
+                                    className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-teal-500/20 blur-3xl"
+                                    aria-hidden="true"
+                                />
 
-                                            <span className="px-3 py-1 bg-gray-50 text-gray-500 border border-gray-100 text-[10px] font-bold uppercase tracking-widest rounded-lg">
-            {property.propertyType || "RESIDENTIAL"}
-        </span>
-                                        </div>
+                                <div className="relative">
+                                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-teal-300">
+                                        {property.purpose ===
+                                        "Rent"
+                                            ? "Listed rent"
+                                            : "Asking price"}
+                                    </p>
 
-                                        {getListingBadges(property).length > 0 && (
-                                            <div className="flex flex-wrap gap-2">
-                                                {getListingBadges(property).map((badge) => (
-                                                    <span
-                                                        key={badge}
-                                                        className="rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary border border-primary/10"
-                                                    >
-                    {badge}
-                </span>
-                                                ))}
-                                            </div>
+                                    <p className="mt-3 text-4xl font-black tracking-[-0.04em] text-white lg:text-5xl">
+                                        {formatPrice(
+                                            property.price,
                                         )}
+                                    </p>
 
-                                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 leading-[1.1] tracking-tighter">
-                                            {property.address}
-                                        </h1>
-
-                                        <div className="text-lg md:text-2xl text-gray-500 font-bold tracking-tight">
-                                            {property.bedrooms === 0 ? "Studio " : property.bedrooms ? `${property.bedrooms} BHK ` : ""}
-                                            {property.propertyType} in {property.locality}, {property.city}
-                                        </div>
-                                    </div>
-
-                                    {/* PRICE BLOCK — NOW LEFT ALIGNED */}
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            Asking Price
+                                    {property.priceType ? (
+                                        <p className="mt-2 text-xs font-bold text-slate-400">
+                                            {
+                                                property.priceType
+                                            }
                                         </p>
+                                    ) : null}
 
-                                        <h2 className="text-5xl md:text-7xl font-black text-primary tracking-tighter">
-                                            ₹{property.price?.toLocaleString()}
-                                        </h2>
+                                    <PriceNegotiabilityBadge
+                                        negotiable={
+                                            property.negotiable
+                                        }
+                                        className="mt-4"
+                                    />
 
-                                        <PriceNegotiabilityBadge
-                                            negotiable={property.negotiable}
+                                    <div className="mt-7 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.055] p-4">
+                                        <ShieldCheck
+                                            size={19}
+                                            className="shrink-0 text-teal-300"
+                                            aria-hidden="true"
                                         />
+                                        <p className="text-xs leading-5 text-slate-400">
+                                            Inspect the property and
+                                            verify documents before
+                                            making any payment.
+                                        </p>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Key Stats Bar */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 pt-8 border-t border-gray-50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                            <Bed size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Bedrooms</p>
-                                            <p className="text-sm font-bold text-gray-900">{property.bedrooms === 0 ? "Studio" : property.bedrooms || "N/A"}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                            <Bath size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Bathrooms</p>
-                                            <p className="text-sm font-bold text-gray-900">{property.bathrooms || "N/A"}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                            <Maximize size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Total Area</p>
-                                            <div className="flex items-center gap-1">
-                                                <p className="text-sm font-bold text-gray-900">
-                                                    {property.size && displayUnit ? (
-                                                        convertSize(property.size, property.sizeUnit || "sqft", displayUnit)
-                                                    ) : property.size}
-                                                </p>
-                                                <select
-                                                    className="text-[10px] font-black uppercase bg-transparent text-primary hover:underline cursor-pointer outline-none border-none p-0 focus:ring-0"
-                                                    value={displayUnit || "sqft"}
-                                                    onChange={(e) => setDisplayUnit(e.target.value)}
-                                                >
-                                                    <option value="sqft">Sq Ft</option>
-                                                    <option value="sqyd">Sq Yd</option>
-                                                    <option value="sqm">Sq M</option>
-                                                    <option value="acre">Acre</option>
-                                                    <option value="kanal">Kanal</option>
-                                                    <option value="marla">Marla</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                            <Layers size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase">Floors</p>
-                                            <p className="text-sm font-bold text-gray-900">{property.floors || "N/A"}</p>
-                                        </div>
-                                    </div>
+                        <div className="grid border-t border-slate-200 sm:grid-cols-2 lg:grid-cols-5">
+                            <AreaDetail
+                                property={property}
+                                displayUnit={
+                                    displayUnit
+                                }
+                                displayedArea={
+                                    displayedArea
+                                }
+                                onUnitChange={
+                                    setDisplayUnit
+                                }
+                            />
+
+                            {primaryDetails.map(
+                                (detail) => (
+                                    <SummaryDetail
+                                        key={detail.label}
+                                        {...detail}
+                                    />
+                                ),
+                            )}
+                        </div>
+                    </div>
+                </section>
+
+                <nav
+                    aria-label="Property detail sections"
+                    className="mt-7 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+                >
+                    <div className="flex min-w-max gap-1">
+                        {[
+                            {
+                                href: "#overview",
+                                label: "Overview",
+                            },
+                            {
+                                href: "#details",
+                                label: "Property details",
+                            },
+                            {
+                                href: "#amenities",
+                                label: "Amenities",
+                            },
+                            ...(videoEmbeds.length >
+                            0
+                                ? [
+                                    {
+                                        href: "#media",
+                                        label: "Videos",
+                                    },
+                                ]
+                                : []),
+                            ...(property.purpose ===
+                            "Sell" &&
+                            (property.price ?? 0) >
+                            0
+                                ? [
+                                    {
+                                        href: "#finance",
+                                        label: "EMI estimate",
+                                    },
+                                ]
+                                : []),
+                        ].map((item) => (
+                            <a
+                                key={item.href}
+                                href={item.href}
+                                className="rounded-xl px-4 py-2.5 text-xs font-black text-slate-600 transition hover:bg-teal-50 hover:text-primary"
+                            >
+                                {item.label}
+                            </a>
+                        ))}
+                    </div>
+                </nav>
+
+                <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_370px]">
+                    <div className="min-w-0 space-y-7">
+                        <section
+                            id="overview"
+                            className="scroll-mt-28 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:p-8"
+                        >
+                            <SectionHeading
+                                eyebrow="Property overview"
+                                title="About this property"
+                                description="The key context supplied by the person who published this listing."
+                                icon={Building2}
+                            />
+
+                            {property.description ? (
+                                <p className="mt-6 whitespace-pre-line text-[15px] leading-8 text-slate-600">
+                                    {
+                                        property.description
+                                    }
+                                </p>
+                            ) : (
+                                <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm leading-6 text-slate-500">
+                                    No additional description
+                                    was provided for this
+                                    property.
                                 </div>
-                            </motion.div>
+                            )}
 
-                            {property.videoLinks && property.videoLinks.length > 0 && (
-                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6 mb-8">
-                                    <div className="flex items-start justify-between gap-4">
+                            <div className="mt-7 grid gap-4 sm:grid-cols-2">
+                                <a
+                                    href={getMapsUrl(
+                                        property,
+                                    )}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-teal-50 p-5 transition hover:border-primary"
+                                >
+                                    <div
+                                        className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/10"
+                                        aria-hidden="true"
+                                    />
+
+                                    <div className="relative flex items-start gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                      <MapPin
+                          size={19}
+                          aria-hidden="true"
+                      />
+                    </span>
+
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.13em] text-primary">
+                                                Location
+                                            </p>
+                                            <p className="mt-2 text-sm font-black leading-6 text-slate-950">
+                                                {getFullAddress(
+                                                    property,
+                                                )}
+                                            </p>
+                                            <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-primary">
+                        Open in Maps
+                        <ExternalLink
+                            size={13}
+                            aria-hidden="true"
+                        />
+                      </span>
+                                        </div>
+                                    </div>
+                                </a>
+
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                                    <div className="flex items-start gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                      <Landmark
+                          size={19}
+                          aria-hidden="true"
+                      />
+                    </span>
+
                                         <div>
-                                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                                <Building2 size={22} className="text-primary" />
-                                                Property Videos
-                                            </h3>
-                                            <p className="text-sm font-semibold text-gray-400 mt-1">
-                                                Watch walkthroughs, tours, or additional property videos.
+                                            <p className="text-[9px] font-black uppercase tracking-[0.13em] text-slate-400">
+                                                Nearby landmark
+                                            </p>
+                                            <p className="mt-2 text-sm font-black leading-6 text-slate-950">
+                                                {property.landmark ||
+                                                    "No landmark provided"}
+                                            </p>
+                                            <p className="mt-2 text-xs leading-5 text-slate-500">
+                                                Confirm the exact
+                                                entrance and access
+                                                route with the owner
+                                                before visiting.
                                             </p>
                                         </div>
-
-                                        <span className="px-3 py-1 bg-primary/5 text-primary border border-primary/10 text-[10px] font-black uppercase tracking-widest rounded-full">
-                {property.videoLinks.length} Video{property.videoLinks.length > 1 ? "s" : ""}
-            </span>
-                                    </div>
-
-                                    <div className="grid gap-6">
-                                        {property.videoLinks.map((videoUrl, index) => (
-                                            <div
-                                                key={`${videoUrl}-${index}`}
-                                                className="rounded-3xl overflow-hidden bg-black shadow-sm aspect-video"
-                                            >
-                                                <iframe
-                                                    src={getVideoEmbedUrl(videoUrl)}
-                                                    title={`Property video ${index + 1}`}
-                                                    className="w-full h-full"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                />
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
-                            )}
+                            </div>
+                        </section>
 
-                            {property.brochure?.url && (
-                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm mb-8">
-                                    <a
-                                        href={property.brochure.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5 transition-all hover:bg-primary/10"
-                                    >
-                                        <div className="flex items-center gap-4 min-w-0">
-                                            <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
-                                                <FileText size={22} />
-                                            </div>
+                        <section
+                            id="details"
+                            className="scroll-mt-28 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:p-8"
+                        >
+                            <SectionHeading
+                                eyebrow={`${categoryLabel} facts`}
+                                title="Property details"
+                                description="Structured listing information for easier comparison."
+                                icon={
+                                    category ===
+                                    "commercial"
+                                        ? Store
+                                        : category ===
+                                        "land"
+                                            ? MapIcon
+                                            : Home
+                                }
+                            />
 
-                                            <div className="min-w-0">
-                                                <p className="font-black text-gray-900">
-                                                    Property Brochure
+                            <div className="mt-7 grid gap-x-10 md:grid-cols-2">
+                                {factRows.map(
+                                    (row) => (
+                                        <FactRow
+                                            key={row.label}
+                                            label={row.label}
+                                            value={row.value}
+                                        />
+                                    ),
+                                )}
+                            </div>
+                        </section>
+
+                        <section
+                            id="amenities"
+                            className="scroll-mt-28 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:p-8"
+                        >
+                            <SectionHeading
+                                eyebrow={
+                                    category ===
+                                    "commercial"
+                                        ? "Business features"
+                                        : category ===
+                                        "land"
+                                            ? "Land features"
+                                            : "Amenities"
+                                }
+                                title="What the listing includes"
+                                description="Facilities marked as available by the listing owner."
+                                icon={CheckCircle2}
+                            />
+
+                            {amenityGroups.length >
+                            0 ? (
+                                <div className="mt-7 space-y-7">
+                                    {amenityGroups.map(
+                                        (group) => (
+                                            <div
+                                                key={
+                                                    group.title
+                                                }
+                                            >
+                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                    {
+                                                        group.title
+                                                    }
                                                 </p>
 
-                                                <p className="text-sm font-medium text-gray-500 truncate">
-                                                    {property.brochure.fileName ||
-                                                        "Download project brochure"}
+                                                <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                    {group.items.map(
+                                                        (
+                                                            amenity,
+                                                        ) => (
+                                                            <div
+                                                                key={
+                                                                    amenity
+                                                                }
+                                                                className="flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                                                            >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-sm">
+                                  <Check
+                                      size={
+                                          14
+                                      }
+                                      aria-hidden="true"
+                                  />
+                                </span>
+                                                                <span className="text-xs font-bold leading-5 text-slate-700">
+                                  {
+                                      amenity
+                                  }
+                                </span>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="mt-7 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm leading-6 text-slate-500">
+                                    No amenities or special
+                                    features were selected for
+                                    this listing.
+                                </div>
+                            )}
+                        </section>
+
+                        {videoEmbeds.length > 0 ? (
+                            <section
+                                id="media"
+                                className="scroll-mt-28 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:p-8"
+                            >
+                                <SectionHeading
+                                    eyebrow="Property media"
+                                    title="Video walkthroughs"
+                                    description="Tours and supporting videos uploaded with the listing."
+                                    icon={Video}
+                                />
+
+                                <div className="mt-7 grid gap-5">
+                                    {videoEmbeds.map(
+                                        (
+                                            video,
+                                            index,
+                                        ) => (
+                                            <div
+                                                key={`${video.sourceUrl}-${index}`}
+                                                className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-sm"
+                                            >
+                                                <div className="aspect-video">
+                                                    <iframe
+                                                        src={
+                                                            video.embedUrl
+                                                        }
+                                                        title={`Property video ${index + 1}`}
+                                                        className="h-full w-full"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                    />
+                                                </div>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                            </section>
+                        ) : null}
+
+                        {property.brochure?.url ? (
+                            <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                                <div className="grid lg:grid-cols-[minmax(0,1fr)_260px]">
+                                    <div className="p-5 sm:p-7 lg:p-8">
+                                        <div className="flex items-start gap-4">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-primary">
+                        <FileText
+                            size={21}
+                            aria-hidden="true"
+                        />
+                      </span>
+
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                                                    Supporting document
+                                                </p>
+                                                <h2 className="mt-2 font-heading text-2xl font-black tracking-[-0.03em] text-slate-950">
+                                                    Property brochure
+                                                </h2>
+                                                <p className="mt-2 text-sm leading-6 text-slate-500">
+                                                    {property
+                                                            .brochure
+                                                            .fileName ||
+                                                        "View the brochure supplied with this listing."}
                                                 </p>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <Download
-                                            size={22}
-                                            className="text-primary shrink-0"
-                                        />
-                                    </a>
+                                    <div className="flex items-center bg-slate-950 p-5 sm:p-7">
+                                        <a
+                                            href={
+                                                property.brochure
+                                                    .url
+                                            }
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-black text-slate-950 transition hover:bg-teal-50"
+                                        >
+                                            <Download
+                                                size={17}
+                                                aria-hidden="true"
+                                            />
+                                            Open brochure
+                                        </a>
+                                    </div>
                                 </div>
-                            )}
+                            </section>
+                        ) : null}
 
-                            {/* Description Section */}
-                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-4 mb-8">
-                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Building2 size={22} className="text-primary" />
-                                    About this Property
-                                </h3>
-                                <p className="text-gray-600 leading-relaxed font-medium">
-                                    {property.description}
+                        {property.purpose ===
+                        "Sell" &&
+                        (property.price ?? 0) >
+                        0 ? (
+                            <section
+                                id="finance"
+                                className="scroll-mt-28"
+                            >
+                                <EMICalculator
+                                    propertyPrice={
+                                        property.price ??
+                                        0
+                                    }
+                                />
+                            </section>
+                        ) : null}
+                    </div>
+
+                    <aside className="lg:sticky lg:top-28">
+                        <ContactCard
+                            property={property}
+                            isOwner={isOwner}
+                            showPhone={showPhone}
+                            contactLoading={
+                                contactLoading
+                            }
+                            contactError={
+                                contactError
+                            }
+                            onPhone={() =>
+                                void handlePhone()
+                            }
+                            onEmail={() =>
+                                void handleEmail()
+                            }
+                            onWhatsApp={() =>
+                                void handleWhatsApp()
+                            }
+                            onAnalytics={() =>
+                                setAnalyticsOpen(true)
+                            }
+                        />
+                    </aside>
+                </div>
+            </div>
+
+            {!isOwner ? (
+                <MobileContactBar
+                    property={property}
+                    contactLoading={
+                        contactLoading
+                    }
+                    onPhone={() =>
+                        void handlePhone()
+                    }
+                    onWhatsApp={() =>
+                        void handleWhatsApp()
+                    }
+                />
+            ) : null}
+
+            <AnimatePresence>
+                {selectedImageIndex !==
+                null ? (
+                    <ImageViewer
+                        images={propertyImages}
+                        address={
+                            property.address
+                        }
+                        selectedIndex={
+                            selectedImageIndex
+                        }
+                        onClose={() =>
+                            setSelectedImageIndex(
+                                null,
+                            )
+                        }
+                        onChange={
+                            setSelectedImageIndex
+                        }
+                    />
+                ) : null}
+            </AnimatePresence>
+
+            <SharePropertyModal
+                isOpen={shareOpen}
+                onClose={() =>
+                    setShareOpen(false)
+                }
+                propertyTitle={
+                    property.address
+                }
+                shareUrl={shareUrl}
+            />
+
+            <PropertyAnalyticsModal
+                isOpen={analyticsOpen}
+                onClose={() =>
+                    setAnalyticsOpen(false)
+                }
+                property={property}
+            />
+        </main>
+    );
+}
+
+function PropertyGallery({
+                             images,
+                             address,
+                             onOpen,
+                         }: {
+    images: string[];
+    address: string;
+    onOpen: (index: number) => void;
+}) {
+    const imageCount = images.length;
+    const isSingleImage =
+        imageCount === 1;
+    const isTwoImageGallery =
+        imageCount === 2;
+    const secondaryImages =
+        images.slice(1, 3);
+
+    const galleryLayout =
+        isSingleImage
+            ? "relative h-[430px] overflow-hidden rounded-[2rem] bg-slate-200 md:h-[580px]"
+            : `relative grid h-[430px] gap-3 overflow-hidden rounded-[2rem] bg-slate-200 md:h-[540px] ${
+                isTwoImageGallery
+                    ? "md:grid-cols-[1.55fr_1fr]"
+                    : "md:grid-cols-[2fr_1fr]"
+            }`;
+
+    return (
+        <div className={galleryLayout}>
+            <button
+                type="button"
+                onClick={() => onOpen(0)}
+                className="group relative h-full min-h-0 w-full overflow-hidden text-left"
+                aria-label="Open main property photo"
+            >
+                <Image
+                    src={images[0]}
+                    alt={address}
+                    fill
+                    priority
+                    sizes={
+                        isSingleImage
+                            ? "100vw"
+                            : "(max-width: 768px) 100vw, 67vw"
+                    }
+                    className="object-cover transition-transform duration-700 group-hover:scale-[1.025]"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
+            </button>
+
+            {!isSingleImage ? (
+                <div
+                    className={`hidden min-h-0 gap-3 md:grid ${
+                        isTwoImageGallery
+                            ? "md:grid-rows-1"
+                            : "md:grid-rows-2"
+                    }`}
+                >
+                    {secondaryImages.map(
+                        (image, index) => (
+                            <button
+                                key={`${image}-${index}`}
+                                type="button"
+                                onClick={() =>
+                                    onOpen(index + 1)
+                                }
+                                className="group relative min-h-0 overflow-hidden text-left"
+                                aria-label={`Open property photo ${index + 2}`}
+                            >
+                                <Image
+                                    src={image}
+                                    alt={`${address} photo ${index + 2}`}
+                                    fill
+                                    sizes="33vw"
+                                    className="object-cover transition-transform duration-700 group-hover:scale-[1.035]"
+                                />
+
+                                {index === 1 &&
+                                imageCount > 3 ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-slate-950/50 backdrop-blur-[1px]">
+                    <span className="text-center text-white">
+                      <span className="block text-4xl font-black">
+                        +
+                          {imageCount - 3}
+                      </span>
+                      <span className="mt-1 block text-[10px] font-black uppercase tracking-[0.15em] text-slate-200">
+                        More photos
+                      </span>
+                    </span>
+                                    </div>
+                                ) : null}
+                            </button>
+                        ),
+                    )}
+                </div>
+            ) : null}
+
+            <button
+                type="button"
+                onClick={() => onOpen(0)}
+                className="absolute bottom-5 right-5 inline-flex h-11 items-center gap-2 rounded-xl border border-white/35 bg-white/95 px-4 text-xs font-black text-slate-950 shadow-lg backdrop-blur transition hover:bg-white"
+            >
+                <Expand
+                    size={15}
+                    aria-hidden="true"
+                />
+                {isSingleImage
+                    ? "View photo"
+                    : `View all ${imageCount} photos`}
+            </button>
+        </div>
+    );
+}
+
+function ActionButton({
+                          label,
+                          icon: Icon,
+                          active = false,
+                          onClick,
+                      }: {
+    label: string;
+    icon: LucideIcon;
+    active?: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex h-11 items-center gap-2 rounded-xl border px-4 text-xs font-black transition ${
+                active
+                    ? "border-primary bg-primary text-white shadow-lg shadow-primary/15"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary"
+            }`}
+        >
+            <Icon
+                size={16}
+                aria-hidden="true"
+            />
+            {label}
+        </button>
+    );
+}
+
+function ListingBadge({
+                          label,
+                      }: {
+    label: string;
+}) {
+    const promoted =
+        label === "Promoted";
+
+    return (
+        <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.11em] ${
+                promoted
+                    ? "border-amber-200 bg-amber-100 text-amber-800"
+                    : "border-teal-100 bg-teal-50 text-primary"
+            }`}
+        >
+      {promoted ? (
+          <Sparkles
+              size={11}
+              aria-hidden="true"
+          />
+      ) : (
+          <BadgeCheck
+              size={11}
+              aria-hidden="true"
+          />
+      )}
+            {label}
+    </span>
+    );
+}
+
+function AreaDetail({
+                        property,
+                        displayUnit,
+                        displayedArea,
+                        onUnitChange,
+                    }: {
+    property: PropertyRecord;
+    displayUnit: string;
+    displayedArea: string | null;
+    onUnitChange: (value: string) => void;
+}) {
+    return (
+        <div className="border-b border-slate-200 p-4 sm:border-b-0 sm:border-r lg:p-5">
+            <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+          <Ruler
+              size={18}
+              aria-hidden="true"
+          />
+        </span>
+
+                <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
+                        Total area
+                    </p>
+
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                        <p
+                            className="max-w-full break-words text-sm font-black tabular-nums leading-tight text-slate-950"
+                            title={
+                                displayedArea ||
+                                "Not provided"
+                            }
+                        >
+                            {displayedArea ||
+                                "Not provided"}
+                        </p>
+
+                        {property.size ? (
+                            <span className="relative shrink-0">
+                <select
+                    value={displayUnit}
+                    aria-label="Area unit"
+                    onChange={(event) =>
+                        onUnitChange(
+                            event.target.value,
+                        )
+                    }
+                    className="appearance-none bg-transparent py-0 pl-0 pr-4 text-[10px] font-black uppercase text-primary outline-none"
+                >
+                  {SIZE_UNITS.map(
+                      (unit) => (
+                          <option
+                              key={unit.value}
+                              value={
+                                  unit.value
+                              }
+                          >
+                              {unit.label}
+                          </option>
+                      ),
+                  )}
+                </select>
+
+                <ChevronDown
+                    size={10}
+                    className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-primary"
+                    aria-hidden="true"
+                />
+              </span>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SummaryDetail({
+                           label,
+                           value,
+                           icon: Icon,
+                       }: DetailItem) {
+    return (
+        <div className="border-b border-slate-200 p-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 lg:p-5">
+            <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+          <Icon
+              size={18}
+              aria-hidden="true"
+          />
+        </span>
+
+                <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
+                        {label}
+                    </p>
+                    <p className="mt-1 truncate text-sm font-black text-slate-950">
+                        {value}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SectionHeading({
+                            eyebrow,
+                            title,
+                            description,
+                            icon: Icon,
+                        }: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+}) {
+    return (
+        <div className="flex items-start gap-4">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-primary">
+        <Icon
+            size={21}
+            aria-hidden="true"
+        />
+      </span>
+
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                    {eyebrow}
+                </p>
+                <h2 className="mt-2 font-heading text-2xl font-black tracking-[-0.03em] text-slate-950">
+                    {title}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                    {description}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function FactRow({
+                     label,
+                     value,
+                 }: {
+    label: string;
+    value: string;
+}) {
+    return (
+        <div className="flex items-start justify-between gap-5 border-b border-slate-100 py-4">
+      <span className="text-sm font-medium text-slate-500">
+        {label}
+      </span>
+            <span className="max-w-[55%] text-right text-sm font-black text-slate-950">
+        {value}
+      </span>
+        </div>
+    );
+}
+
+function ContactCard({
+                         property,
+                         isOwner,
+                         showPhone,
+                         contactLoading,
+                         contactError,
+                         onPhone,
+                         onEmail,
+                         onWhatsApp,
+                         onAnalytics,
+                     }: {
+    property: PropertyRecord;
+    isOwner: boolean;
+    showPhone: boolean;
+    contactLoading:
+        | "phone"
+        | "email"
+        | "whatsapp"
+        | null;
+    contactError: string;
+    onPhone: () => void;
+    onEmail: () => void;
+    onWhatsApp: () => void;
+    onAnalytics: () => void;
+}) {
+    const owner =
+        property.userId;
+    const ownerName =
+        owner?.name ||
+        "Property owner";
+    const initials = ownerName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) =>
+            part.charAt(0).toUpperCase(),
+        )
+        .join("");
+
+    return (
+        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_65px_rgba(15,23,42,0.11)]">
+            <div className="relative overflow-hidden bg-slate-950 p-6 text-white">
+                <div
+                    className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-teal-500/20 blur-3xl"
+                    aria-hidden="true"
+                />
+
+                <div className="relative flex items-start gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-lg font-black text-teal-300 ring-1 ring-white/10">
+            {initials || (
+                <UserCircle
+                    size={25}
+                    aria-hidden="true"
+                />
+            )}
+          </span>
+
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-black uppercase tracking-[0.14em] text-teal-300">
+                            Listed by
+                        </p>
+                        <h2 className="mt-2 truncate text-xl font-black">
+                            {ownerName}
+                        </h2>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-300">
+                {owner?.role ||
+                    "PropYours member"}
+              </span>
+
+                            {owner?.company ? (
+                                <span className="truncate text-xs font-bold text-slate-400">
+                  {owner.company}
+                </span>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+
+                {owner?.bio ? (
+                    <p className="relative mt-5 line-clamp-3 text-xs leading-6 text-slate-400">
+                        {owner.bio}
+                    </p>
+                ) : null}
+            </div>
+
+            <div className="p-5 sm:p-6">
+                {isOwner ? (
+                    <div className="space-y-3">
+                        <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                            <p className="text-sm font-black text-slate-950">
+                                This is your listing
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                                Open management tools to
+                                edit details, update media or
+                                review performance.
+                            </p>
+                        </div>
+
+                        <Link
+                            href="/manage-properties"
+                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20"
+                        >
+                            Manage property
+                            <ArrowRight
+                                size={16}
+                                aria-hidden="true"
+                            />
+                        </Link>
+
+                        <button
+                            type="button"
+                            onClick={onAnalytics}
+                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary"
+                        >
+                            <Eye
+                                size={16}
+                                aria-hidden="true"
+                            />
+                            View analytics
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                                Interested in this property?
+                            </p>
+                            <h3 className="mt-2 font-heading text-2xl font-black tracking-[-0.03em] text-slate-950">
+                                Contact the listing owner
+                            </h3>
+                            <p className="mt-2 text-xs leading-5 text-slate-500">
+                                Sign in before contacting so
+                                the owner receives a verified
+                                enquiry from your profile.
+                            </p>
+                        </div>
+
+                        {contactError ? (
+                            <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-red-700">
+                                <AlertTriangle
+                                    size={16}
+                                    className="mt-0.5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <p className="text-xs font-bold leading-5">
+                                    {contactError}
                                 </p>
                             </div>
+                        ) : null}
 
-                            {/* Property Specs Table */}
-                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-6 mb-8">
-                                <h3 className="text-xl font-bold text-gray-900">Property Details</h3>
-                                <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
-                                    {property.uds ? (
-                                        <div className="flex justify-between py-3 border-b border-gray-50">
-                                            <span className="text-gray-500 font-medium">UDS</span>
-                                            <span className="text-gray-900 font-bold">{property.uds} sq. ft.</span>
-                                        </div>
-                                    ) : null}
-                                    <div className="flex justify-between py-3 border-b border-gray-50">
-                                        <span className="text-gray-500 font-medium">Ownership</span>
-                                        <span className="text-gray-900 font-bold uppercase">{property.ownershipType || "Freehold"}</span>
-                                    </div>
-                                    {property.dimensions ? (
-                                        <div className="flex justify-between py-3 border-b border-gray-50">
-                                            <span className="text-gray-500 font-medium">Dimensions</span>
-                                            <span className="text-gray-900 font-bold">{property.dimensions}</span>
-                                        </div>
-                                    ) : null}
-                                    <div className="flex justify-between py-3 border-b border-gray-50">
-                                        <span className="text-gray-500 font-medium">Nearby Landmark</span>
-                                        <span className="text-gray-900 font-bold">{property.landmark || "None reported"}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Amenities Section */}
-                            {property.amenities && property.amenities.length > 0 && (
-                                <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm space-y-8 mb-8">
-                                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                        <CheckCircle2 size={22} className="text-primary" />
-                                        Amenities & Features
-                                    </h3>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
-                                        {property.amenities.map((amenity) => (
-                                            <div key={amenity} className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-primary/5 rounded-lg flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                                                    <Check size={14} />
-                                                </div>
-                                                <span className="text-sm font-bold text-gray-600">{amenity}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                        <div className="mt-5 space-y-3">
+                            {showPhone &&
+                            owner?.phone ? (
+                                <a
+                                    href={`tel:${owner.phone}`}
+                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20"
+                                >
+                                    <Phone
+                                        size={17}
+                                        aria-hidden="true"
+                                    />
+                                    {owner.phone}
+                                </a>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onPhone}
+                                    disabled={
+                                        contactLoading !==
+                                        null
+                                    }
+                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 disabled:cursor-wait disabled:opacity-60"
+                                >
+                                    {contactLoading ===
+                                    "phone" ? (
+                                        <Loader2
+                                            size={17}
+                                            className="animate-spin"
+                                            aria-hidden="true"
+                                        />
+                                    ) : (
+                                        <Phone
+                                            size={17}
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    {owner?.phone
+                                        ? "Show phone number"
+                                        : "Request phone contact"}
+                                </button>
                             )}
 
-                            {/* EMI Calculator Section */}
-                            <EMICalculator propertyPrice={property.price || 0} />
-                        </div>
-
-                        {/* RIGHT COLUMN: Contact & Sidebar */}
-                        <div className="space-y-8">
-
-                            {/* Contact Card */}
-                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl shadow-gray-200/50 sticky top-36">
-                                <div className="text-center mb-6">
-                                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary relative">
-                                        <User size={40} />
-                                        <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-4 border-white rounded-full" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-gray-900 leading-tight mb-1">{property.userId?.name || "Owner"}</h3>
-                                    <div className="flex flex-col items-center gap-1">
-                                        <span className="text-xs font-black text-primary uppercase tracking-wider bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
-                                            {property.userId?.role || "PropYours User"}
-                                        </span>
-                                        {property.userId?.company && (
-                                            <p className="text-xs font-bold text-gray-500">
-                                                {property.userId.company}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {property.userId?.bio && (
-                                    <div className="mb-6">
-                                        <p className="text-xs text-center text-gray-500 leading-relaxed font-medium italic">
-                                            "{property.userId.bio}"
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-4">
-                                    {showPhone ? (
-                                        property.userId?.phone ? (
-                                            <a
-                                                href={`tel:${property.userId.phone}`}
-                                                className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95"
-                                            >
-                                                <Phone size={20} />
-                                                {property.userId.phone}
-                                            </a>
-                                        ) : (
-                                            <div className="w-full bg-gray-50 text-gray-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 border border-gray-100">
-                                                <Phone size={20} className="text-gray-300" />
-                                                No phone number provided
-                                            </div>
-                                        )
+                            {owner?.phone ? (
+                                <button
+                                    type="button"
+                                    onClick={onWhatsApp}
+                                    disabled={
+                                        contactLoading !==
+                                        null
+                                    }
+                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#159C62] px-5 text-sm font-black text-white transition hover:bg-[#118353] disabled:cursor-wait disabled:opacity-60"
+                                >
+                                    {contactLoading ===
+                                    "whatsapp" ? (
+                                        <Loader2
+                                            size={17}
+                                            className="animate-spin"
+                                            aria-hidden="true"
+                                        />
                                     ) : (
-                                        <button
-                                            onClick={async () => {
-                                                const normalizedId = Array.isArray(id) ? id[0] : id;
-                                                // Record analytics only if it's the first click
-                                                try {
-                                                    await fetch(`/api/property/${normalizedId}/analytics`, {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({ type: "phoneClick" }),
-                                                    });
-
-                                                    await createLead("phone");
-                                                } catch (err) {
-                                                    console.error("Failed to record phone click:", err);
-                                                }
-                                                setShowPhone(true);
-                                            }}
-                                            className="w-full bg-primary text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-lg hover:shadow-primary/30 active:scale-95"
-                                        >
-                                            <Phone size={20} />
-                                            Show Phone Number
-                                        </button>
+                                        <MessageCircle
+                                            size={17}
+                                            aria-hidden="true"
+                                        />
                                     )}
-                                    <button
-                                        onClick={async () => {
-                                            await createLead("email");
-                                            window.location.href = `mailto:${property.userId?.email}`;
-                                        }}
-                                        className="w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-primary/5 active:scale-95"
-                                    >
-                                        <Mail size={20} />
-                                        Email Seller
-                                    </button>
-                                    <Link
-                                        href={`/profile/${property.userId?._id}`}
-                                        className="w-full flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-all py-2"
-                                    >
-                                        <UserCircle size={18} />
-                                        View Full Profile
-                                    </Link>
-                                </div>
+                                    WhatsApp owner
+                                </button>
+                            ) : null}
 
-                                <div className="mt-8 pt-8 border-t border-gray-50 flex flex-col gap-4">
-                                    <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
-                                        <CheckCircle2 size={16} className="text-green-500" />
-                                        Trusted Listing
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
-                                        <CheckCircle2 size={16} className="text-green-500" />
-                                        Verified Documents
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm font-medium text-gray-500">
-                                        <CheckCircle2 size={16} className="text-green-500" />
-                                        Premium Visibility
-                                    </div>
-                                </div>
-
-                                {/* Trust Badge */}
-                                <div className="mt-8 bg-gray-50 rounded-2xl p-4 flex items-center gap-4">
-                                    <Building2 size={32} className="text-gray-300" />
-                                    <p className="text-xs font-bold text-gray-500 leading-tight">
-                                        Always meet the seller in person before finalizing any payments.
-                                    </p>
-                                </div>
-                            </div>
-
+                            <button
+                                type="button"
+                                onClick={onEmail}
+                                disabled={
+                                    !owner?.email ||
+                                    contactLoading !== null
+                                }
+                                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {contactLoading ===
+                                "email" ? (
+                                    <Loader2
+                                        size={17}
+                                        className="animate-spin"
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <Mail
+                                        size={17}
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                Email owner
+                            </button>
                         </div>
+                    </>
+                )}
 
-                    </div>
-                </div>
-
-            {selectedImageIndex !== null && (
-                <div className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-6">
-                    <button
-                        type="button"
-                        onClick={() => setSelectedImageIndex(null)}
-                        className="absolute top-6 right-6 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-2xl font-bold"
-                        aria-label="Close image viewer"
+                {owner?._id ? (
+                    <Link
+                        href={`/profile/${owner._id}`}
+                        className="mt-5 inline-flex w-full items-center justify-center gap-2 border-t border-slate-100 pt-5 text-xs font-black text-slate-500 transition hover:text-primary"
                     >
-                        ×
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setSelectedImageIndex((current) =>
-                                current === null
-                                    ? null
-                                    : current === 0
-                                        ? propertyImages.length - 1
-                                        : current - 1
-                            )
-                        }
-                        className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-3xl font-bold"
-                        aria-label="Previous image"
-                    >
-                        ‹
-                    </button>
-
-                    <div className="relative w-full max-w-6xl h-[80vh]">
-                        <Image
-                            src={propertyImages[selectedImageIndex]}
-                            alt={`${property.address || "Property"} photo ${selectedImageIndex + 1}`}
-                            fill
-                            sizes="100vw"
-                            className="object-contain"
-                            priority
+                        <UserCircle
+                            size={16}
+                            aria-hidden="true"
                         />
-                    </div>
+                        View full profile
+                    </Link>
+                ) : null}
 
+                <div className="mt-5 space-y-3 rounded-2xl bg-slate-50 p-4">
+                    {[
+                        "Inspect before paying",
+                        "Verify ownership documents",
+                        "Use traceable payment methods",
+                    ].map((item) => (
+                        <div
+                            key={item}
+                            className="flex items-center gap-2.5"
+                        >
+                            <ShieldCheck
+                                size={15}
+                                className="shrink-0 text-primary"
+                                aria-hidden="true"
+                            />
+                            <span className="text-xs font-bold text-slate-600">
+                {item}
+              </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MobileContactBar({
+                              property,
+                              contactLoading,
+                              onPhone,
+                              onWhatsApp,
+                          }: {
+    property: PropertyRecord;
+    contactLoading:
+        | "phone"
+        | "email"
+        | "whatsapp"
+        | null;
+    onPhone: () => void;
+    onWhatsApp: () => void;
+}) {
+    return (
+        <div className="fixed inset-x-0 bottom-0 z-[900] border-t border-slate-200 bg-white/95 p-3 shadow-[0_-16px_45px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
+            <div className="mx-auto grid max-w-2xl grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
+                <div className="min-w-0 px-1">
+                    <p className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        Asking price
+                    </p>
+                    <p className="truncate text-lg font-black text-slate-950">
+                        {formatPrice(
+                            property.price,
+                        )}
+                    </p>
+                </div>
+
+                {property.userId?.phone ? (
                     <button
                         type="button"
-                        onClick={() =>
-                            setSelectedImageIndex((current) =>
-                                current === null
-                                    ? null
-                                    : current === propertyImages.length - 1
-                                        ? 0
-                                        : current + 1
-                            )
+                        onClick={onWhatsApp}
+                        disabled={
+                            contactLoading !== null
                         }
-                        className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center text-3xl font-bold"
-                        aria-label="Next image"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#159C62] text-white disabled:opacity-60"
+                        aria-label="WhatsApp owner"
                     >
-                        ›
+                        {contactLoading ===
+                        "whatsapp" ? (
+                            <Loader2
+                                size={17}
+                                className="animate-spin"
+                                aria-hidden="true"
+                            />
+                        ) : (
+                            <MessageCircle
+                                size={18}
+                                aria-hidden="true"
+                            />
+                        )}
                     </button>
+                ) : null}
 
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/10 text-white text-sm font-bold">
-                        {selectedImageIndex + 1} / {propertyImages.length}
+                <button
+                    type="button"
+                    onClick={onPhone}
+                    disabled={
+                        contactLoading !== null
+                    }
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-lg shadow-primary/20 disabled:opacity-60"
+                >
+                    {contactLoading ===
+                    "phone" ? (
+                        <Loader2
+                            size={16}
+                            className="animate-spin"
+                            aria-hidden="true"
+                        />
+                    ) : (
+                        <Phone
+                            size={16}
+                            aria-hidden="true"
+                        />
+                    )}
+                    Contact
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function ImageViewer({
+                         images,
+                         address,
+                         selectedIndex,
+                         onClose,
+                         onChange,
+                     }: {
+    images: string[];
+    address: string;
+    selectedIndex: number;
+    onClose: () => void;
+    onChange: (index: number) => void;
+}) {
+    function previous() {
+        onChange(
+            selectedIndex === 0
+                ? images.length - 1
+                : selectedIndex - 1,
+        );
+    }
+
+    function next() {
+        onChange(
+            selectedIndex ===
+            images.length - 1
+                ? 0
+                : selectedIndex + 1,
+        );
+    }
+
+    return (
+        <motion.div
+            initial={{
+                opacity: 0,
+            }}
+            animate={{
+                opacity: 1,
+            }}
+            exit={{
+                opacity: 0,
+            }}
+            className="fixed inset-0 z-[10000] flex flex-col bg-slate-950/98"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Property photo gallery"
+        >
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-4 text-white sm:px-6">
+                <div className="min-w-0">
+                    <p className="truncate text-sm font-black">
+                        {address}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        {selectedIndex + 1} of{" "}
+                        {images.length}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white transition hover:bg-white hover:text-slate-950"
+                    aria-label="Close photo gallery"
+                >
+                    <X
+                        size={19}
+                        aria-hidden="true"
+                    />
+                </button>
+            </div>
+
+            <div className="relative min-h-0 flex-1">
+                <div className="absolute inset-4 sm:inset-7">
+                    <Image
+                        src={images[selectedIndex]}
+                        alt={`${address} photo ${selectedIndex + 1}`}
+                        fill
+                        priority
+                        sizes="100vw"
+                        className="object-contain"
+                    />
+                </div>
+
+                {images.length > 1 ? (
+                    <>
+                        <button
+                            type="button"
+                            onClick={previous}
+                            className="absolute left-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur transition hover:bg-white hover:text-slate-950 sm:left-6"
+                            aria-label="Previous photo"
+                        >
+                            <ChevronLeft
+                                size={23}
+                                aria-hidden="true"
+                            />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={next}
+                            className="absolute right-3 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur transition hover:bg-white hover:text-slate-950 sm:right-6"
+                            aria-label="Next photo"
+                        >
+                            <ChevronRight
+                                size={23}
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </>
+                ) : null}
+            </div>
+
+            {images.length > 1 ? (
+                <div className="shrink-0 overflow-x-auto border-t border-white/10 px-4 py-4 sm:px-6">
+                    <div className="mx-auto flex w-max gap-2">
+                        {images.map(
+                            (image, index) => (
+                                <button
+                                    key={`${image}-${index}`}
+                                    type="button"
+                                    onClick={() =>
+                                        onChange(index)
+                                    }
+                                    className={`relative h-16 w-24 overflow-hidden rounded-xl border-2 transition ${
+                                        index ===
+                                        selectedIndex
+                                            ? "border-teal-300"
+                                            : "border-transparent opacity-55 hover:opacity-100"
+                                    }`}
+                                    aria-label={`View photo ${index + 1}`}
+                                >
+                                    <Image
+                                        src={image}
+                                        alt=""
+                                        fill
+                                        sizes="96px"
+                                        className="object-cover"
+                                    />
+                                </button>
+                            ),
+                        )}
                     </div>
                 </div>
-            )}
-
-                <SharePropertyModal
-                    isOpen={shareOpen}
-                    onClose={() => setShareOpen(false)}
-                    propertyTitle={property.address}
-                    shareUrl={shareUrl}
-                />
-
-                <PropertyAnalyticsModal
-                    isOpen={showAnalytics}
-                    onClose={() => setShowAnalytics(false)}
-                    property={property}
-                />
-            </main>
-        </ProtectedRoute>
+            ) : null}
+        </motion.div>
     );
 }

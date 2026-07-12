@@ -1,682 +1,2225 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ownerPlans } from "@/data/pricing/ownerPlans";
-import { developerPlans } from "@/data/pricing/developerPlans";
-import { pricingFaqs } from "@/data/pricing/pricingFaq";
-import Link from "next/link";
-import { ownerComparison } from "@/data/pricing/ownerComparison";
-import { developerComparison } from "@/data/pricing/developerComparison";
 import {
-    Check,
-    X,
-    Sparkles,
+    Suspense,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import Link from "next/link";
+import {
+    useRouter,
+    useSearchParams,
+} from "next/navigation";
+import {
+    AnimatePresence,
+    motion,
+} from "framer-motion";
+import {
     ArrowRight,
+    BadgeCheck,
+    BarChart3,
+    Building2,
+    Check,
+    CheckCircle2,
     ChevronDown,
+    Crown,
+    Eye,
+    Gem,
+    HelpCircle,
     Info,
-    BarChart3
+    LayoutDashboard,
+    LineChart,
+    ListChecks,
+    Mail,
+    MessageSquareText,
+    Rocket,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    Store,
+    Target,
+    UserRound,
+    Users,
+    X,
+    Zap,
+    type LucideIcon,
 } from "lucide-react";
 
-export default function PricingPage() {
-    // FAQ Active Accordions
-    const [activeFaq, setActiveFaq] = useState<number | null>(null);
+import {
+    PLAN_CATALOG,
+    type AnalyticsLevel,
+    type PlanAudience,
+    type PlanDefinition,
+    type PlanTier,
+    type RankingLevel,
+} from "@/lib/plan-catalog";
+import {
+    ownerComparison,
+} from "@/data/pricing/ownerComparison";
+import {
+    developerComparison,
+} from "@/data/pricing/developerComparison";
+import type {
+    ComparisonRow,
+} from "@/types/pricing";
 
-    const [pricingAudience, setPricingAudience] = useState<"owners" | "builders">("owners");
+type FinderAnswers = Record<string, string>;
 
-    const activePlans = pricingAudience === "owners" ? ownerPlans : developerPlans;
+type FinderQuestion = {
+    key: string;
+    label: string;
+    description: string;
+    options: Array<{
+        value: string;
+        label: string;
+        hint: string;
+    }>;
+};
 
-    const activeComparison =
-        pricingAudience === "owners" ? ownerComparison : developerComparison;
+type PlanTheme = {
+    icon: LucideIcon;
+    cardClass: string;
+    topLineClass: string;
+    iconClass: string;
+    badgeClass: string;
+    eyebrowClass: string;
+    mutedClass: string;
+    featureClass: string;
+    checkClass: string;
+    priceClass: string;
+    dividerClass: string;
+    primaryCtaClass: string;
+    secondaryCtaClass: string;
+};
 
-    const comparisonContent = {
-        owners: {
-            title: "Compare Owner Plans",
-            description:
-                "See how Silver, Gold, and Platinum compare across listing duration, visibility, media, and analytics.",
-            columns: ["Silver", "Gold", "Platinum"],
-        },
-        builders: {
-            title: "Compare Builder Plans",
-            description:
-                "Compare builder visibility, active project limits, profile treatment, placement, and analytics.",
-            columns: ["Builder Starter", "Builder Growth", "Builder Elite"],
-        },
+const OWNER_PLAN_TIERS = [
+    "silver",
+    "gold",
+    "platinum",
+] as const satisfies readonly PlanTier[];
+
+const BUILDER_PLAN_TIERS = [
+    "builder-starter",
+    "builder-growth",
+    "builder-elite",
+] as const satisfies readonly PlanTier[];
+
+const ANALYTICS_RANK: Record<AnalyticsLevel, number> = {
+    none: 0,
+    basic: 1,
+    advanced: 2,
+    project: 3,
+    portfolio: 4,
+};
+
+const RANKING_RANK: Record<RankingLevel, number> = {
+    standard: 0,
+    featured: 1,
+    priority: 2,
+    top: 3,
+};
+
+const AUDIENCE_CONTENT = {
+    owner: {
+        eyebrow: "Pricing for property owners",
+        title: "Choose how much visibility your property needs.",
+        description:
+            "Start with a free listing or choose a monthly plan for longer duration, stronger placement and clearer performance insights.",
+        billingSummary: "Gold and Platinum are billed monthly.",
+        icon: UserRound,
+    },
+    builder: {
+        eyebrow: "Pricing for builders and developers",
+        title: "Choose the portfolio tools that match your scale.",
+        description:
+            "Annual builder plans combine active project limits, listing visibility, profile treatment, promotion boosts and project analytics.",
+        billingSummary: "Builder plans are billed yearly.",
+        icon: Building2,
+    },
+} satisfies Record<
+    PlanAudience,
+    {
+        eyebrow: string;
+        title: string;
+        description: string;
+        billingSummary: string;
+        icon: LucideIcon;
+    }
+>;
+
+const OWNER_FAQS = [
+    {
+        question: "Is the Silver owner plan really free?",
+        answer:
+            "Yes. Silver has no monthly charge. It supports one active property for 30 days, up to five images and the standard listing experience.",
+    },
+    {
+        question: "Are Gold and Platinum billed monthly?",
+        answer:
+            "Yes. Gold and Platinum are monthly owner subscriptions. Their listing-duration limits describe how long an individual listing may remain active; that is separate from the subscription billing cycle.",
+    },
+    {
+        question: "Why does a monthly plan have a 90-day or 180-day listing duration?",
+        answer:
+            "Billing controls access to the plan. Listing duration controls the maximum active window assigned to a property under that plan. They are two different product rules.",
+    },
+    {
+        question: "How many properties can I keep active?",
+        answer:
+            "Silver and Gold support one active property. Platinum supports two active properties. Additional properties may need to remain inactive until capacity is available.",
+    },
+    {
+        question: "What analytics are included?",
+        answer:
+            "Silver does not include performance analytics. Gold includes basic views, phone-click and favorite tracking. Platinum includes advanced daily performance and conversion-oriented insights.",
+    },
+    {
+        question: "What happens when a listing reaches its duration limit?",
+        answer:
+            "The listing can become inactive and stop appearing in property discovery. You can review it from the property-management area and reactivate it when your plan and account flow permit.",
+    },
+];
+
+const BUILDER_FAQS = [
+    {
+        question: "Are builder plans monthly or yearly?",
+        answer:
+            "Builder Starter, Builder Growth and Builder Elite are annual plans in the current catalog.",
+    },
+    {
+        question: "How many active projects can each plan support?",
+        answer:
+            "Builder Starter supports up to three active projects, Growth supports up to ten and Elite supports up to twenty-five.",
+    },
+    {
+        question: "What are promote boosts?",
+        answer:
+            "Growth and Elite include monthly promote-boost allowances. These can be used by the existing promotion workflow to increase property visibility, subject to the plan balance.",
+    },
+    {
+        question: "How do builder analytics differ?",
+        answer:
+            "Starter includes basic analytics, Growth includes project-level analytics and Elite includes portfolio-level analytics.",
+    },
+    {
+        question: "Do builder plans include profile and listing treatment?",
+        answer:
+            "Yes. Higher builder tiers include stronger ranking, badge and comparison visibility entitlements, as defined by the plan catalog.",
+    },
+    {
+        question: "How do I activate a builder plan?",
+        answer:
+            "The repository does not currently include a public builder checkout or registration route. Use the contact flow to discuss activation and onboarding.",
+    },
+];
+
+function getPlansForAudience(
+    audience: PlanAudience,
+): PlanDefinition[] {
+    const tiers =
+        audience === "owner"
+            ? OWNER_PLAN_TIERS
+            : BUILDER_PLAN_TIERS;
+
+    return tiers.map((tier) => PLAN_CATALOG[tier]);
+}
+
+function formatPrice(
+    priceInPaise: number,
+): string {
+    if (priceInPaise === 0) {
+        return "Free";
+    }
+
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(priceInPaise / 100);
+}
+
+function formatCompactPrice(
+    priceInPaise: number,
+): string {
+    if (priceInPaise === 0) {
+        return "Free";
+    }
+
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        notation: "compact",
+        maximumFractionDigits: 1,
+    }).format(priceInPaise / 100);
+}
+
+function getBillingLabel(
+    plan: PlanDefinition,
+): string {
+    if (plan.presentation.priceInPaise === 0) {
+        return "No monthly charge";
+    }
+
+    /*
+     * Gold and Platinum are monthly owner subscriptions.
+     * This normalization keeps the pricing UI correct even if an older
+     * plan-catalog branch still carries the previous per-listing label.
+     */
+    if (plan.audience === "owner") {
+        return "/ month";
+    }
+
+    return "/ year";
+}
+
+function getBillingNote(
+    plan: PlanDefinition,
+): string {
+    if (plan.presentation.priceInPaise === 0) {
+        return "Start without a paid subscription";
+    }
+
+    if (plan.audience === "owner") {
+        return "Monthly owner subscription";
+    }
+
+    return "Annual builder subscription";
+}
+
+function getPlanSavings(
+    plan: PlanDefinition,
+): number | null {
+    const original =
+        plan.presentation.originalPriceInPaise;
+
+    if (
+        original === undefined ||
+        original <= plan.presentation.priceInPaise
+    ) {
+        return null;
+    }
+
+    return original - plan.presentation.priceInPaise;
+}
+
+function toTitle(value: string): string {
+    return value
+        .split("-")
+        .map(
+            (word) =>
+                word.charAt(0).toUpperCase() +
+                word.slice(1),
+        )
+        .join(" ");
+}
+
+function getPlanTheme(
+    plan: PlanDefinition,
+): PlanTheme {
+    switch (plan.tier) {
+        case "gold":
+        case "builder-growth":
+            return {
+                icon:
+                    plan.audience === "owner"
+                        ? Sparkles
+                        : Rocket,
+                cardClass:
+                    "border-2 border-primary/70 bg-white text-slate-950 shadow-[0_34px_95px_rgba(13,148,136,0.18)] ring-4 ring-primary/5 lg:-translate-y-3",
+                topLineClass:
+                    "bg-gradient-to-r from-teal-300 via-primary to-teal-500",
+                iconClass:
+                    "bg-primary text-white shadow-xl shadow-primary/25",
+                badgeClass:
+                    "bg-primary text-white shadow-lg shadow-primary/20",
+                eyebrowClass: "text-primary",
+                mutedClass: "text-slate-500",
+                featureClass: "text-slate-600",
+                checkClass:
+                    "bg-teal-100 text-primary ring-1 ring-teal-200",
+                priceClass:
+                    "border-teal-200 bg-[linear-gradient(135deg,#ecfdf9_0%,#ffffff_100%)]",
+                dividerClass: "bg-teal-100",
+                primaryCtaClass:
+                    "bg-primary text-white shadow-lg shadow-primary/25 hover:bg-primary-dark",
+                secondaryCtaClass:
+                    "border-teal-200 bg-white text-primary hover:bg-teal-50",
+            };
+
+        case "platinum":
+        case "builder-elite":
+            return {
+                icon:
+                    plan.audience === "owner"
+                        ? Gem
+                        : Crown,
+                cardClass:
+                    "border-white/10 bg-slate-950 text-white shadow-[0_38px_110px_rgba(15,23,42,0.34)] ring-1 ring-white/5",
+                topLineClass:
+                    "bg-gradient-to-r from-teal-400 via-cyan-200 to-teal-400",
+                iconClass:
+                    "bg-white/10 text-teal-300 ring-1 ring-white/10 shadow-xl",
+                badgeClass:
+                    "bg-teal-300 text-slate-950 shadow-lg shadow-teal-400/20",
+                eyebrowClass: "text-teal-300",
+                mutedClass: "text-slate-400",
+                featureClass: "text-slate-300",
+                checkClass:
+                    "bg-teal-300/15 text-teal-300 ring-1 ring-teal-300/20",
+                priceClass:
+                    "border-white/10 bg-white/[0.055]",
+                dividerClass: "bg-white/10",
+                primaryCtaClass:
+                    "bg-white text-slate-950 shadow-lg hover:bg-teal-200",
+                secondaryCtaClass:
+                    "border-white/15 bg-white/5 text-white hover:bg-white/10",
+            };
+
+        default:
+            return {
+                icon:
+                    plan.audience === "owner"
+                        ? UserRound
+                        : Building2,
+                cardClass:
+                    "border-slate-200 bg-white text-slate-950 shadow-sm",
+                topLineClass: "bg-slate-200",
+                iconClass:
+                    "bg-slate-100 text-slate-700",
+                badgeClass:
+                    "bg-slate-100 text-slate-700",
+                eyebrowClass: "text-slate-500",
+                mutedClass: "text-slate-500",
+                featureClass: "text-slate-600",
+                checkClass:
+                    "bg-slate-100 text-slate-600",
+                priceClass:
+                    "border-slate-200 bg-slate-50",
+                dividerClass: "bg-slate-100",
+                primaryCtaClass:
+                    "bg-slate-950 text-white hover:bg-primary",
+                secondaryCtaClass:
+                    "border-slate-200 bg-white text-slate-700 hover:border-primary hover:text-primary",
+            };
+    }
+}
+
+function buildPlanFeatures(
+    plan: PlanDefinition,
+): string[] {
+    const limits = plan.entitlements;
+    const subject =
+        plan.audience === "owner"
+            ? limits.activeProperties === 1
+                ? "active property"
+                : "active properties"
+            : limits.activeProperties === 1
+                ? "active project"
+                : "active projects";
+
+    const features = [
+        `${limits.activeProperties} ${subject}`,
+        `${limits.listingDays}-day listing duration`,
+        `Up to ${limits.maxImages} images`,
+    ];
+
+    if (limits.maxVideoLinks > 0) {
+        features.push(
+            `${limits.maxVideoLinks} video ${
+                limits.maxVideoLinks === 1
+                    ? "link"
+                    : "links"
+            }`,
+        );
+    }
+
+    features.push(
+        limits.verifiedLeadLimit === null
+            ? "Unlimited verified leads"
+            : `${limits.verifiedLeadLimit} verified ${
+                limits.verifiedLeadLimit === 1
+                    ? "lead"
+                    : "leads"
+            }`,
+    );
+
+    if (limits.rankingLevel !== "standard") {
+        features.push(
+            `${toTitle(limits.rankingLevel)} search ranking`,
+        );
+    }
+
+    if (limits.homepageFeatured) {
+        features.push("Homepage-featured eligibility");
+    } else if (limits.featured) {
+        features.push("Featured listing treatment");
+    }
+
+    if (limits.analyticsLevel !== "none") {
+        features.push(
+            `${toTitle(limits.analyticsLevel)} analytics`,
+        );
+    }
+
+    if (limits.promoteBoostsPerMonth > 0) {
+        features.push(
+            `${limits.promoteBoostsPerMonth} promote boosts per month`,
+        );
+    }
+
+    if (limits.leadNotifications) {
+        features.push("Lead notifications");
+    }
+
+    return features.slice(0, 8);
+}
+
+function getPlanPositioning(
+    plan: PlanDefinition,
+): string {
+    switch (plan.tier) {
+        case "silver":
+            return "A simple place to begin";
+        case "gold":
+            return "Recommended for more visibility";
+        case "platinum":
+            return "Maximum visibility and insights";
+        case "builder-starter":
+            return "For smaller project portfolios";
+        case "builder-growth":
+            return "Recommended for growing builders";
+        case "builder-elite":
+            return "For established builder portfolios";
+    }
+}
+
+function getPlanCta(
+    plan: PlanDefinition,
+): {
+    href: string;
+    label: string;
+    external?: boolean;
+} {
+    if (plan.audience === "builder") {
+        return {
+            href: "/contact",
+            label: `Discuss ${plan.presentation.displayName}`,
+        };
+    }
+
+    if (plan.tier === "silver") {
+        return {
+            href: "/post-property",
+            label: "Start with Silver",
+        };
+    }
+
+    return {
+        href: `/post-property?plan=${plan.tier}`,
+        label: `Choose ${plan.presentation.displayName}`,
     };
+}
 
-    const pricingContent = {
-        owners: {
-            eyebrow: "Owner Pricing",
-            title: "List Your Property",
+function getFinderQuestions(
+    audience: PlanAudience,
+): FinderQuestion[] {
+    if (audience === "owner") {
+        return [
+            {
+                key: "capacity",
+                label: "How many properties need to stay active?",
+                description:
+                    "Choose the maximum number you expect to manage at once.",
+                options: [
+                    {
+                        value: "1",
+                        label: "One property",
+                        hint: "Silver or Gold may fit",
+                    },
+                    {
+                        value: "2",
+                        label: "Two properties",
+                        hint: "Platinum capacity",
+                    },
+                ],
+            },
+            {
+                key: "duration",
+                label: "How long should each listing remain active?",
+                description:
+                    "Pick the minimum listing window you need.",
+                options: [
+                    {
+                        value: "30",
+                        label: "30 days",
+                        hint: "Short initial listing",
+                    },
+                    {
+                        value: "90",
+                        label: "90 days",
+                        hint: "Longer selling window",
+                    },
+                    {
+                        value: "180",
+                        label: "180 days",
+                        hint: "Maximum owner duration",
+                    },
+                ],
+            },
+            {
+                key: "analytics",
+                label: "How much performance insight do you need?",
+                description:
+                    "Choose the minimum analytics level that would be useful.",
+                options: [
+                    {
+                        value: "none",
+                        label: "No analytics",
+                        hint: "Listing access only",
+                    },
+                    {
+                        value: "basic",
+                        label: "Basic",
+                        hint: "Views, calls and saves",
+                    },
+                    {
+                        value: "advanced",
+                        label: "Advanced",
+                        hint: "Daily and conversion insights",
+                    },
+                ],
+            },
+        ];
+    }
+
+    return [
+        {
+            key: "capacity",
+            label: "How many projects need to stay active?",
             description:
-                "Choose a plan based on how many properties you want to list and how long you want them active.",
+                "Choose the maximum active portfolio size you expect.",
+            options: [
+                {
+                    value: "3",
+                    label: "Up to 3",
+                    hint: "Smaller builder portfolio",
+                },
+                {
+                    value: "10",
+                    label: "Up to 10",
+                    hint: "Growing project portfolio",
+                },
+                {
+                    value: "25",
+                    label: "Up to 25",
+                    hint: "Established portfolio",
+                },
+            ],
         },
-        builders: {
-            eyebrow: "Builder & Developer Pricing",
-            title: "Promote Your Projects",
+        {
+            key: "ranking",
+            label: "What visibility level do you need?",
             description:
-                "Paid plans for builders and developers who want stronger visibility, verified branding, project promotion, and lead management.",
+                "Choose the minimum search-ranking treatment you want.",
+            options: [
+                {
+                    value: "standard",
+                    label: "Standard",
+                    hint: "Core directory presence",
+                },
+                {
+                    value: "priority",
+                    label: "Priority",
+                    hint: "Stronger project placement",
+                },
+                {
+                    value: "top",
+                    label: "Top",
+                    hint: "Highest catalog ranking",
+                },
+            ],
         },
-    };
+        {
+            key: "analytics",
+            label: "How should performance be analysed?",
+            description:
+                "Choose the minimum analytics scope required by your team.",
+            options: [
+                {
+                    value: "basic",
+                    label: "Basic",
+                    hint: "Core listing activity",
+                },
+                {
+                    value: "project",
+                    label: "Project",
+                    hint: "Project-level trends",
+                },
+                {
+                    value: "portfolio",
+                    label: "Portfolio",
+                    hint: "Portfolio-wide insights",
+                },
+            ],
+        },
+    ];
+}
 
-    // Interactive Plan Finder State
-    const [finderDuration, setFinderDuration] = useState<string | null>(null);
-    const [finderLeads, setFinderLeads] = useState<string | null>(null);
-    const [finderAnalytics, setFinderAnalytics] = useState<string | null>(null);
-    const [finderResult, setFinderResult] = useState<string | null>(null);
+function recommendPlan(
+    audience: PlanAudience,
+    answers: FinderAnswers,
+): PlanDefinition {
+    const plans = getPlansForAudience(audience);
+    const requiredCapacity =
+        Number.parseInt(answers.capacity ?? "0", 10) || 0;
+    const requiredAnalytics =
+        (answers.analytics ??
+            (audience === "owner"
+                ? "none"
+                : "basic")) as AnalyticsLevel;
 
-    // Handle Plan Finder logic
-    const handleFindPlan = () => {
-        if (!finderDuration || !finderLeads || !finderAnalytics) return;
+    const candidates = plans.filter((plan) => {
+        const capacityMatches =
+            plan.entitlements.activeProperties >=
+            requiredCapacity;
 
-        if (finderDuration === "long" || finderLeads === "high" || finderAnalytics === "advanced") {
-            setFinderResult("premium");
-        } else if (finderDuration === "medium" || finderLeads === "moderate" || finderAnalytics === "basic") {
-            setFinderResult("boost");
-        } else {
-            setFinderResult("basic");
+        const analyticsMatches =
+            ANALYTICS_RANK[
+                plan.entitlements.analyticsLevel
+                ] >= ANALYTICS_RANK[requiredAnalytics];
+
+        if (audience === "owner") {
+            const requiredDuration =
+                Number.parseInt(
+                    answers.duration ?? "0",
+                    10,
+                ) || 0;
+
+            return (
+                capacityMatches &&
+                analyticsMatches &&
+                plan.entitlements.listingDays >=
+                requiredDuration
+            );
         }
-    };
 
-    const resetFinder = () => {
-        setFinderDuration(null);
-        setFinderLeads(null);
-        setFinderAnalytics(null);
-        setFinderResult(null);
-    };
+        const requiredRanking =
+            (answers.ranking ??
+                "standard") as RankingLevel;
+
+        return (
+            capacityMatches &&
+            analyticsMatches &&
+            RANKING_RANK[
+                plan.entitlements.rankingLevel
+                ] >= RANKING_RANK[requiredRanking]
+        );
+    });
+
+    return candidates[0] ?? plans[plans.length - 1];
+}
+
+function getRecommendationReasons(
+    plan: PlanDefinition,
+    audience: PlanAudience,
+): string[] {
+    const reasons = [
+        `${plan.entitlements.activeProperties} active ${
+            audience === "owner"
+                ? plan.entitlements.activeProperties === 1
+                    ? "property"
+                    : "properties"
+                : plan.entitlements.activeProperties === 1
+                    ? "project"
+                    : "projects"
+        }`,
+        `${plan.entitlements.listingDays}-day listing duration`,
+        `${toTitle(
+            plan.entitlements.analyticsLevel,
+        )} analytics`,
+    ];
+
+    if (
+        plan.entitlements.rankingLevel !==
+        "standard"
+    ) {
+        reasons.push(
+            `${toTitle(
+                plan.entitlements.rankingLevel,
+            )} search ranking`,
+        );
+    }
+
+    return reasons;
+}
+
+function renderComparisonValue(
+    value: string,
+    variant: "default" | "highlighted" | "dark" = "default",
+) {
+    if (value === "✓") {
+        return (
+            <span
+                className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${
+                    variant === "dark"
+                        ? "bg-white text-slate-950"
+                        : variant === "highlighted"
+                            ? "bg-primary text-white"
+                            : "bg-teal-50 text-primary"
+                }`}
+                aria-label="Included"
+            >
+        <Check size={16} aria-hidden="true" />
+      </span>
+        );
+    }
+
+    if (value === "—") {
+        return (
+            <span
+                className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${
+                    variant === "dark"
+                        ? "bg-white/10 text-slate-300"
+                        : "bg-slate-100 text-slate-400"
+                }`}
+                aria-label="Not included"
+            >
+        <X size={14} aria-hidden="true" />
+      </span>
+        );
+    }
 
     return (
-        <div className="pt-24 min-h-screen bg-white font-body relative overflow-hidden">
+        <span
+            className={
+                variant === "dark"
+                    ? "font-semibold text-slate-100"
+                    : variant === "highlighted"
+                        ? "font-black text-primary"
+                        : "font-semibold text-slate-700"
+            }
+        >
+      {value}
+    </span>
+    );
+}
 
-            {/* Decorative Blur Background Blobs */}
-            <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
-            <div className="absolute top-1/2 right-1/10 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none -z-10" />
-            <div className="absolute bottom-1/10 left-1/3 w-[500px] h-[500px] bg-primary-light/30 rounded-full blur-3xl pointer-events-none -z-10" />
+function PlanCard({
+                      plan,
+                      index,
+                  }: {
+    plan: PlanDefinition;
+    index: number;
+}) {
+    const theme = getPlanTheme(plan);
+    const Icon = theme.icon;
+    const features = buildPlanFeatures(plan);
+    const savings = getPlanSavings(plan);
+    const cta = getPlanCta(plan);
+    const isPremium =
+        plan.tier === "platinum" ||
+        plan.tier === "builder-elite";
+    const isRecommended =
+        plan.tier === "gold" ||
+        plan.tier === "builder-growth";
 
-            {/* Grid Pattern Layer */}
-            <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none -z-20" />
+    return (
+        <motion.article
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+                duration: 0.45,
+                delay: index * 0.08,
+            }}
+            className={`group relative isolate flex h-full flex-col overflow-hidden rounded-[2rem] border p-6 transition duration-300 hover:-translate-y-1 sm:p-7 ${theme.cardClass}`}
+        >
+            <div
+                className={`absolute inset-x-0 top-0 h-1.5 ${theme.topLineClass}`}
+                aria-hidden="true"
+            />
 
-            {/* --- HERO HEADER SECTION --- */}
-            <section className="pt-16 pb-12 px-6 text-center">
-                <div className="max-w-4xl mx-auto space-y-5">
-                    <motion.h1
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.1 }}
-                        className="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 leading-tight tracking-tight font-heading"
+            {isRecommended ? (
+                <>
+                    <div
+                        className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-teal-200/45 blur-3xl"
+                        aria-hidden="true"
+                    />
+                    <div
+                        className="pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"
+                        aria-hidden="true"
+                    />
+                </>
+            ) : null}
+
+            {isPremium ? (
+                <>
+                    <div
+                        className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-teal-400/15 blur-3xl"
+                        aria-hidden="true"
+                    />
+                    <div
+                        className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl"
+                        aria-hidden="true"
+                    />
+                    <div
+                        className="pointer-events-none absolute right-7 top-28 h-24 w-24 rounded-full border-[18px] border-white/[0.025]"
+                        aria-hidden="true"
+                    />
+                </>
+            ) : null}
+
+            <div className="relative flex h-full flex-col">
+                <div className="flex items-start justify-between gap-4">
+          <span
+              className={`flex h-13 w-13 items-center justify-center rounded-2xl p-3.5 ${theme.iconClass}`}
+          >
+            <Icon size={23} aria-hidden="true" />
+          </span>
+
+                    {plan.presentation.badge ? (
+                        <span
+                            className={`rounded-full px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.12em] ${theme.badgeClass}`}
+                        >
+              {plan.presentation.badge}
+            </span>
+                    ) : null}
+                </div>
+
+                <p
+                    className={`mt-7 text-[10px] font-black uppercase tracking-[0.15em] ${theme.eyebrowClass}`}
+                >
+                    {getPlanPositioning(plan)}
+                </p>
+
+                <h3 className="mt-2 text-2xl font-black tracking-tight">
+                    {plan.presentation.displayName}
+                </h3>
+
+                <p
+                    className={`mt-3 min-h-[4.5rem] text-sm leading-6 ${theme.mutedClass}`}
+                >
+                    {plan.presentation.description}
+                </p>
+
+                <div
+                    className={`mt-6 rounded-2xl border p-4 ${theme.priceClass}`}
+                >
+                    <div className="flex items-center justify-between gap-3">
+                        <p
+                            className={`text-[10px] font-black uppercase tracking-[0.12em] ${theme.mutedClass}`}
+                        >
+                            Plan price
+                        </p>
+
+                        {savings ? (
+                            <span
+                                className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
+                                    isPremium
+                                        ? "bg-teal-300/15 text-teal-300"
+                                        : "bg-emerald-100 text-emerald-700"
+                                }`}
+                            >
+                Save {formatPrice(savings)}
+              </span>
+                        ) : null}
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-end gap-x-1.5 gap-y-1">
+                        <p className="text-3xl font-black tracking-tight">
+                            {formatPrice(
+                                plan.presentation.priceInPaise,
+                            )}
+                        </p>
+
+                        {plan.presentation.priceInPaise > 0 ? (
+                            <p
+                                className={`pb-1 text-sm font-bold ${theme.mutedClass}`}
+                            >
+                                {getBillingLabel(plan)}
+                            </p>
+                        ) : null}
+                    </div>
+
+                    <p
+                        className={`mt-2 text-xs ${theme.mutedClass}`}
                     >
-                        Property Exposure Backed by <span className="text-primary bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">Real-Time Data</span>
-                    </motion.h1>
+                        {getBillingNote(plan)}
+                    </p>
 
-                    <motion.p
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed"
+                    {plan.presentation.originalPriceInPaise ? (
+                        <p
+                            className={`mt-2 text-xs ${theme.mutedClass}`}
+                        >
+                            Standard price{" "}
+                            <span className="line-through">
+                {formatPrice(
+                    plan.presentation
+                        .originalPriceInPaise,
+                )}
+              </span>
+                        </p>
+                    ) : null}
+                </div>
+
+                <div
+                    className={`my-7 h-px ${theme.dividerClass}`}
+                    aria-hidden="true"
+                />
+
+                <p
+                    className={`text-[10px] font-black uppercase tracking-[0.13em] ${theme.mutedClass}`}
+                >
+                    What is included
+                </p>
+
+                <ul className="mt-4 space-y-3 pb-2">
+                    {features.map((feature) => (
+                        <li
+                            key={feature}
+                            className={`flex items-start gap-3 text-sm leading-6 ${theme.featureClass}`}
+                        >
+              <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${theme.checkClass}`}
+              >
+                <Check size={12} aria-hidden="true" />
+              </span>
+                            <span>{feature}</span>
+                        </li>
+                    ))}
+                </ul>
+
+                <div className="mt-auto pt-8">
+                    <Link
+                        href={cta.href}
+                        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 ${theme.primaryCtaClass}`}
                     >
-                        Choose the right plan for your property listing or builder profile. Get better visibility, clearer analytics, and tools designed for how you sell.
-                    </motion.p>
+                        {cta.label}
+                        <ArrowRight
+                            size={16}
+                            className="transition-transform group-hover:translate-x-1"
+                            aria-hidden="true"
+                        />
+                    </Link>
+
+                    <Link
+                        href="#compare-plans"
+                        className={`mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border px-5 py-3 text-xs font-black transition ${theme.secondaryCtaClass}`}
+                    >
+                        Compare every detail
+                    </Link>
+                </div>
+            </div>
+        </motion.article>
+    );
+}
+
+function PricingPageContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    const queryAudience: PlanAudience =
+        searchParams.get("audience") === "builder"
+            ? "builder"
+            : "owner";
+
+    const [audience, setAudience] =
+        useState<PlanAudience>(queryAudience);
+    const [finderAnswers, setFinderAnswers] =
+        useState<FinderAnswers>({});
+    const [recommendedTier, setRecommendedTier] =
+        useState<PlanTier | null>(null);
+
+    useEffect(() => {
+        setAudience(queryAudience);
+        setFinderAnswers({});
+        setRecommendedTier(null);
+    }, [queryAudience]);
+
+    const plans = useMemo(
+        () => getPlansForAudience(audience),
+        [audience],
+    );
+
+    const comparisonRows: ComparisonRow[] =
+        audience === "owner"
+            ? ownerComparison
+            : developerComparison;
+
+    const finderQuestions =
+        getFinderQuestions(audience);
+
+    const finderComplete =
+        finderQuestions.every(
+            (question) =>
+                Boolean(finderAnswers[question.key]),
+        );
+
+    const recommendedPlan =
+        recommendedTier === null
+            ? null
+            : PLAN_CATALOG[recommendedTier];
+
+    const content = AUDIENCE_CONTENT[audience];
+    const ContentIcon = content.icon;
+    const faqs =
+        audience === "owner"
+            ? OWNER_FAQS
+            : BUILDER_FAQS;
+
+    const audienceSnapshot =
+        audience === "owner"
+            ? [
+                {
+                    label: "Free entry plan",
+                    value: "Silver",
+                    icon: UserRound,
+                },
+                {
+                    label: "Paid billing",
+                    value: "Monthly",
+                    icon: Zap,
+                },
+                {
+                    label: "Listing windows",
+                    value: "30–180 days",
+                    icon: ListChecks,
+                },
+                {
+                    label: "Active capacity",
+                    value: "1–2 properties",
+                    icon: Store,
+                },
+            ]
+            : [
+                {
+                    label: "Billing",
+                    value: "Yearly",
+                    icon: Building2,
+                },
+                {
+                    label: "Active capacity",
+                    value: "3–25 projects",
+                    icon: Store,
+                },
+                {
+                    label: "Promotion boosts",
+                    value: "Up to 15/month",
+                    icon: Rocket,
+                },
+                {
+                    label: "Analytics",
+                    value: "Basic–portfolio",
+                    icon: BarChart3,
+                },
+            ];
+
+    const processSteps =
+        audience === "owner"
+            ? [
+                {
+                    number: "01",
+                    title: "Choose visibility",
+                    description:
+                        "Compare the free and monthly owner plans.",
+                    icon: Target,
+                },
+                {
+                    number: "02",
+                    title: "Create the listing",
+                    description:
+                        "Add property details, images and pricing.",
+                    icon: ListChecks,
+                },
+                {
+                    number: "03",
+                    title: "Manage performance",
+                    description:
+                        "Edit the listing and open analytics when included.",
+                    icon: LayoutDashboard,
+                },
+            ]
+            : [
+                {
+                    number: "01",
+                    title: "Choose portfolio scale",
+                    description:
+                        "Compare annual project capacity and visibility.",
+                    icon: Building2,
+                },
+                {
+                    number: "02",
+                    title: "Discuss activation",
+                    description:
+                        "Use the contact flow for builder onboarding.",
+                    icon: MessageSquareText,
+                },
+                {
+                    number: "03",
+                    title: "Manage projects",
+                    description:
+                        "Publish projects and use plan-aware analytics.",
+                    icon: LineChart,
+                },
+            ];
+
+    function selectAudience(
+        nextAudience: PlanAudience,
+    ) {
+        setAudience(nextAudience);
+        setFinderAnswers({});
+        setRecommendedTier(null);
+
+        const params = new URLSearchParams(
+            searchParams.toString(),
+        );
+
+        if (nextAudience === "owner") {
+            params.delete("audience");
+        } else {
+            params.set("audience", "builder");
+        }
+
+        const query = params.toString();
+
+        router.replace(
+            query
+                ? `/pricing?${query}`
+                : "/pricing",
+            {
+                scroll: false,
+            },
+        );
+    }
+
+    function handleRecommendation() {
+        if (!finderComplete) {
+            return;
+        }
+
+        const plan = recommendPlan(
+            audience,
+            finderAnswers,
+        );
+
+        setRecommendedTier(plan.tier);
+    }
+
+    function resetFinder() {
+        setFinderAnswers({});
+        setRecommendedTier(null);
+    }
+
+    return (
+        <main className="min-h-screen bg-white pt-20 font-body text-slate-950">
+            {/* Hero */}
+            <section className="relative overflow-hidden border-b border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(13,148,136,0.16),_transparent_35%),linear-gradient(180deg,#f7fbfa_0%,#ffffff_100%)]">
+                <div
+                    className="pointer-events-none absolute -left-48 top-40 h-96 w-96 rounded-full bg-amber-50 blur-3xl"
+                    aria-hidden="true"
+                />
+
+                <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-12 sm:px-6 lg:px-8 lg:pb-16 lg:pt-16">
+                    <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
+                        <motion.div
+                            initial={{ opacity: 0, y: 18 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <h1 className="mt-6 max-w-4xl font-heading text-4xl font-black leading-[1.05] tracking-[-0.045em] sm:text-5xl lg:text-[4rem]">
+                                Pricing that matches
+                                <span className="block text-primary">
+                  how you actually list.
+                </span>
+                            </h1>
+
+                            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                                Compare capacity, listing duration, media limits, visibility,
+                                leads and analytics before choosing a plan.
+                            </p>
+
+                            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+                                {[
+                                    "Catalog-backed limits",
+                                    "Owner and builder plans",
+                                    "Side-by-side comparison",
+                                ].map((item) => (
+                                    <span
+                                        key={item}
+                                        className="flex items-center gap-2 text-sm font-semibold text-slate-600"
+                                    >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <Check size={13} aria-hidden="true" />
+                    </span>
+                                        {item}
+                  </span>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, x: 22 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.08 }}
+                            className="relative overflow-hidden rounded-[2rem] bg-slate-950 p-6 text-white shadow-[0_30px_90px_rgba(15,23,42,0.24)] sm:p-8"
+                        >
+                            <div
+                                className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-teal-500/25 blur-3xl"
+                                aria-hidden="true"
+                            />
+
+                            <div className="relative">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-300">
+                                            Current view
+                                        </p>
+                                        <h2 className="mt-2 text-2xl font-black tracking-tight">
+                                            {audience === "owner"
+                                                ? "Owner plans"
+                                                : "Builder plans"}
+                                        </h2>
+                                        <p className="mt-2 text-sm leading-6 text-slate-400">
+                                            {content.billingSummary}
+                                        </p>
+                                    </div>
+
+                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+                    <ContentIcon size={22} aria-hidden="true" />
+                  </span>
+                                </div>
+
+                                <div className="mt-8 grid grid-cols-2 gap-3">
+                                    {audienceSnapshot.map((item) => {
+                                        const Icon = item.icon;
+
+                                        return (
+                                            <div
+                                                key={item.label}
+                                                className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"
+                                            >
+                                                <Icon
+                                                    size={17}
+                                                    className="text-teal-300"
+                                                    aria-hidden="true"
+                                                />
+                                                <p className="mt-4 text-lg font-black">
+                                                    {item.value}
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-400">
+                                                    {item.label}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* Audience switch */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 18 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.12 }}
+                        className="relative z-20 mt-12 rounded-[1.75rem] border border-slate-200 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)]"
+                    >
+                        <div
+                            role="tablist"
+                            aria-label="Pricing audience"
+                            className="grid gap-3 sm:grid-cols-2"
+                        >
+                            {(
+                                [
+                                    {
+                                        value: "owner",
+                                        label: "Property owners",
+                                        description:
+                                            "Free and monthly plans for selling or renting.",
+                                        icon: UserRound,
+                                    },
+                                    {
+                                        value: "builder",
+                                        label: "Builders & developers",
+                                        description:
+                                            "Annual plans for project portfolios and visibility.",
+                                        icon: Building2,
+                                    },
+                                ] as const
+                            ).map((option) => {
+                                const Icon = option.icon;
+                                const active =
+                                    audience === option.value;
+
+                                return (
+                                    <button
+                                        key={option.value}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={active}
+                                        onClick={() =>
+                                            selectAudience(option.value)
+                                        }
+                                        className={`flex items-center gap-4 rounded-2xl border p-4 text-left transition sm:p-5 ${
+                                            active
+                                                ? "border-primary bg-teal-50 shadow-sm"
+                                                : "border-slate-100 bg-slate-50 hover:border-teal-200 hover:bg-white"
+                                        }`}
+                                    >
+                    <span
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition ${
+                            active
+                                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                : "bg-white text-slate-500 shadow-sm"
+                        }`}
+                    >
+                      <Icon size={21} aria-hidden="true" />
+                    </span>
+
+                                        <span className="min-w-0 flex-1">
+                      <span
+                          className={`block font-black ${
+                              active
+                                  ? "text-primary"
+                                  : "text-slate-950"
+                          }`}
+                      >
+                        {option.label}
+                      </span>
+                      <span className="mt-1 block text-sm leading-5 text-slate-500">
+                        {option.description}
+                      </span>
+                    </span>
+
+                                        <span
+                                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                                                active
+                                                    ? "border-primary bg-primary text-white"
+                                                    : "border-slate-200 bg-white text-transparent"
+                                            }`}
+                                        >
+                      <Check size={14} aria-hidden="true" />
+                    </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
                 </div>
             </section>
 
-            {/* --- PRICING TOGGLE + CARDS SECTION --- */}
-            <section className="max-w-7xl mx-auto px-6 py-12 relative z-10">
-                <div className="text-center space-y-6 mb-12">
-                    <div className="inline-flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl border border-gray-200">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPricingAudience("owners");
-                                resetFinder();
-                            }}
-                            className={`px-5 py-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all ${
-                                pricingAudience === "owners"
-                                    ? "bg-white text-primary shadow-sm"
-                                    : "text-gray-500 hover:text-gray-900"
-                            }`}
+            {/* Plan cards */}
+            <section
+                id="plans"
+                className="relative overflow-hidden bg-[#f5f7f6]"
+            >
+                <div
+                    className="pointer-events-none absolute -right-52 top-16 h-[520px] w-[520px] rounded-full bg-teal-100/50 blur-3xl"
+                    aria-hidden="true"
+                />
+
+                <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={`heading-${audience}`}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -12 }}
+                            className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
                         >
-                            Owners
-                        </button>
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">
+                                    {content.eyebrow}
+                                </p>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setPricingAudience("builders");
-                                resetFinder();
-                            }}
-                            className={`px-5 py-3 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider transition-all ${
-                                pricingAudience === "builders"
-                                    ? "bg-white text-primary shadow-sm"
-                                    : "text-gray-500 hover:text-gray-900"
-                            }`}
+                                <h2 className="mt-3 max-w-3xl font-heading text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                                    {content.title}
+                                </h2>
+
+                                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                                    {content.description}
+                                </p>
+                            </div>
+
+                            <div className="inline-flex w-fit items-start gap-3 rounded-2xl border border-teal-100 bg-white px-4 py-3 shadow-sm">
+                                <Info
+                                    size={18}
+                                    className="mt-0.5 shrink-0 text-primary"
+                                    aria-hidden="true"
+                                />
+                                <p className="max-w-sm text-sm leading-6 text-slate-600">
+                                    {audience === "owner"
+                                        ? "Monthly billing and listing duration are separate product rules."
+                                        : "Builder prices and project limits are configured on an annual basis."}
+                                </p>
+                            </div>
+                        </motion.div>
+                    </AnimatePresence>
+
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={`plans-${audience}`}
+                            initial={{ opacity: 0, y: 18 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -18 }}
+                            className="mt-14 grid gap-6 lg:grid-cols-3 lg:items-stretch"
                         >
-                            Builders / Developers
-                        </button>
-                    </div>
+                            {plans.map((plan, index) => (
+                                <PlanCard
+                                    key={plan.tier}
+                                    plan={plan}
+                                    index={index}
+                                />
+                            ))}
+                        </motion.div>
+                    </AnimatePresence>
 
-                    <div className="space-y-3">
-            <span className="text-primary font-black text-xs uppercase tracking-[0.3em]">
-                {pricingContent[pricingAudience].eyebrow}
-            </span>
+                    <div className="mt-9 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                <BadgeCheck size={19} aria-hidden="true" />
+              </span>
 
-                        <h2 className="text-3xl md:text-4xl font-black text-gray-900 font-heading uppercase tracking-wide">
-                            {pricingContent[pricingAudience].title}
-                        </h2>
+                            <div>
+                                <p className="font-black text-slate-950">
+                                    Every limit shown here comes from the plan catalog.
+                                </p>
+                                <p className="mt-1 text-sm leading-6 text-slate-500">
+                                    The comparison section below exposes the remaining
+                                    visibility, media and analytics differences.
+                                </p>
+                            </div>
+                        </div>
 
-                        <p className="text-sm md:text-base text-gray-600 max-w-2xl mx-auto">
-                            {pricingContent[pricingAudience].description}
-                        </p>
+                        <Link
+                            href="#compare-plans"
+                            className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-primary hover:text-primary-dark"
+                        >
+                            Compare every feature
+                            <ArrowRight size={16} aria-hidden="true" />
+                        </Link>
                     </div>
                 </div>
+            </section>
 
-                {/* --- INTERACTIVE PLAN RECOMMENDER WIDGET --- */}
-                {pricingAudience === "owners" && (
-                    <div className="max-w-5xl mx-auto mb-14">
-                        <div className="bg-gradient-to-br from-primary-dark to-primary p-6 md:p-8 rounded-[2rem] shadow-xl text-white relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                            <div className="absolute bottom-0 left-0 w-40 h-40 bg-accent/10 rounded-full translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+            {/* Plan finder */}
+            <section className="relative overflow-hidden bg-white">
+                <div className="mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+                    <div className="overflow-hidden rounded-[2.25rem] bg-slate-950 text-white shadow-[0_34px_100px_rgba(15,23,42,0.24)]">
+                        <div className="grid lg:grid-cols-12">
+                            <div className="relative overflow-hidden p-7 sm:p-10 lg:col-span-5 lg:p-12">
+                                <div
+                                    className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-teal-500/22 blur-3xl"
+                                    aria-hidden="true"
+                                />
 
-                            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-5 gap-6 items-center">
-                                <div className="lg:col-span-2 space-y-3">
-                    <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-accent">
-                        <Sparkles className="w-4 h-4" />
-                        Not Sure?
-                    </span>
+                                <div className="relative">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+                    <Sparkles size={22} aria-hidden="true" />
+                  </span>
 
-                                    <h2 className="text-2xl md:text-3xl font-black font-heading leading-tight uppercase">
-                                        Find Your Owner Plan
+                                    <p className="mt-8 text-xs font-black uppercase tracking-[0.14em] text-teal-300">
+                                        Plan finder
+                                    </p>
+
+                                    <h2 className="mt-3 max-w-xl text-3xl font-black tracking-[-0.03em] sm:text-4xl">
+                                        Answer three questions. Get a catalog-backed recommendation.
                                     </h2>
 
-                                    <p className="text-sm text-white/80 leading-relaxed">
-                                        Answer three quick questions and we’ll suggest Silver, Gold, or Platinum before you pick a plan.
+                                    <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400 sm:text-base">
+                                        The recommendation selects the lowest plan whose actual
+                                        capacity, duration, ranking and analytics meet your stated
+                                        needs.
                                     </p>
+
+                                    <div className="mt-8 space-y-3">
+                                        {[
+                                            "No hidden scoring",
+                                            "Uses real entitlement limits",
+                                            "You can still choose any plan",
+                                        ].map((item) => (
+                                            <div
+                                                key={item}
+                                                className="flex items-center gap-3 text-sm font-semibold text-slate-300"
+                                            >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-300/15 text-teal-300">
+                          <Check size={14} aria-hidden="true" />
+                        </span>
+                                                {item}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                            </div>
 
-                                <div className="lg:col-span-3 bg-white text-gray-900 p-5 md:p-6 rounded-3xl shadow-lg border border-white/10">
-                                    {!finderResult ? (
-                                        <div className="space-y-5">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black uppercase text-primary tracking-wider">
-                                                    Listing duration
-                                                </label>
+                            <div className="bg-[linear-gradient(145deg,#f0fdfa_0%,#ffffff_68%)] p-6 text-slate-950 sm:p-9 lg:col-span-7 lg:p-10">
+                                <AnimatePresence mode="wait">
+                                    {recommendedPlan ? (
+                                        <motion.div
+                                            key={`recommendation-${recommendedPlan.tier}`}
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.98 }}
+                                            aria-live="polite"
+                                        >
+                                            <div className="flex items-start justify-between gap-5">
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">
+                                                        Recommended plan
+                                                    </p>
+                                                    <h3 className="mt-2 text-3xl font-black tracking-tight">
+                                                        {recommendedPlan.presentation.displayName}
+                                                    </h3>
+                                                </div>
 
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { id: "short", label: "30 Days" },
-                                                        { id: "medium", label: "90 Days" },
-                                                        { id: "long", label: "180 Days" }
-                                                    ].map((item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            type="button"
-                                                            onClick={() => setFinderDuration(item.id)}
-                                                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                                                                finderDuration === item.id
-                                                                    ? "bg-primary/10 border-primary text-primary"
-                                                                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                                            }`}
+                                                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+                          <Star size={22} aria-hidden="true" />
+                        </span>
+                                            </div>
+
+                                            <div className="mt-7 rounded-2xl border border-teal-200 bg-white p-5 shadow-sm">
+                                                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                                                    Price
+                                                </p>
+
+                                                <div className="mt-2 flex items-end gap-1.5">
+                                                    <p className="text-3xl font-black">
+                                                        {formatPrice(
+                                                            recommendedPlan.presentation.priceInPaise,
+                                                        )}
+                                                    </p>
+                                                    {recommendedPlan.presentation.priceInPaise > 0 ? (
+                                                        <p className="pb-1 text-sm font-bold text-slate-500">
+                                                            {getBillingLabel(recommendedPlan)}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-7">
+                                                <p className="text-sm font-black text-slate-950">
+                                                    Why it matches
+                                                </p>
+
+                                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                                    {getRecommendationReasons(
+                                                        recommendedPlan,
+                                                        audience,
+                                                    ).map((reason) => (
+                                                        <div
+                                                            key={reason}
+                                                            className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4"
                                                         >
-                                                            {item.label}
-                                                        </button>
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-100 text-primary">
+                                <Check size={13} aria-hidden="true" />
+                              </span>
+                                                            <span className="text-sm font-semibold text-slate-700">
+                                {reason}
+                              </span>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black uppercase text-primary tracking-wider">
-                                                    Lead needs
-                                                </label>
+                                            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                                                <Link
+                                                    href={getPlanCta(recommendedPlan).href}
+                                                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
+                                                >
+                                                    {getPlanCta(recommendedPlan).label}
+                                                    <ArrowRight size={16} aria-hidden="true" />
+                                                </Link>
 
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { id: "low", label: "Low" },
-                                                        { id: "moderate", label: "Medium" },
-                                                        { id: "high", label: "High" }
-                                                    ].map((item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            type="button"
-                                                            onClick={() => setFinderLeads(item.id)}
-                                                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                                                                finderLeads === item.id
-                                                                    ? "bg-primary/10 border-primary text-primary"
-                                                                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                                            }`}
-                                                        >
-                                                            {item.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={resetFinder}
+                                                    className="h-12 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary"
+                                                >
+                                                    Start again
+                                                </button>
                                             </div>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div
+                                            key={`questions-${audience}`}
+                                            initial={{ opacity: 0, x: 12 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -12 }}
+                                        >
+                                            <div className="space-y-7">
+                                                {finderQuestions.map(
+                                                    (question, questionIndex) => (
+                                                        <fieldset key={question.key}>
+                                                            <legend className="flex items-start gap-3">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-black text-white">
+                                  {questionIndex + 1}
+                                </span>
 
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black uppercase text-primary tracking-wider">
-                                                    Analytics
-                                                </label>
+                                                                <span>
+                                  <span className="block font-black text-slate-950">
+                                    {question.label}
+                                  </span>
+                                  <span className="mt-1 block text-sm leading-6 text-slate-500">
+                                    {question.description}
+                                  </span>
+                                </span>
+                                                            </legend>
 
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { id: "none", label: "None" },
-                                                        { id: "basic", label: "Basic" },
-                                                        { id: "advanced", label: "Advanced" }
-                                                    ].map((item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            type="button"
-                                                            onClick={() => setFinderAnalytics(item.id)}
-                                                            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all border ${
-                                                                finderAnalytics === item.id
-                                                                    ? "bg-primary/10 border-primary text-primary"
-                                                                    : "border-gray-200 text-gray-600 hover:border-gray-300"
-                                                            }`}
-                                                        >
-                                                            {item.label}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                            <div
+                                                                className={`mt-4 grid gap-2 ${
+                                                                    question.options.length === 2
+                                                                        ? "sm:grid-cols-2"
+                                                                        : "sm:grid-cols-3"
+                                                                }`}
+                                                            >
+                                                                {question.options.map((option) => {
+                                                                    const active =
+                                                                        finderAnswers[question.key] ===
+                                                                        option.value;
+
+                                                                    return (
+                                                                        <button
+                                                                            key={option.value}
+                                                                            type="button"
+                                                                            aria-pressed={active}
+                                                                            onClick={() =>
+                                                                                setFinderAnswers((current) => ({
+                                                                                    ...current,
+                                                                                    [question.key]: option.value,
+                                                                                }))
+                                                                            }
+                                                                            className={`rounded-2xl border p-4 text-left transition ${
+                                                                                active
+                                                                                    ? "border-primary bg-teal-50 shadow-sm"
+                                                                                    : "border-slate-200 bg-white hover:border-teal-200"
+                                                                            }`}
+                                                                        >
+                                      <span
+                                          className={`block text-sm font-black ${
+                                              active
+                                                  ? "text-primary"
+                                                  : "text-slate-950"
+                                          }`}
+                                      >
+                                        {option.label}
+                                      </span>
+                                                                            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                                        {option.hint}
+                                      </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </fieldset>
+                                                    ),
+                                                )}
                                             </div>
 
                                             <button
                                                 type="button"
-                                                onClick={handleFindPlan}
-                                                disabled={!finderDuration || !finderLeads || !finderAnalytics}
-                                                className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all text-center flex items-center justify-center gap-2 ${
-                                                    finderDuration && finderLeads && finderAnalytics
-                                                        ? "bg-primary text-white hover:bg-primary-dark shadow-md cursor-pointer"
-                                                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                                disabled={!finderComplete}
+                                                onClick={handleRecommendation}
+                                                className={`mt-8 flex h-13 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-black transition ${
+                                                    finderComplete
+                                                        ? "bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-dark"
+                                                        : "cursor-not-allowed bg-slate-100 text-slate-400"
                                                 }`}
                                             >
-                                                Recommend a Plan
-                                                <ArrowRight className="w-4 h-4" />
+                                                Recommend a plan
+                                                <ArrowRight size={16} aria-hidden="true" />
                                             </button>
-                                        </div>
-                                    ) : (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            className="text-center py-4 space-y-5"
-                                        >
-                                            <div className="w-12 h-12 bg-primary-light text-primary rounded-full flex items-center justify-center mx-auto shadow-sm">
-                                                <Sparkles className="w-5 h-5" />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <p className="text-xs font-black uppercase tracking-wider text-gray-500">
-                                                    Recommended owner plan
-                                                </p>
-
-                                                <h3 className="text-2xl font-black text-gray-900 uppercase font-heading tracking-wide">
-                                                    {finderResult === "basic" && "Silver Plan"}
-                                                    {finderResult === "boost" && "Gold Plan"}
-                                                    {finderResult === "premium" && "Platinum Plan"}
-                                                </h3>
-
-                                                <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                                                    {finderResult === "basic" &&
-                                                        "Best for a simple 30-day listing with basic visibility."}
-                                                    {finderResult === "boost" &&
-                                                        "Best for a 90-day listing with stronger visibility and basic analytics."}
-                                                    {finderResult === "premium" &&
-                                                        "Best for maximum exposure, 180 days, advanced analytics, and 2 active properties."}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={resetFinder}
-                                                    className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-50"
-                                                >
-                                                    Recalculate
-                                                </button>
-
-                                                <Link
-                                                    href={
-                                                        finderResult === "basic"
-                                                            ? "/post-property?plan=silver"
-                                                            : finderResult === "boost"
-                                                                ? "/post-property?plan=gold"
-                                                                : "/post-property?plan=platinum"
-                                                    }
-                                                    className="w-full sm:w-auto px-6 py-3 bg-primary text-white rounded-xl font-bold text-xs hover:bg-primary-dark shadow-md block text-center"
-                                                >
-                                                    Select Plan
-                                                </Link>
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={pricingAudience}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -16 }}
-                        transition={{ duration: 0.25 }}
-                        className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch"
-                    >
-                        {activePlans.map((plan, index) => {
-                            const isPopular = plan.badgeType === "popular";
-                            const isPremium = plan.badgeType === "premium";
-                            const Icon = plan.icon;
-
-                            return (
-                                <motion.div
-                                    key={plan.name}
-                                    initial={{ opacity: 0, y: 40 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className={`flex flex-col relative rounded-3xl transition-all duration-300 border-2 overflow-hidden bg-white ${
-                                        isPopular
-                                            ? "border-primary shadow-xl lg:-translate-y-4 shadow-primary/10 z-20"
-                                            : isPremium
-                                                ? "border-zinc-900 bg-zinc-950 text-white shadow-2xl z-10"
-                                                : "border-gray-200 shadow-md hover:border-primary/50 hover:shadow-lg z-10"
-                                    }`}
-                                >
-                                    {plan.badge && (
-                                        <div
-                                            className={`absolute top-0 right-0 py-1.5 px-6 rounded-bl-2xl text-[10px] font-black uppercase tracking-wider ${
-                                                isPopular
-                                                    ? "bg-primary text-white"
-                                                    : "bg-accent text-gray-950"
-                                            }`}
-                                        >
-                                            {plan.badge}
-                                        </div>
-                                    )}
-
-                                    <div className="p-8 pb-6 border-b border-gray-100 flex-none relative">
-                                        {isPremium && (
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
-                                        )}
-
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div
-                                                className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                                    isPremium
-                                                        ? "bg-zinc-800"
-                                                        : isPopular
-                                                            ? "bg-primary-light text-primary"
-                                                            : "bg-gray-100"
-                                                }`}
-                                            >
-                                                <Icon className="w-5 h-5" />
-                                            </div>
-
-                                            <h3
-                                                className={`text-xl font-bold font-heading uppercase tracking-wide ${
-                                                    isPremium ? "text-white" : "text-gray-900"
-                                                }`}
-                                            >
-                                                {plan.name}
-                                            </h3>
-                                        </div>
-
-                                        <p className={`text-sm mb-6 ${isPremium ? "text-zinc-400" : "text-gray-500"}`}>
-                                            {plan.description}
-                                        </p>
-
-                                        <div className="flex items-baseline gap-2">
-                                            {plan.originalPrice && (
-                                                <span
-                                                    className={`text-base line-through font-medium ${
-                                                        isPremium ? "text-zinc-600" : "text-gray-400"
-                                                    }`}
-                                                >
-                                        {plan.originalPrice}
-                                    </span>
-                                            )}
-
-                                            <span className="text-4xl font-black font-heading tracking-tight">
-                                    {plan.price}
-                                </span>
-
-                                            <span className={`text-xs font-semibold ${isPremium ? "text-zinc-500" : "text-gray-500"}`}>
-                                    {plan.period}
-                                </span>
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        className={`px-8 py-4 flex-none border-b border-gray-100/50 flex items-center gap-2 ${
-                                            isPremium ? "bg-zinc-900/60 border-zinc-800" : "bg-primary-light/30"
-                                        }`}
-                                    >
-                                        <BarChart3 className={`w-4 h-4 shrink-0 ${isPremium ? "text-accent" : "text-primary"}`} />
-
-                                        <div className="text-xs font-bold leading-relaxed">
-                                <span className={isPremium ? "text-zinc-400" : "text-gray-500"}>
-                                    Analytics:{" "}
-                                </span>
-
-                                            <span className={isPremium ? "text-accent" : "text-primary-dark"}>
-                                    {plan.analyticsHighlight}
-                                </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-8 flex-1 flex flex-col justify-between space-y-8">
-                                        <ul className="space-y-4">
-                                            {plan.features.map((feature, fIdx) => (
-                                                <li key={fIdx} className="flex items-start gap-3 text-sm">
-                                                    <Check className={`w-5 h-5 shrink-0 ${isPremium ? "text-accent" : "text-primary"}`} />
-
-                                                    <span className={isPremium ? "text-zinc-200" : "text-gray-700"}>
-                                            {feature}
-                                        </span>
-                                                </li>
-                                            ))}
-
-                                            {plan.notIncluded?.map((feature, fIdx) => (
-                                                <li key={fIdx} className="flex items-start gap-3 text-sm opacity-55">
-                                                    <X className="w-5 h-5 text-red-400 shrink-0" />
-
-                                                    <span className={isPremium ? "text-zinc-500 line-through" : "text-gray-400 line-through"}>
-                                            {feature}
-                                        </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-
-                                        <div className="pt-6">
-                                            <Link
-                                                href={plan.ctaLink}
-                                                className={`w-full py-4 px-6 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
-                                                    isPremium
-                                                        ? "bg-white text-zinc-950 hover:bg-accent hover:text-zinc-950"
-                                                        : isPopular
-                                                            ? "bg-primary text-white hover:bg-primary-dark"
-                                                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                                }`}
-                                            >
-                                                {plan.ctaText}
-                                                <ArrowRight className="w-4 h-4" />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </motion.div>
-                </AnimatePresence>
-            </section>
-
-            {/* --- FEATURES COMPARISON TABLE SECTION --- */}
-            <section className="max-w-7xl mx-auto px-6 py-16">
-                <div className="text-center space-y-4 mb-12">
-                    <h2 className="text-3xl md:text-4xl font-black text-gray-900 font-heading uppercase tracking-wide">
-                        {comparisonContent[pricingAudience].title}
-                    </h2>
-
-                    <p className="text-sm md:text-base text-gray-600 max-w-xl mx-auto">
-                        {comparisonContent[pricingAudience].description}
-                    </p>
-                </div>
-
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={`comparison-${pricingAudience}`}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -16 }}
-                        transition={{ duration: 0.25 }}
-                        className="overflow-x-auto border border-gray-200 rounded-3xl shadow-sm bg-white"
-                    >
-                        <table className="w-full text-left border-collapse min-w-[760px]">
-                            <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="p-5 font-black text-xs uppercase text-gray-500 tracking-wider w-[35%]">
-                                    Plan Details
-                                </th>
-
-                                {comparisonContent[pricingAudience].columns.map((column, index) => (
-                                    <th
-                                        key={column}
-                                        className={`p-5 font-black text-xs uppercase tracking-wider text-center ${
-                                            index === 1
-                                                ? "text-primary bg-primary-light/20"
-                                                : index === 2
-                                                    ? "text-primary-dark bg-teal-500/5"
-                                                    : "text-gray-700"
-                                        }`}
-                                    >
-                                        {column}
-                                    </th>
-                                ))}
-                            </tr>
-                            </thead>
-
-                            <tbody className="divide-y divide-gray-100 text-sm">
-                            {activeComparison.map((row) => (
-                                <tr key={row.feature}>
-                                    <td className="p-5 font-semibold text-gray-800">
-                                        <div className="flex items-center gap-2">
-                                            {row.feature}
-
-                                            {row.tooltip && (
-                                                <div className="group relative cursor-pointer">
-                                                    <Info className="w-3.5 h-3.5 text-gray-400" />
-                                                    <div className="absolute left-0 bottom-full mb-2 w-56 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20">
-                                                        {row.tooltip}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-
-                                    {[row.plan1, row.plan2, row.plan3].map((value, index) => (
-                                        <td
-                                            key={`${row.feature}-${index}`}
-                                            className={`p-5 text-center ${
-                                                index === 1
-                                                    ? "font-semibold text-primary"
-                                                    : index === 2
-                                                        ? "font-bold text-primary-dark"
-                                                        : "text-gray-600"
-                                            }`}
-                                        >
-                                            {value === "✓" ? (
-                                                <Check className="w-5 h-5 mx-auto text-primary" />
-                                            ) : value === "—" ? (
-                                                <X className="w-4 h-4 mx-auto text-red-400" />
-                                            ) : (
-                                                value
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </motion.div>
-                </AnimatePresence>
-            </section>
-
-            {/* --- FAQ SECTION --- */}
-            <section className="max-w-4xl mx-auto px-6 py-12">
-                <div className="text-center space-y-4 mb-10">
-                    <h2 className="text-3xl font-black text-gray-900 font-heading uppercase tracking-wide">
-                        Frequently Asked Questions
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                        Have questions about our pricing structures? Read through our standard inquiries or get in touch.
-                    </p>
-                </div>
-
-                <div className="space-y-4">
-                    {pricingFaqs.map((faq, index) => {
-                        const isOpen = activeFaq === index;
-                        return (
-                            <div
-                                key={index}
-                                className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm transition-all duration-300 hover:border-gray-300"
-                            >
-                                <button
-                                    onClick={() => setActiveFaq(isOpen ? null : index)}
-                                    className="w-full p-5 text-left flex items-center justify-between font-bold text-gray-900 text-sm md:text-base focus:outline-none hover:bg-gray-50/50"
-                                >
-                                    <span>{faq.q}</span>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 shrink-0 ml-4 ${isOpen ? "rotate-180" : ""
-                                        }`} />
-                                </button>
-
-                                <AnimatePresence initial={false}>
-                                    {isOpen && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="border-t border-gray-100"
-                                        >
-                                            <div className="p-5 text-sm text-gray-600 leading-relaxed bg-gray-50/30">
-                                                {faq.a}
-                                            </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
-                        );
-                    })}
-                </div>
-            </section>
-
-            {/* --- BOTTOM CTA --- */}
-            <section className="max-w-7xl mx-auto px-6 py-16">
-                <div className="bg-zinc-950 text-white rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-
-                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-                        <div className="space-y-4 max-w-2xl">
-                            <span className="text-accent font-black text-xs uppercase tracking-[0.3em] block">Builder Visibility</span>
-                            <h2 className="text-3xl md:text-4xl font-black font-heading leading-tight uppercase tracking-tight">
-                                Have a Large Property Portfolio?
-                            </h2>
-                            <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
-                                Builders with larger portfolios can start with the Elite plan for higher visibility, more active projects, and stronger analytics across their listings.
-                            </p>
-                        </div>
-
-                        <div className="shrink-0 flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                            <Link
-                                href="/builders"
-                                className="w-full sm:w-auto py-4 px-8 text-center bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-850 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2"
-                            >
-                                Browse Builders Directory
-                                <ArrowRight className="w-4 h-4" />
-                            </Link>
                         </div>
                     </div>
                 </div>
             </section>
 
-        </div>
+            {/* Comparison */}
+            <section
+                id="compare-plans"
+                className="scroll-mt-24 border-y border-slate-200 bg-[#f5f7f6]"
+            >
+                <div className="mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">
+                                Full comparison
+                            </p>
+
+                            <h2 className="mt-3 max-w-3xl font-heading text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                                Compare every limit before choosing.
+                            </h2>
+
+                            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                                Review capacity, media, ranking, badges, placement and
+                                analytics across the current {audience} plans.
+                            </p>
+                        </div>
+
+                        <div className="inline-flex w-fit rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                            <button
+                                type="button"
+                                onClick={() => selectAudience("owner")}
+                                className={`rounded-lg px-4 py-2.5 text-xs font-black transition ${
+                                    audience === "owner"
+                                        ? "bg-slate-950 text-white"
+                                        : "text-slate-500 hover:text-slate-950"
+                                }`}
+                            >
+                                Owner comparison
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => selectAudience("builder")}
+                                className={`rounded-lg px-4 py-2.5 text-xs font-black transition ${
+                                    audience === "builder"
+                                        ? "bg-slate-950 text-white"
+                                        : "text-slate-500 hover:text-slate-950"
+                                }`}
+                            >
+                                Builder comparison
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile comparison */}
+                    <div className="mt-10 space-y-3 lg:hidden">
+                        {comparisonRows.map((row) => (
+                            <article
+                                key={row.feature}
+                                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-black text-slate-950">
+                                        {row.feature}
+                                    </h3>
+
+                                    {row.tooltip ? (
+                                        <span title={row.tooltip}>
+                      <Info
+                          size={14}
+                          className="text-slate-400"
+                          aria-label={row.tooltip}
+                      />
+                    </span>
+                                    ) : null}
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-3 gap-2">
+                                    {[row.plan1, row.plan2, row.plan3].map(
+                                        (value, index) => (
+                                            <div
+                                                key={`${row.feature}-${index}`}
+                                                className={`rounded-xl border px-2 py-3 text-center ${
+                                                    index === 1
+                                                        ? "border-teal-200 bg-teal-50"
+                                                        : index === 2
+                                                            ? "border-slate-800 bg-slate-950 text-white"
+                                                            : "border-slate-100 bg-slate-50"
+                                                }`}
+                                            >
+                                                <p
+                                                    className={`mb-2 truncate text-[9px] font-black uppercase tracking-wide ${
+                                                        index === 2
+                                                            ? "text-slate-400"
+                                                            : "text-slate-400"
+                                                    }`}
+                                                >
+                                                    {plans[index]?.presentation.displayName}
+                                                </p>
+
+                                                <div className="text-xs">
+                                                    {renderComparisonValue(
+                                                        value,
+                                                        index === 1
+                                                            ? "highlighted"
+                                                            : index === 2
+                                                                ? "dark"
+                                                                : "default",
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ),
+                                    )}
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+
+                    {/* Desktop comparison */}
+                    <div className="mt-10 hidden overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] lg:block">
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[940px] border-collapse text-left">
+                                <thead>
+                                <tr className="border-b border-slate-200">
+                                    <th
+                                        scope="col"
+                                        className="w-[31%] bg-white px-6 py-6 text-xs font-black uppercase tracking-[0.12em] text-slate-500"
+                                    >
+                                        Plan detail
+                                    </th>
+
+                                    {plans.map((plan, index) => (
+                                        <th
+                                            key={plan.tier}
+                                            scope="col"
+                                            className={`px-5 py-6 text-center ${
+                                                index === 1
+                                                    ? "bg-teal-50"
+                                                    : index === 2
+                                                        ? "bg-slate-950 text-white"
+                                                        : "bg-slate-50"
+                                            }`}
+                                        >
+                                            <p
+                                                className={`text-sm font-black ${
+                                                    index === 2
+                                                        ? "text-white"
+                                                        : "text-slate-950"
+                                                }`}
+                                            >
+                                                {plan.presentation.displayName}
+                                            </p>
+
+                                            <div className="mt-2 flex items-end justify-center gap-1">
+                          <span className="text-lg font-black">
+                            {formatCompactPrice(
+                                plan.presentation.priceInPaise,
+                            )}
+                          </span>
+                                                {plan.presentation.priceInPaise > 0 ? (
+                                                    <span
+                                                        className={`pb-0.5 text-[10px] font-bold ${
+                                                            index === 2
+                                                                ? "text-slate-400"
+                                                                : "text-slate-500"
+                                                        }`}
+                                                    >
+                              {getBillingLabel(plan)}
+                            </span>
+                                                ) : null}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                                </thead>
+
+                                <tbody className="divide-y divide-slate-100 text-sm">
+                                {comparisonRows.map((row) => (
+                                    <tr
+                                        key={row.feature}
+                                        className="transition hover:bg-slate-50/60"
+                                    >
+                                        <th
+                                            scope="row"
+                                            className="px-6 py-5 font-bold text-slate-800"
+                                        >
+                        <span className="flex items-center gap-2">
+                          {row.feature}
+                            {row.tooltip ? (
+                                <span title={row.tooltip}>
+                              <Info
+                                  size={14}
+                                  className="text-slate-400"
+                                  aria-label={row.tooltip}
+                              />
+                            </span>
+                            ) : null}
+                        </span>
+                                        </th>
+
+                                        {[row.plan1, row.plan2, row.plan3].map(
+                                            (value, index) => (
+                                                <td
+                                                    key={`${row.feature}-${index}`}
+                                                    className={`px-5 py-5 text-center ${
+                                                        index === 1
+                                                            ? "bg-teal-50/60"
+                                                            : index === 2
+                                                                ? "bg-slate-950 text-white"
+                                                                : ""
+                                                    }`}
+                                                >
+                                                    {renderComparisonValue(
+                                                        value,
+                                                        index === 1
+                                                            ? "highlighted"
+                                                            : index === 2
+                                                                ? "dark"
+                                                                : "default",
+                                                    )}
+                                                </td>
+                                            ),
+                                        )}
+                                    </tr>
+                                ))}
+                                </tbody>
+
+                                <tfoot>
+                                <tr className="border-t border-slate-200">
+                                    <td className="px-6 py-6 text-sm font-bold text-slate-500">
+                                        Choose a plan when the limits match your needs.
+                                    </td>
+
+                                    {plans.map((plan, index) => {
+                                        const cta = getPlanCta(plan);
+
+                                        return (
+                                            <td
+                                                key={plan.tier}
+                                                className={`px-5 py-6 ${
+                                                    index === 1
+                                                        ? "bg-teal-50"
+                                                        : index === 2
+                                                            ? "bg-slate-950"
+                                                            : "bg-slate-50"
+                                                }`}
+                                            >
+                                                <Link
+                                                    href={cta.href}
+                                                    className={`flex h-11 items-center justify-center rounded-xl px-4 text-xs font-black transition ${
+                                                        index === 1
+                                                            ? "bg-primary text-white hover:bg-primary-dark"
+                                                            : index === 2
+                                                                ? "bg-white text-slate-950 hover:bg-teal-200"
+                                                                : "bg-slate-950 text-white hover:bg-primary"
+                                                    }`}
+                                                >
+                                                    {cta.label}
+                                                </Link>
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* After choosing */}
+            <section className="relative overflow-hidden bg-white">
+                <div className="mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
+                    <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">
+                                After you choose
+                            </p>
+
+                            <h2 className="mt-3 max-w-xl font-heading text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                                A plan should lead into a clear next step.
+                            </h2>
+
+                            <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
+                                Pricing is only useful when customers understand what happens
+                                after selection and where their listing or project is managed.
+                            </p>
+
+                            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                                <Link
+                                    href={
+                                        audience === "owner"
+                                            ? "/post-property"
+                                            : "/contact"
+                                    }
+                                    className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-6 py-3 text-sm font-black text-white transition hover:bg-primary sm:w-auto"
+                                >
+                                    {audience === "owner"
+                                        ? "Start a property listing"
+                                        : "Contact builder onboarding"}
+
+                                    <ArrowRight
+                                        size={16}
+                                        className="shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                </Link>
+
+                                <Link
+                                    href={
+                                        audience === "owner"
+                                            ? "/manage-properties"
+                                            : "/builders"
+                                    }
+                                    className="inline-flex min-h-12 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary sm:w-auto"
+                                >
+                                    {audience === "owner"
+                                        ? "Manage properties"
+                                        : "Browse builder directory"}
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            {processSteps.map((step) => {
+                                const Icon = step.icon;
+
+                                return (
+                                    <div
+                                        key={step.number}
+                                        className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                        <Icon size={20} aria-hidden="true" />
+                      </span>
+
+                                            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Step {step.number}
+                      </span>
+                                        </div>
+
+                                        <h3 className="mt-6 font-black text-slate-950">
+                                            {step.title}
+                                        </h3>
+
+                                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                                            {step.description}
+                                        </p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ */}
+            <section className="border-y border-slate-200 bg-[#f7faf9]">
+                <div className="mx-auto grid max-w-7xl gap-10 px-5 py-20 sm:px-6 lg:grid-cols-[0.72fr_1.28fr] lg:px-8 lg:py-24">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-primary">
+                            Pricing questions
+                        </p>
+
+                        <h2 className="mt-3 font-heading text-3xl font-black tracking-[-0.035em] text-slate-950 sm:text-4xl">
+                            Understand the rules before choosing.
+                        </h2>
+
+                        <p className="mt-4 max-w-md text-base leading-7 text-slate-600">
+                            These answers reflect the current catalog and the workflows
+                            available in the repository.
+                        </p>
+
+                        <Link
+                            href="/contact"
+                            className="mt-7 inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-primary shadow-sm transition hover:border-primary"
+                        >
+                            Ask a pricing question
+                            <Mail size={16} aria-hidden="true" />
+                        </Link>
+                    </div>
+
+                    <div className="space-y-3">
+                        {faqs.map((faq, index) => (
+                            <details
+                                key={faq.question}
+                                className="group rounded-2xl border border-slate-200 bg-white shadow-sm"
+                                open={index === 0}
+                            >
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-5 px-5 py-5 font-black text-slate-950 sm:px-6">
+                                    {faq.question}
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-50 text-primary transition group-open:rotate-180">
+                    <ChevronDown size={17} aria-hidden="true" />
+                  </span>
+                                </summary>
+
+                                <p className="px-5 pb-5 pr-16 text-sm leading-7 text-slate-600 sm:px-6 sm:pb-6 sm:pr-20">
+                                    {faq.answer}
+                                </p>
+                            </details>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Final CTA */}
+            <section className="bg-white">
+                <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
+                    <div className="relative overflow-hidden rounded-[2rem] bg-[linear-gradient(120deg,#0f766e_0%,#0d9488_56%,#115e59_100%)] px-6 py-9 text-white shadow-[0_24px_70px_rgba(13,148,136,0.22)] sm:px-10 sm:py-10">
+                        <div
+                            className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full border-[45px] border-white/5"
+                            aria-hidden="true"
+                        />
+
+                        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex max-w-2xl items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/15">
+                  <HelpCircle size={22} aria-hidden="true" />
+                </span>
+
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-100">
+                                        Choose with confidence
+                                    </p>
+
+                                    <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+                                        {audience === "owner"
+                                            ? "Start free or choose the monthly visibility you need."
+                                            : "Choose the annual portfolio capacity your team needs."}
+                                    </h2>
+
+                                    <p className="mt-3 max-w-xl text-sm leading-6 text-teal-50/85">
+                                        Use the plan finder or compare every entitlement before
+                                        continuing.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                                <Link
+                                    href="#plans"
+                                    className="inline-flex h-12 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-5 text-sm font-black text-white transition hover:bg-white/15"
+                                >
+                                    Review plans
+                                </Link>
+
+                                <Link
+                                    href={
+                                        audience === "owner"
+                                            ? "/post-property"
+                                            : "/contact"
+                                    }
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-slate-950 shadow-lg transition hover:bg-teal-50"
+                                >
+                                    {audience === "owner"
+                                        ? "Start with Silver"
+                                        : "Contact builder onboarding"}
+                                    <ArrowRight size={16} aria-hidden="true" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    );
+}
+
+export default function PricingPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-[#f5f7f6]">
+                    <div className="text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-primary shadow-lg">
+              <Sparkles
+                  size={24}
+                  className="animate-pulse"
+                  aria-hidden="true"
+              />
+            </span>
+                        <p className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                            Loading pricing
+                        </p>
+                    </div>
+                </div>
+            }
+        >
+            <PricingPageContent />
+        </Suspense>
     );
 }

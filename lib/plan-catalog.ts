@@ -39,7 +39,7 @@ export type BadgeLevel =
 
 export type BillingType =
     | "free"
-    | "per-listing"
+    | "monthly"
     | "yearly";
 
 export type PlanEntitlements = {
@@ -148,8 +148,8 @@ export const PLAN_CATALOG = {
             displayName: "Gold",
             priceInPaise: 249900,
             originalPriceInPaise: 299900,
-            billingType: "per-listing",
-            billingLabel: "per listing",
+            billingType: "monthly",
+            billingLabel: "per month",
 
             description:
                 "Boost your property's visibility and receive more qualified enquiries.",
@@ -195,8 +195,8 @@ export const PLAN_CATALOG = {
             displayName: "Platinum",
             priceInPaise: 599900,
             originalPriceInPaise: 699900,
-            billingType: "per-listing",
-            billingLabel: "per listing",
+            billingType: "monthly",
+            billingLabel: "per month",
 
             description:
                 "Maximum exposure with premium placement, unlimited leads and advanced insights.",

@@ -1,9 +1,35 @@
-import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
+import {
+    createUploadthing,
+    type FileRouter,
+} from "uploadthing/next";
+import {
+    UploadThingError,
+} from "uploadthing/server";
+
+import {
+    getAuthenticatedUser,
+    isAuthError,
+} from "@/lib/auth";
 import { connectDB } from "@/lib/mongoose";
+import {
+    createUploadDeleteToken,
+} from "@/lib/uploadthing-storage";
 import User from "@/models/User";
 
 const f = createUploadthing();
+
+async function requireAuthenticatedUser() {
+    const auth =
+        await getAuthenticatedUser();
+
+    if (isAuthError(auth)) {
+        throw new UploadThingError(
+            "You must be signed in to upload files.",
+        );
+    }
+
+    return auth;
+}
 
 export const ourFileRouter = {
     propertyImageUploader: f({
@@ -13,44 +39,30 @@ export const ourFileRouter = {
         },
     })
         .middleware(async () => {
-            const auth = await getAuthenticatedUser();
-
-            if (isAuthError(auth)) {
-                throw new Error("Unauthorized");
-            }
-
-            await connectDB();
-
-            const user = await User.findById(auth.userId)
-                .select("role plan.audience")
-                .lean();
-
-            const isDeveloper =
-                user?.role === "Builder" ||
-                user?.plan?.audience === "builder";
-
-            if (!isDeveloper) {
-                throw new Error("Only developers can upload brochures");
-            }
+            const auth =
+                await requireAuthenticatedUser();
 
             return {
                 userId: auth.userId,
             };
         })
-        .onUploadComplete(async ({ metadata, file }) => {
-            const fileUrl = file.ufsUrl || file.url;
+        .onUploadComplete(
+            async ({ metadata, file }) => {
+                const fileUrl =
+                    file.ufsUrl || file.url;
 
-            console.log(
-                "Property image uploaded by:",
-                metadata.userId
-            );
-            console.log("File URL:", fileUrl);
-
-            return {
-                uploadedBy: metadata.userId,
-                url: fileUrl,
-            };
-        }),
+                return {
+                    uploadedBy: metadata.userId,
+                    url: fileUrl,
+                    fileKey: file.key,
+                    deleteToken:
+                        createUploadDeleteToken(
+                            metadata.userId,
+                            file.key,
+                        ),
+                };
+            },
+        ),
 
     developerBrochureUploader: f({
         pdf: {
@@ -59,31 +71,51 @@ export const ourFileRouter = {
         },
     })
         .middleware(async () => {
-            const auth = await getAuthenticatedUser();
+            const auth =
+                await requireAuthenticatedUser();
 
-            if (isAuthError(auth)) {
-                throw new Error("Unauthorized");
+            await connectDB();
+
+            const user = await User.findById(
+                auth.userId,
+            )
+                .select("role plan.audience")
+                .lean();
+
+            const isDeveloper =
+                user?.role === "Builder" ||
+                user?.plan?.audience ===
+                "builder";
+
+            if (!isDeveloper) {
+                throw new UploadThingError(
+                    "Only builders or developers can upload property brochures.",
+                );
             }
 
             return {
                 userId: auth.userId,
             };
         })
-        .onUploadComplete(async ({ metadata, file }) => {
-            const fileUrl = file.ufsUrl || file.url;
+        .onUploadComplete(
+            async ({ metadata, file }) => {
+                const fileUrl =
+                    file.ufsUrl || file.url;
 
-            console.log(
-                "Developer brochure uploaded by:",
-                metadata.userId
-            );
-            console.log("File URL:", fileUrl);
-
-            return {
-                uploadedBy: metadata.userId,
-                url: fileUrl,
-                fileName: file.name,
-            };
-        }),
+                return {
+                    uploadedBy: metadata.userId,
+                    url: fileUrl,
+                    fileName: file.name,
+                    fileKey: file.key,
+                    deleteToken:
+                        createUploadDeleteToken(
+                            metadata.userId,
+                            file.key,
+                        ),
+                };
+            },
+        ),
 } satisfies FileRouter;
 
-export type OurFileRouter = typeof ourFileRouter;
+export type OurFileRouter =
+    typeof ourFileRouter;

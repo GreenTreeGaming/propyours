@@ -1,97 +1,222 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import {
+    FormEvent,
+    ReactNode,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+    ArrowLeft,
+    ArrowRight,
+    BadgeCheck,
+    Briefcase,
+    Building,
+    Building2,
+    Check,
+    ChevronDown,
+    CircleCheckBig,
+    Factory,
+    FileText,
+    GraduationCap,
+    Home,
+    Hotel,
+    Image as ImageIcon,
+    IndianRupee,
+    Info,
+    Landmark,
+    Layers,
+    LayoutGrid,
+    Loader2,
+    Map,
+    MapPin,
+    Plus,
+    Ruler,
+    Save,
+    ShoppingBag,
+    Sparkles,
+    Stethoscope,
+    Store,
+    Trash2,
+    Trees,
+    Upload,
+    Users,
+    Utensils,
+    Video,
+    Warehouse,
+    X,
+    type LucideIcon,
+} from "lucide-react";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { UploadDropzone } from "@/lib/uploadthing";
-import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import {
     PLAN_CATALOG,
     isPlanTier,
 } from "@/lib/plan-catalog";
 import {
-    Home,
-    Building2,
-    Map,
-    Image as ImageIcon,
-    Plus,
-    Check,
-    ChevronRight,
-    ChevronDown,
-    Info,
-    LayoutGrid,
-    MapPin,
-    HelpCircle,
-    Building,
-    Warehouse,
-    Key,
-    Layers,
-    Ship,
-    Box,
-    Sprout,
-    Trees
-} from "lucide-react";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { TAMIL_NADU_LOCATIONS } from "@/lib/locations";
-import { getStoredUser } from "@/lib/browser-user";
+    clearStoredUser,
+    getStoredUser,
+} from "@/lib/browser-user";
+import {
+    COMMERCIAL_TYPE_GROUPS,
+    LAND_PROPERTY_TYPES,
+    OWNERSHIP_TYPES,
+    PRICE_TYPES,
+    PROPERTY_CATEGORIES,
+    PROPERTY_PURPOSES,
+    RESIDENTIAL_PROPERTY_TYPES,
+    SIZE_UNITS,
+    TAMIL_NADU_CITIES,
+    getAmenityCategories,
+    getTamilNaduLocalities,
+    isCommercialPropertyType,
+    isLandPropertyType,
+    type PropertyCategory,
+} from "@/lib/property-form-options";
 
-const STEPS = [
-    { id: 1, title: "Property Details", icon: Check },
-    { id: 2, title: "Basic Info", icon: Info },
-    { id: 3, title: "Pricing", icon: LayoutGrid },
-    { id: 4, title: "Photos & Amenities", icon: ImageIcon },
-    { id: 5, title: "Finish", icon: Check },
+type StepId =
+    | "category"
+    | "location"
+    | "details"
+    | "pricing"
+    | "media"
+    | "review";
+
+interface StoredUser {
+    role?: string;
+    plan?: {
+        audience?: "owner" | "builder";
+        tier?: string;
+        status?: string;
+    };
+}
+
+interface UploadDeleteGrant {
+    fileKey: string;
+    deleteToken: string;
+}
+
+interface PropertyForm {
+    category: PropertyCategory;
+    purpose: string;
+    propertyType: string;
+    commercialType: string;
+    description: string;
+    address: string;
+    locality: string;
+    city: string;
+    state: "Tamil Nadu";
+    landmark: string;
+    uds: string;
+    size: string;
+    sizeUnit: string;
+    dimensions: string;
+    ownershipType: string;
+    price: string;
+    priceType: string;
+    negotiable: boolean;
+    bedrooms: string;
+    bathrooms: string;
+    floors: string;
+    amenities: string[];
+    images: string[];
+    videoLinks: string[];
+    uploadDeleteGrants: Record<
+        string,
+        UploadDeleteGrant
+    >;
+    brochure: {
+        url: string;
+        fileName: string;
+    } | null;
+}
+
+interface UploadFile {
+    url?: string;
+    ufsUrl?: string;
+    key?: string;
+    name?: string;
+    serverData?: {
+        url?: string;
+        fileKey?: string;
+        deleteToken?: string;
+    } | null;
+}
+
+interface UploadedFileDescriptor {
+    url: string;
+    fileKey: string | null;
+    deleteToken: string | null;
+    fileName?: string;
+}
+
+interface StepDefinition {
+    id: StepId;
+    title: string;
+    shortTitle: string;
+    description: string;
+    icon: LucideIcon;
+}
+
+const FORM_STORAGE_KEY =
+    "post-property-form-v3";
+const STEP_STORAGE_KEY =
+    "post-property-step-v3";
+
+const STEPS: StepDefinition[] = [
+    {
+        id: "category",
+        title: "Listing type",
+        shortTitle: "Type",
+        description: "Purpose, category and subtype",
+        icon: Building2,
+    },
+    {
+        id: "location",
+        title: "Location & area",
+        shortTitle: "Location",
+        description: "Tamil Nadu location and size",
+        icon: MapPin,
+    },
+    {
+        id: "details",
+        title: "Property details",
+        shortTitle: "Details",
+        description: "Category-specific specifications",
+        icon: LayoutGrid,
+    },
+    {
+        id: "pricing",
+        title: "Pricing",
+        shortTitle: "Price",
+        description: "Amount and negotiability",
+        icon: IndianRupee,
+    },
+    {
+        id: "media",
+        title: "Facilities & media",
+        shortTitle: "Media",
+        description: "Amenities, photos and videos",
+        icon: ImageIcon,
+    },
+    {
+        id: "review",
+        title: "Review & publish",
+        shortTitle: "Review",
+        description: "Check the complete listing",
+        icon: BadgeCheck,
+    },
 ];
 
-const LOCATION_DATA: Record<string, Record<string, string[]>> = {
-    "Tamil Nadu": Object.fromEntries(
-        Object.entries(TAMIL_NADU_LOCATIONS).map(([city, localities]) => [
-            city,
-            localities.filter(l => l !== "All")
-        ])
-    )
-};
-
-const AMENITY_CATEGORIES = [
-    {
-        name: "Security & Safety",
-        amenities: [
-            "24x7 Security", "CCTV Surveillance", "Intercom Facility",
-            "Fire Alarm System", "Gated Community", "Security Cabin"
-        ]
-    },
-    {
-        name: "Infrastructure & Utility",
-        amenities: [
-            "Power Backup", "Lift", "Water Source (Borewell)", "Water Source (Corporation)",
-            "Water Storage", "Rain Water Harvesting", "Sewage Treatment Plant", "Gas Pipeline"
-        ]
-    },
-    {
-        name: "Leisure & Lifestyle",
-        amenities: [
-            "Clubhouse", "Gymnasium", "Swimming Pool", "Kids Play Area",
-            "Jogging Track", "Party Hall", "Library", "Indoor Games"
-        ]
-    },
-    {
-        name: "Comfort & Convenience",
-        amenities: [
-            "Covered Parking", "Visitor Parking", "Servant Room",
-            "Vastu Compliant", "Internet/Wi-Fi", "Laundry Service"
-        ]
-    },
-    {
-        name: "Green & Eco",
-        amenities: [
-            "Park/Garden", "Waste Disposal", "Organic Waste Converter", "Compound Wall"
-        ]
-    }
-];
-
-const DEFAULT_FORM = {
+const DEFAULT_FORM: PropertyForm = {
+    category: "residential",
     purpose: "Sell",
-    propertyType: "Independent House",
+    propertyType: "Apartment",
+    commercialType: "",
     description: "",
     address: "",
     locality: "",
@@ -109,1140 +234,2957 @@ const DEFAULT_FORM = {
     bedrooms: "",
     bathrooms: "",
     floors: "",
-    amenities: [] as string[],
-    images: [] as string[],
-    videoLinks: [] as string[],
-    brochure: null as {
-        url: string;
-        fileName: string;
-    } | null,
+    amenities: [],
+    images: [],
+    videoLinks: [],
+    uploadDeleteGrants: {},
+    brochure: null,
 };
 
-type PropertyForm = typeof DEFAULT_FORM;
+const CATEGORY_ICONS: Record<PropertyCategory, LucideIcon> = {
+    residential: Home,
+    land: Trees,
+    commercial: Building2,
+};
+
+const PROPERTY_ICONS: Record<string, LucideIcon> = {
+    Apartment: Building2,
+    "Independent House": Home,
+    "Independent Floor": Layers,
+    Duplex: LayoutGrid,
+    Villa: Home,
+    Penthouse: Building,
+    "Farm House": Trees,
+    Plot: Map,
+    "Agricultural Land": Trees,
+};
+
+const RESIDENTIAL_TYPE_DESCRIPTIONS: Record<
+    (typeof RESIDENTIAL_PROPERTY_TYPES)[number],
+    string
+> = {
+    Apartment:
+        "A self-contained home in a multi-unit building or gated community.",
+    "Independent House":
+        "A standalone home with its own entrance, plot and private space.",
+    "Independent Floor":
+        "One complete floor in a low-rise independent building.",
+    Duplex:
+        "A two-level home connected internally as one residence.",
+    Villa:
+        "A premium standalone or gated-community home with more private space.",
+    Penthouse:
+        "A premium top-floor residence, often with a terrace or wider views.",
+    "Farm House":
+        "A residential home on a larger rural or semi-rural parcel.",
+};
+
+const COMMERCIAL_ICONS: Record<string, LucideIcon> = {
+    "Office Space": Briefcase,
+    "Co-working Space": Users,
+    "Business Centre": Landmark,
+    "Commercial Building": Building2,
+    Shop: Store,
+    Showroom: ShoppingBag,
+    "Restaurant / Cafe": Utensils,
+    "Hotel / Resort": Hotel,
+    "Warehouse / Godown": Warehouse,
+    "Industrial Shed": Factory,
+    Factory,
+    "Clinic / Hospital": Stethoscope,
+    "School / Institution": GraduationCap,
+    "Commercial Land": Map,
+};
+
+function loadInitialForm(): PropertyForm {
+    if (typeof window === "undefined") {
+        return DEFAULT_FORM;
+    }
+
+    const saved = localStorage.getItem(FORM_STORAGE_KEY);
+
+    if (!saved) {
+        return DEFAULT_FORM;
+    }
+
+    try {
+        const parsed = JSON.parse(saved) as Partial<PropertyForm>;
+
+        return {
+            ...DEFAULT_FORM,
+            ...parsed,
+            state: "Tamil Nadu",
+            amenities: Array.isArray(parsed.amenities)
+                ? parsed.amenities
+                : [],
+            images: Array.isArray(parsed.images)
+                ? parsed.images
+                : [],
+            videoLinks: Array.isArray(parsed.videoLinks)
+                ? parsed.videoLinks
+                : [],
+            uploadDeleteGrants:
+                typeof parsed.uploadDeleteGrants === "object" &&
+                parsed.uploadDeleteGrants !== null &&
+                !Array.isArray(parsed.uploadDeleteGrants)
+                    ? parsed.uploadDeleteGrants
+                    : {},
+        };
+    } catch {
+        return DEFAULT_FORM;
+    }
+}
+
+function loadInitialStep(): StepId {
+    if (typeof window === "undefined") {
+        return "category";
+    }
+
+    const saved = localStorage.getItem(STEP_STORAGE_KEY);
+
+    return STEPS.some((step) => step.id === saved)
+        ? (saved as StepId)
+        : "category";
+}
+
+function optionalNumber(value: string): number | null {
+    if (!value.trim()) {
+        return null;
+    }
+
+    return Number(value);
+}
+
+function isValidVideoUrl(value: string): boolean {
+    if (!value.trim()) {
+        return true;
+    }
+
+    try {
+        const host = new URL(value).hostname;
+
+        return [
+            "youtube.com",
+            "www.youtube.com",
+            "youtu.be",
+            "vimeo.com",
+            "www.vimeo.com",
+        ].includes(host);
+    } catch {
+        return false;
+    }
+}
+
+function getUploadedFileDescriptor(
+    file: UploadFile,
+): UploadedFileDescriptor | null {
+    const url =
+        file.ufsUrl ||
+        file.url ||
+        file.serverData?.url;
+
+    if (!url) {
+        return null;
+    }
+
+    return {
+        url,
+        fileKey:
+            file.key ||
+            file.serverData?.fileKey ||
+            null,
+        deleteToken:
+            file.serverData?.deleteToken ||
+            null,
+        fileName: file.name,
+    };
+}
+
+function formatPrice(value: string): string {
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+        return "Price not set";
+    }
+
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function getDisplayType(form: PropertyForm): string {
+    return form.category === "commercial"
+        ? form.commercialType || "Commercial property"
+        : form.propertyType;
+}
+
+function FieldLabel({
+                        children,
+                        required = false,
+                        hint,
+                    }: {
+    children: ReactNode;
+    required?: boolean;
+    hint?: string;
+}) {
+    return (
+        <span className="mb-2 flex items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+      <span>
+        {children}
+          {required ? <span className="ml-1 text-red-500">*</span> : null}
+      </span>
+            {hint ? (
+                <span className="normal-case tracking-normal text-slate-400">
+          {hint}
+        </span>
+            ) : null}
+    </span>
+    );
+}
+
+function ErrorText({ children }: { children: ReactNode }) {
+    return (
+        <p className="mt-2 text-xs font-bold text-red-600">
+            {children}
+        </p>
+    );
+}
+
+function SelectField({
+                         value,
+                         onChange,
+                         children,
+                         disabled = false,
+                         ariaLabel,
+                     }: {
+    value: string;
+    onChange: (value: string) => void;
+    children: ReactNode;
+    disabled?: boolean;
+    ariaLabel: string;
+}) {
+    return (
+        <span className="relative block">
+      <select
+          value={value}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-bold text-slate-800 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+      >
+        {children}
+      </select>
+      <ChevronDown
+          size={16}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+      />
+    </span>
+    );
+}
+
+function SectionHeading({
+                            eyebrow,
+                            title,
+                            description,
+                            icon: Icon,
+                        }: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+}) {
+    return (
+        <div className="flex items-start gap-4">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-slate-200">
+        <Icon size={21} aria-hidden="true" />
+      </span>
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                    {eyebrow}
+                </p>
+                <h2 className="mt-2 font-heading text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl">
+                    {title}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                    {description}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function ReviewCard({
+                        title,
+                        onEdit,
+                        children,
+                    }: {
+    title: string;
+    onEdit: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h3 className="font-black text-slate-950">{title}</h3>
+                <button
+                    type="button"
+                    onClick={onEdit}
+                    className="text-xs font-black text-primary"
+                >
+                    Edit
+                </button>
+            </div>
+            <div className="mt-4 space-y-4">{children}</div>
+        </div>
+    );
+}
+
+function ReviewRow({
+                       label,
+                       value,
+                   }: {
+    label: string;
+    value: string;
+}) {
+    return (
+        <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                {label}
+            </p>
+            <p className="mt-1 whitespace-pre-line text-sm font-bold leading-6 text-slate-700">
+                {value}
+            </p>
+        </div>
+    );
+}
 
 export default function PostPropertyPage() {
     const router = useRouter();
-
-    const [currentStep, setCurrentStep] = useState(() => {
-        if (typeof window === "undefined") {
-            return 1;
-        }
-
-        const savedStep =
-            localStorage.getItem(
-                "post-property-step"
-            );
-
-        if (!savedStep) {
-            return 1;
-        }
-
-        const parsedStep =
-            Number.parseInt(savedStep, 10);
-
-        if (
-            Number.isNaN(parsedStep) ||
-            parsedStep < 1 ||
-            parsedStep > 5
-        ) {
-            return 1;
-        }
-
-        return parsedStep;
-    });
-
-    const [form, setForm] = useState<PropertyForm>(() => {
-        if (typeof window === "undefined") {
-            return DEFAULT_FORM;
-        }
-
-        const savedForm =
-            localStorage.getItem(
-                "post-property-form"
-            );
-
-        if (!savedForm) {
-            return DEFAULT_FORM;
-        }
-
-        try {
-            const parsed = JSON.parse(savedForm) as Partial<PropertyForm>;
-
-            return {
-                ...DEFAULT_FORM,
-                ...parsed,
-                state: "Tamil Nadu",
-            };
-        } catch (error) {
-            console.error(
-                "Failed to load saved form",
-                error
-            );
-
-            return DEFAULT_FORM;
-        }
-    });
-    const LAND_TYPES = ["Plot", "Agricultural Land"];
-    const isLand = LAND_TYPES.includes(form.propertyType);
-
-    const REQUIRED_FIELDS = [
-        {
-            key: "state",
-            label: "State",
-            step: 1,
-            validate: (val: any) => !val ? "Required" : null
-        },
-        {
-            key: "city",
-            label: "City",
-            step: 1,
-            validate: (val: any) => !val ? "Required" : null
-        },
-        {
-            key: "locality",
-            label: "Locality",
-            step: 1,
-            validate: (val: any) => !val ? "Required" : null
-        },
-        {
-            key: "address",
-            label: "Street Address",
-            step: 1,
-            validate: (val: any) => !val ? "Required" : null
-        },
-        {
-            key: "size",
-            label: "Total Size",
-            step: 1,
-            validate: (val: any) => {
-                if (!val) return "Required";
-                if (isNaN(Number(val))) return "Must be a valid number";
-                if (Number(val) <= 0) return "Must be greater than 0";
-                return null;
-            }
-        },
-        {
-            key: "price",
-            label: "Asking Price",
-            step: 3,
-            validate: (val: any) => {
-                if (!val) return "Required";
-                if (isNaN(Number(val))) return "Must be a valid number";
-                if (Number(val) <= 0) return "Must be greater than 0";
-                return null;
-            }
-        },
-        {
-            key: "bedrooms",
-            label: "Bedrooms",
-            step: 2,
-            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
-        },
-        {
-            key: "bathrooms",
-            label: "Bathrooms",
-            step: 2,
-            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
-        },
-        {
-            key: "floors",
-            label: "Total Floors",
-            step: 2,
-            validate: (val: any) => !isLand && val && (isNaN(Number(val)) || Number(val) < 0) ? "Must be a valid count" : null
-        },
-    ];
-
-    const getValidationErrors = () => {
-        return REQUIRED_FIELDS
-            .map(field => ({
-                ...field,
-                error: field.validate(form[field.key as keyof typeof form])
-            }))
-            .filter(field => field.error !== null);
-    };
-
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState("");
-    const [user, setUser] = useState<any>(null);
-
-    const isDeveloper =
-        user?.role === "Builder" ||
-        user?.plan?.audience === "builder";
-
-    const hasActivePaidPlan =
-        user?.plan?.status === "active";
-
-    const storedTier: unknown = user?.plan?.tier;
-
-    const currentTier =
-        isPlanTier(storedTier) &&
-        (
-            storedTier === "silver" ||
-            hasActivePaidPlan
-        )
-            ? storedTier
-            : "silver";
-
-    const currentPlan =
-        PLAN_CATALOG[currentTier];
-
-    const maxImages =
-        currentPlan.entitlements.maxImages;
-
-    const maxVideoLinks =
-        currentPlan.entitlements.maxVideoLinks;
+    const [user, setUser] = useState<StoredUser | null>(null);
+    const [form, setForm] = useState<PropertyForm>(loadInitialForm);
+    const [activeStep, setActiveStep] =
+        useState<StepId>(loadInitialStep);
+    const [errors, setErrors] =
+        useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
+    const [uploadMessage, setUploadMessage] = useState("");
+    const [draftSaved, setDraftSaved] = useState(false);
 
     useEffect(() => {
         const syncUser = () => {
             const currentUser =
-                getStoredUser();
+                getStoredUser() as StoredUser | null;
+
+            if (!currentUser) {
+                clearStoredUser();
+            }
 
             setUser(currentUser);
         };
 
         syncUser();
+        window.addEventListener("storage", syncUser);
 
-        window.addEventListener(
-            "storage",
-            syncUser
-        );
-
-        return () => {
-            window.removeEventListener(
-                "storage",
-                syncUser
-            );
-        };
+        return () =>
+            window.removeEventListener("storage", syncUser);
     }, []);
 
     useEffect(() => {
-        localStorage.setItem(
-            "post-property-form",
-            JSON.stringify(form)
+        const saveTimer = window.setTimeout(() => {
+            localStorage.setItem(
+                FORM_STORAGE_KEY,
+                JSON.stringify(form),
+            );
+            localStorage.setItem(STEP_STORAGE_KEY, activeStep);
+            setDraftSaved(true);
+        }, 250);
+
+        const statusTimer = window.setTimeout(
+            () => setDraftSaved(false),
+            1800,
         );
 
-        localStorage.setItem(
-            "post-property-step",
-            currentStep.toString()
-        );
-    }, [form, currentStep]);
+        return () => {
+            window.clearTimeout(saveTimer);
+            window.clearTimeout(statusTimer);
+        };
+    }, [activeStep, form]);
 
-    // Scroll to top whenever step changes
-    useEffect(() => {
+    const isDeveloper =
+        user?.role === "Builder" ||
+        user?.plan?.audience === "builder";
+    const hasActivePaidPlan =
+        user?.plan?.status === "active";
+    const storedTier = user?.plan?.tier;
+    const currentTier =
+        isPlanTier(storedTier) &&
+        (storedTier === "silver" || hasActivePaidPlan)
+            ? storedTier
+            : "silver";
+    const currentPlan = PLAN_CATALOG[currentTier];
+    const maxImages = currentPlan.entitlements.maxImages;
+    const maxVideoLinks =
+        currentPlan.entitlements.maxVideoLinks;
+
+    const activeStepIndex = STEPS.findIndex(
+        (step) => step.id === activeStep,
+    );
+    const isLand = isLandPropertyType(form.propertyType);
+    const isCommercial =
+        isCommercialPropertyType(form.propertyType);
+    const displayType = getDisplayType(form);
+
+    const localityOptions = useMemo(
+        () =>
+            form.city
+                ? getTamilNaduLocalities(form.city)
+                : [],
+        [form.city],
+    );
+
+    const applicablePurposes = useMemo(
+        () =>
+            form.category === "residential"
+                ? PROPERTY_PURPOSES
+                : PROPERTY_PURPOSES.filter(
+                    (purpose) => purpose !== "PG/CO-Living",
+                ),
+        [form.category],
+    );
+
+    const amenityCategories = useMemo(
+        () => getAmenityCategories(form.category),
+        [form.category],
+    );
+
+    function updateForm(patch: Partial<PropertyForm>) {
+        setForm((current) => ({
+            ...current,
+            ...patch,
+        }));
+    }
+
+    function selectCategory(category: PropertyCategory) {
+        if (category === "commercial") {
+            updateForm({
+                category,
+                propertyType: "Commercial",
+                commercialType: "",
+                purpose:
+                    form.purpose === "PG/CO-Living"
+                        ? "Rent"
+                        : form.purpose,
+                bedrooms: "",
+                bathrooms: "",
+                floors: "",
+                amenities: [],
+            });
+            return;
+        }
+
+        if (category === "land") {
+            updateForm({
+                category,
+                propertyType: "Plot",
+                commercialType: "",
+                purpose:
+                    form.purpose === "PG/CO-Living"
+                        ? "Sell"
+                        : form.purpose,
+                bedrooms: "",
+                bathrooms: "",
+                floors: "",
+                amenities: [],
+            });
+            return;
+        }
+
+        updateForm({
+            category,
+            propertyType: "Apartment",
+            commercialType: "",
+            amenities: [],
+        });
+    }
+
+    function validateStep(step: StepId): boolean {
+        const nextErrors: Record<string, string> = {};
+
+        if (step === "category") {
+            if (!form.purpose) {
+                nextErrors.purpose =
+                    "Select what you want to do with the property.";
+            }
+
+            if (!form.propertyType) {
+                nextErrors.propertyType =
+                    "Select a property type.";
+            }
+
+            if (
+                form.category === "commercial" &&
+                !form.commercialType
+            ) {
+                nextErrors.commercialType =
+                    "Select the commercial property type.";
+            }
+        }
+
+        if (step === "location") {
+            if (!form.city) {
+                nextErrors.city = "Select a city.";
+            }
+            if (!form.locality) {
+                nextErrors.locality =
+                    "Select a locality or area.";
+            }
+            if (!form.address.trim()) {
+                nextErrors.address =
+                    "Enter the street address.";
+            }
+
+            const size = Number(form.size);
+
+            if (!Number.isFinite(size) || size <= 0) {
+                nextErrors.size =
+                    "Enter a valid property size.";
+            }
+
+            if (
+                form.uds.trim() &&
+                (!Number.isFinite(Number(form.uds)) ||
+                    Number(form.uds) < 0)
+            ) {
+                nextErrors.uds =
+                    "Enter a valid UDS value.";
+            }
+        }
+
+        if (step === "details") {
+            const numericFields: Array<[string, string]> =
+                form.category === "residential"
+                    ? [
+                        ["bedrooms", form.bedrooms],
+                        ["bathrooms", form.bathrooms],
+                        ["floors", form.floors],
+                    ]
+                    : form.category === "commercial"
+                        ? [
+                            ["bathrooms", form.bathrooms],
+                            ["floors", form.floors],
+                        ]
+                        : [];
+
+            numericFields.forEach(([key, value]) => {
+                if (
+                    value.trim() &&
+                    (!Number.isFinite(Number(value)) ||
+                        Number(value) < 0)
+                ) {
+                    nextErrors[key] =
+                        "Enter a valid non-negative number.";
+                }
+            });
+        }
+
+        if (step === "pricing") {
+            const price = Number(form.price);
+
+            if (!Number.isFinite(price) || price <= 0) {
+                nextErrors.price =
+                    "Enter a valid asking price.";
+            }
+        }
+
+        if (step === "media") {
+            if (form.images.length === 0) {
+                nextErrors.images =
+                    "Add at least one property photo.";
+            } else if (form.images.length > maxImages) {
+                nextErrors.images = `Your ${currentPlan.presentation.displayName} plan allows up to ${maxImages} images.`;
+            }
+
+            const videoLinks = form.videoLinks
+                .map((link) => link.trim())
+                .filter(Boolean);
+
+            if (videoLinks.length > maxVideoLinks) {
+                nextErrors.videoLinks = `Your ${currentPlan.presentation.displayName} plan allows up to ${maxVideoLinks} video links.`;
+            } else if (
+                videoLinks.some((link) => !isValidVideoUrl(link))
+            ) {
+                nextErrors.videoLinks =
+                    "Only YouTube and Vimeo links are allowed.";
+            }
+        }
+
+        setErrors(nextErrors);
+
+        return Object.keys(nextErrors).length === 0;
+    }
+
+    function validateAll(): StepId | null {
+        const order: StepId[] = [
+            "category",
+            "location",
+            "details",
+            "pricing",
+            "media",
+        ];
+
+        return (
+            order.find((step) => !validateStep(step)) ??
+            null
+        );
+    }
+
+    function goForward() {
+        if (
+            activeStep !== "review" &&
+            !validateStep(activeStep)
+        ) {
+            return;
+        }
+
+        setErrors({});
+        setActiveStep(
+            STEPS[
+                Math.min(
+                    activeStepIndex + 1,
+                    STEPS.length - 1,
+                )
+                ].id,
+        );
         window.scrollTo({ top: 0, behavior: "smooth" });
-    }, [currentStep]);
+    }
 
-    const handleNext = () => {
-        setCurrentStep((step) =>
-            Math.min(step + 1, 5)
+    function goBack() {
+        setErrors({});
+        setActiveStep(
+            STEPS[Math.max(activeStepIndex - 1, 0)].id,
         );
-    };
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 
-    const handleBack = () => {
-        setCurrentStep((step) =>
-            Math.max(step - 1, 1)
-        );
-    };
+    async function deleteDraftUploads(
+        urls: string[],
+    ): Promise<boolean> {
+        const files = urls
+            .map((url) => {
+                const grant =
+                    form.uploadDeleteGrants[url];
 
-    const handleCityChange = (city: string) => {
-        setForm(prev => ({ ...prev, city, locality: "" }));
-    };
+                if (!grant) {
+                    return null;
+                }
 
-    const handleLocalityChange = (locality: string) => {
-        setForm(prev => ({ ...prev, locality }));
-    };
+                return {
+                    url,
+                    fileKey: grant.fileKey,
+                    deleteToken:
+                    grant.deleteToken,
+                };
+            })
+            .filter(
+                (
+                    value,
+                ): value is {
+                    url: string;
+                    fileKey: string;
+                    deleteToken: string;
+                } => Boolean(value),
+            );
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        setLoading(true);
-        setMessage("");
+        if (files.length === 0) {
+            return true;
+        }
 
         try {
-            const res = await fetch("/api/property/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    purpose: form.purpose,
-                    propertyType: form.propertyType,
-                    description: form.description,
-                    address: form.address,
-                    locality: form.locality,
-                    city: form.city,
-                    state: form.state,
-                    landmark: form.landmark,
-                    uds: Number(form.uds) || undefined,
-                    size: Number(form.size),
-                    sizeUnit: form.sizeUnit,
-                    dimensions: form.dimensions,
-                    ownershipType: form.ownershipType,
-                    price: Number(form.price),
-                    priceType: form.priceType,
-                    negotiable: form.negotiable,
-                    bedrooms: Number(form.bedrooms) || undefined,
-                    bathrooms: Number(form.bathrooms) || undefined,
-                    floors: Number(form.floors) || undefined,
-                    amenities: form.amenities,
-                    images: form.images,
-                    videoLinks: form.videoLinks.filter(Boolean),
-                    brochure: form.brochure,
-                }),
-            });
+            const response = await fetch(
+                "/api/uploadthing/delete",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify({
+                        files,
+                    }),
+                },
+            );
 
-            const data = await res.json();
+            const payload: unknown =
+                await response.json();
 
-            if (!res.ok) {
-                setMessage(data.error || "Something went wrong");
-                setLoading(false);
-            } else {
-                localStorage.removeItem("post-property-form");
-                localStorage.removeItem("post-property-step");
+            if (!response.ok) {
+                const message =
+                    typeof payload ===
+                    "object" &&
+                    payload !== null &&
+                    "error" in payload &&
+                    typeof payload.error ===
+                    "string"
+                        ? payload.error
+                        : "Unable to remove the uploaded file.";
 
-                setMessage("Property published successfully! Finalizing your listing...");
-                setTimeout(() => {
-                    router.push(`/property/${data.property._id}`);
-                }, 3000);
+                throw new Error(message);
             }
-        } catch (error) {
-            setMessage("Failed to connect to server.");
-            setLoading(false);
-        }
-    };
 
-    const propertyTypes = [
-        { name: "Sell", icon: Home, value: "Sell", category: "purpose" },
-        { name: "Rent", icon: Key, value: "Rent", category: "purpose" },
-        { name: "PG/CO-Living", icon: Building, value: "PG/CO-Living", category: "purpose" },
-        { name: "Apartment", icon: Building2, value: "Apartment", category: "type" },
-        { name: "Independent House", icon: Home, value: "Independent House", category: "type" },
-        { name: "Independent Floor", icon: Layers, value: "Independent Floor", category: "type" },
-        { name: "Duplex", icon: LayoutGrid, value: "Duplex", category: "type" },
-        { name: "Villa", icon: Warehouse, value: "Villa", category: "type" },
-        { name: "Penthouse", icon: Ship, value: "Penthouse", category: "type" },
-        { name: "Plot", icon: Map, value: "Plot", category: "type" },
-        { name: "Farm House", icon: Sprout, value: "Farm House", category: "type" },
-        { name: "Agricultural Land", icon: Trees, value: "Agricultural Land", category: "type" },
-    ];
+            return true;
+        } catch (error) {
+            setUploadMessage(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to remove the uploaded file.",
+            );
+
+            return false;
+        }
+    }
+
+    async function removeDraftImage(
+        imageUrl: string,
+    ) {
+        const deleted =
+            await deleteDraftUploads([
+                imageUrl,
+            ]);
+
+        if (!deleted) {
+            return;
+        }
+
+        setForm((current) => {
+            const nextGrants = {
+                ...current.uploadDeleteGrants,
+            };
+            delete nextGrants[imageUrl];
+
+            return {
+                ...current,
+                images:
+                    current.images.filter(
+                        (url) =>
+                            url !== imageUrl,
+                    ),
+                uploadDeleteGrants:
+                nextGrants,
+            };
+        });
+
+        setUploadMessage(
+            "Image removed.",
+        );
+    }
+
+    async function removeDraftBrochure() {
+        const brochureUrl =
+            form.brochure?.url;
+
+        if (!brochureUrl) {
+            return;
+        }
+
+        const deleted =
+            await deleteDraftUploads([
+                brochureUrl,
+            ]);
+
+        if (!deleted) {
+            return;
+        }
+
+        setForm((current) => {
+            const nextGrants = {
+                ...current.uploadDeleteGrants,
+            };
+            delete nextGrants[
+                brochureUrl
+                ];
+
+            return {
+                ...current,
+                brochure: null,
+                uploadDeleteGrants:
+                nextGrants,
+            };
+        });
+
+        setUploadMessage(
+            "Brochure removed.",
+        );
+    }
+
+    async function clearDraft() {
+        const uploadedUrls = Object.keys(
+            form.uploadDeleteGrants,
+        );
+
+        const deleted =
+            await deleteDraftUploads(
+                uploadedUrls,
+            );
+
+        if (!deleted) {
+            return;
+        }
+
+        localStorage.removeItem(
+            FORM_STORAGE_KEY,
+        );
+        localStorage.removeItem(
+            STEP_STORAGE_KEY,
+        );
+        setForm(DEFAULT_FORM);
+        setActiveStep("category");
+        setErrors({});
+        setSubmitError("");
+        setUploadMessage("");
+    }
+
+    function handleWizardSubmit(
+        event: FormEvent<HTMLFormElement>,
+    ) {
+        event.preventDefault();
+
+        /*
+         * Pressing Enter anywhere in the wizard must never publish a listing.
+         * Before the review step it only advances after validating the current
+         * section. On the review step it does nothing; publishing is handled by
+         * the explicit button below.
+         */
+        if (activeStep !== "review") {
+            goForward();
+        }
+    }
+
+    async function publishProperty() {
+        if (activeStep !== "review" || submitting) {
+            return;
+        }
+
+        const invalidStep = validateAll();
+
+        if (invalidStep) {
+            setActiveStep(invalidStep);
+            return;
+        }
+
+        setSubmitting(true);
+        setSubmitError("");
+
+        try {
+            const response = await fetch(
+                "/api/property/create",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        purpose: form.purpose,
+                        propertyType: form.propertyType,
+                        commercialType:
+                            form.category === "commercial"
+                                ? form.commercialType
+                                : null,
+                        description: form.description.trim(),
+                        address: form.address.trim(),
+                        locality: form.locality,
+                        city: form.city,
+                        state: "Tamil Nadu",
+                        landmark: form.landmark.trim(),
+                        uds: optionalNumber(form.uds),
+                        size: Number(form.size),
+                        sizeUnit: form.sizeUnit,
+                        dimensions: form.dimensions.trim(),
+                        ownershipType: form.ownershipType,
+                        price: Number(form.price),
+                        priceType: form.priceType,
+                        negotiable: form.negotiable,
+                        bedrooms:
+                            form.category === "residential"
+                                ? optionalNumber(form.bedrooms)
+                                : null,
+                        bathrooms:
+                            form.category === "land"
+                                ? null
+                                : optionalNumber(form.bathrooms),
+                        floors:
+                            form.category === "land"
+                                ? null
+                                : optionalNumber(form.floors),
+                        amenities: form.amenities,
+                        images: form.images,
+                        videoLinks: form.videoLinks
+                            .map((link) => link.trim())
+                            .filter(Boolean),
+                        brochure: form.brochure,
+                    }),
+                },
+            );
+
+            const payload: unknown = await response.json();
+
+            if (!response.ok) {
+                const message =
+                    typeof payload === "object" &&
+                    payload !== null &&
+                    "error" in payload &&
+                    typeof payload.error === "string"
+                        ? payload.error
+                        : "Unable to publish this property.";
+
+                throw new Error(message);
+            }
+
+            if (
+                typeof payload !== "object" ||
+                payload === null ||
+                !("property" in payload) ||
+                typeof payload.property !== "object" ||
+                payload.property === null ||
+                !("_id" in payload.property)
+            ) {
+                throw new Error(
+                    "The property was created, but the response was incomplete.",
+                );
+            }
+
+            localStorage.removeItem(FORM_STORAGE_KEY);
+            localStorage.removeItem(STEP_STORAGE_KEY);
+
+            router.push(
+                `/property/${String(payload.property._id)}`,
+            );
+            router.refresh();
+        } catch (error) {
+            setSubmitError(
+                error instanceof Error
+                    ? error.message
+                    : "Unable to publish this property.",
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    }
 
     return (
         <ProtectedRoute>
-            <main className="min-h-screen bg-[#F0F4F4] pt-32 pb-20 px-4">
-                <div className="max-w-4xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-1">Post a Property</h1>
-                        <p className="text-gray-500 font-medium">List your property for sale or lease</p>
-                    </div>
-
-                    <div className="bg-white rounded-t-3xl border-b border-gray-100 p-8 md:px-12">
-                        <div className="relative w-full">
-                            {/* Lines Container - dynamically positioned to exactly 10% inward to perfectly match the grid column centers (10%, 30%, 50%, 70%, 90%) */}
-                            <div className="absolute top-4 left-[10%] right-[10%] h-0.5 -translate-y-1/2 z-0">
-                                <div className="absolute inset-0 bg-gray-200 w-full h-full" />
-                                <motion.div
-                                    className="absolute top-0 left-0 h-full bg-primary"
-                                    initial={{ width: "0%" }}
-                                    animate={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
-                                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                                />
+            <main className="min-h-screen bg-[#f5f7f6] pb-20 pt-20 font-body text-slate-950">
+                <section className="relative overflow-hidden border-b border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(13,148,136,0.16),_transparent_35%),linear-gradient(180deg,#f7fbfa_0%,#ffffff_100%)]">
+                    <div className="mx-auto max-w-7xl px-5 pb-12 pt-12 sm:px-6 lg:px-8 lg:pb-14">
+                        <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-primary shadow-sm">
+                                    <Sparkles size={14} aria-hidden="true" />
+                                    Clear property publishing
+                                </div>
+                                <h1 className="mt-5 max-w-4xl font-heading text-4xl font-black leading-[1.06] tracking-[-0.045em] text-slate-950 sm:text-5xl">
+                                    Publish a property people
+                                    <span className="block text-primary">
+                    can understand and trust.
+                  </span>
+                                </h1>
+                                <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
+                                    Create residential, land or commercial
+                                    listings with structured location, pricing,
+                                    facilities and media.
+                                </p>
                             </div>
 
-                            <div className="grid grid-cols-5 relative z-10 w-full">
-                                {STEPS.map((step) => (
-                                    <div
-                                        key={step.id}
-                                        onClick={() => setCurrentStep(step.id)}
-                                        className="flex flex-col items-center cursor-pointer group"
-                                    >
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${currentStep >= step.id ? "bg-primary text-white" : "bg-gray-200 text-gray-400 group-hover:bg-gray-300"}`}>
-                                            {currentStep > step.id ? <Check size={14} /> : step.id}
-                                        </div>
-                                        <span className={`mt-2 text-xs font-bold hidden md:block text-center transition-colors ${currentStep >= step.id ? "text-gray-800" : "text-gray-400 group-hover:text-gray-600"}`}>
-                                            {step.title}
-                                        </span>
-                                    </div>
-                                ))}
+                            <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-500 shadow-sm">
+                  <Save
+                      size={15}
+                      className="text-primary"
+                      aria-hidden="true"
+                  />
+                    {draftSaved
+                        ? "Draft saved"
+                        : "Draft saves automatically"}
+                </span>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        void clearDraft()
+                                    }
+                                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
+                                >
+                                    <Trash2 size={15} aria-hidden="true" />
+                                    Clear draft
+                                </button>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <div className="bg-white rounded-b-3xl shadow-xl shadow-gray-200/50 p-6 md:p-10">
-                        <form onSubmit={handleSubmit}>
-                            <AnimatePresence mode="wait">
-                                {currentStep === 1 && (
-                                    <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="text-xl font-bold text-gray-900">Property Details</h2>
-                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 rounded-full border border-green-100">
-                                                <Check size={12} className="text-green-600" />
-                                                <span className="text-xs font-bold text-green-700">Step 1 of 5</span>
-                                            </div>
+                <div className="mx-auto grid max-w-7xl items-start gap-8 px-5 py-10 sm:px-6 lg:grid-cols-[290px_minmax(0,1fr)] lg:px-8 lg:py-12">
+                    <aside className="lg:sticky lg:top-28">
+                        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                            <div className="relative overflow-hidden bg-slate-950 p-5 text-white">
+                                <div
+                                    className="pointer-events-none absolute -right-14 -top-16 h-44 w-44 rounded-full bg-teal-500/20 blur-3xl"
+                                    aria-hidden="true"
+                                />
+                                <div className="relative">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-teal-300">
+                                                Publishing plan
+                                            </p>
+                                            <h2 className="mt-2 text-xl font-black">
+                                                {currentPlan.presentation.displayName}
+                                            </h2>
                                         </div>
-                                        <div className="space-y-4">
-                                            <label className="text-sm font-bold text-gray-500">What are you looking to do?</label>
-                                            <div className="flex gap-4">
-                                                {propertyTypes.filter(i => i.category === 'purpose').map((item) => (
-                                                    <button key={item.name} type="button" onClick={() => setForm({ ...form, purpose: item.value })} className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border-2 transition-all duration-300 ${form.purpose === item.value ? "bg-primary text-white border-primary shadow-xl shadow-primary/20 scale-105" : "bg-white text-gray-500 border-gray-100 hover:border-primary/20"}`}>
-                                                        <item.icon size={22} />
-                                                        <span className="text-base font-bold">{item.name}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+                      <BadgeCheck size={18} aria-hidden="true" />
+                    </span>
+                                    </div>
+
+                                    <div className="mt-5 grid grid-cols-2 gap-2">
+                                        <div className="rounded-xl bg-white/[0.06] p-3">
+                                            <p className="text-lg font-black">{maxImages}</p>
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                Photos
+                                            </p>
                                         </div>
-                                        <div className="space-y-4">
-                                            <label className="text-sm font-bold text-gray-500">Choose Property Type</label>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                                                {propertyTypes.filter(i => i.category === 'type').map((item) => (
-                                                    <button key={item.name} type="button" onClick={() => setForm({ ...form, propertyType: item.value })} className={`flex flex-col items-center justify-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 ${form.propertyType === item.value ? "bg-primary/5 text-primary border-primary shadow-sm" : "bg-white text-gray-500 border-gray-50 hover:bg-gray-50 hover:border-gray-200"}`}>
-                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${form.propertyType === item.value ? "bg-primary text-white" : "bg-gray-100 text-gray-400"}`}>
-                                                            <item.icon size={24} />
-                                                        </div>
-                                                        <span className="text-sm font-bold text-center leading-tight">{item.name}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <div className="rounded-xl bg-white/[0.06] p-3">
+                                            <p className="text-lg font-black">
+                                                {maxVideoLinks}
+                                            </p>
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                Videos
+                                            </p>
                                         </div>
-                                        <div className="space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <label className="text-sm font-bold text-gray-500">Property Description</label>
-                                                <span className="text-[10px] font-bold text-gray-400">{form.description.length}/2000</span>
-                                            </div>
-                                            <textarea rows={4} placeholder="Describe your property in detail to attract more buyers..." className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all outline-none resize-none" value={form.description} maxLength={2000} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                                        </div>
-                                        <div className="grid md:grid-cols-3 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-bold text-gray-500">State <span className="text-red-500">*</span></label>
-                                                <div className="relative">
-                                                    <select className="w-full px-4 py-3.5 rounded-xl bg-gray-50 border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-not-allowed font-bold text-gray-500 pr-10" value={form.state} disabled>
-                                                        <option value="Tamil Nadu">Tamil Nadu</option>
-                                                    </select>
-                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-bold text-gray-500">City <span className="text-red-500">*</span></label>
-                                                <div className="relative">
-                                                    <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold pr-10 ${!form.state && "opacity-50 cursor-not-allowed"}`} value={form.city} disabled={!form.state} onChange={(e) => handleCityChange(e.target.value)}>
-                                                        <option value="">Select City</option>
-                                                        {form.state && Object.keys(LOCATION_DATA[form.state] || {}).map(city => (<option key={city} value={city}>{city}</option>))}
-                                                    </select>
-                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-bold text-gray-500">Locality / Area <span className="text-red-500">*</span></label>
-                                                <div className="relative">
-                                                    <select className={`w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none appearance-none cursor-pointer font-bold pr-10 ${!form.city && "opacity-50 cursor-not-allowed"}`} value={form.locality} disabled={!form.city} onChange={(e) => handleLocalityChange(e.target.value)}>
-                                                        <option value="">Select Locality</option>
-                                                        {form.state && form.city && (LOCATION_DATA[form.state][form.city] || []).map(loc => (<option key={loc} value={loc}>{loc}</option>))}
-                                                    </select>
-                                                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-bold text-gray-500">Street Address / House No. <span className="text-red-500">*</span></label>
-                                            <input type="text" placeholder="e.g. #123, 2nd Main Road" className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-medium" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-gray-600">Nearby Landmark <span className="text-gray-400 font-normal">(optional)</span></label>
-                                                <input type="text" placeholder="Nearby Landmark" className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none" value={form.landmark} onChange={(e) => setForm({ ...form, landmark: e.target.value })} />
-                                            </div>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-6">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-gray-600">
-                                                    {form.propertyType === "Apartment" ? "Built Up Size" : "Total Size"} <span className="text-red-500">*</span>
-                                                </label>
-                                                <div className="flex gap-2">
-                                                    <input
-                                                        type="number"
-                                                        placeholder="Enter Size"
-                                                        className="flex-[3] px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
-                                                        value={form.size}
-                                                        onChange={(e) => setForm({ ...form, size: e.target.value })}
-                                                    />
-                                                    <select
-                                                        className="flex-1 px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold text-gray-700"
-                                                        value={form.sizeUnit}
-                                                        onChange={(e) => setForm({ ...form, sizeUnit: e.target.value })}
-                                                    >
-                                                        <option value="sqft">Sq Ft</option>
-                                                        <option value="sqyd">Sq Yd</option>
-                                                        <option value="sqm">Sq M</option>
-                                                        <option value="acre">Acre</option>
-                                                        <option value="kanal">Kanal</option>
-                                                        <option value="marla">Marla</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-semibold text-gray-600">UDS <span className="text-gray-400 font-normal">(Undivided Share - sq. ft.)</span></label>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Enter UDS"
-                                                    className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
-                                                    value={form.uds}
-                                                    onChange={(e) => setForm({ ...form, uds: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-                                        <button type="button" onClick={handleNext} className="w-full bg-primary hover:bg-primary-dark text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 transition-all active:scale-[0.98] mt-4">
-                                            Next: Basic Info
+                                    </div>
+                                </div>
+                            </div>
+
+                            <nav
+                                aria-label="Property publishing steps"
+                                className="space-y-1 p-3"
+                            >
+                                {STEPS.map((step, index) => {
+                                    const Icon = step.icon;
+                                    const active = step.id === activeStep;
+                                    const complete = index < activeStepIndex;
+                                    const available = index <= activeStepIndex;
+
+                                    return (
+                                        <button
+                                            key={step.id}
+                                            type="button"
+                                            disabled={!available}
+                                            onClick={() => {
+                                                if (available) {
+                                                    setErrors({});
+                                                    setActiveStep(step.id);
+                                                }
+                                            }}
+                                            className={`group flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
+                                                active
+                                                    ? "bg-slate-950 text-white shadow-lg"
+                                                    : complete
+                                                        ? "bg-teal-50 text-primary"
+                                                        : "text-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+                                            }`}
+                                        >
+                      <span
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                              active
+                                  ? "bg-white/10 text-teal-300"
+                                  : complete
+                                      ? "bg-white text-primary shadow-sm"
+                                      : "bg-slate-50 text-slate-400"
+                          }`}
+                      >
+                        {complete ? (
+                            <Check size={17} aria-hidden="true" />
+                        ) : (
+                            <Icon size={17} aria-hidden="true" />
+                        )}
+                      </span>
+                                            <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-black">
+                          {step.title}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[9px] text-slate-400">
+                          {step.description}
+                        </span>
+                      </span>
+                                            <span className="text-[9px] font-black">
+                        0{index + 1}
+                      </span>
                                         </button>
-                                    </motion.div>
-                                )}
-                                {currentStep > 1 && currentStep < 5 && (
-                                    <motion.div key={`step${currentStep}`} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="text-xl font-bold text-gray-900">{STEPS[currentStep - 1].title}</h2>
-                                            <div className="px-2 py-0.5 bg-primary/5 rounded-full border border-primary/10"><span className="text-xs font-bold text-primary">Step {currentStep} of 5</span></div>
-                                        </div>
-                                        {currentStep === 2 && (
-                                            <div className="grid md:grid-cols-2 gap-6">
-                                                {!isLand && (
-                                                    <>
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-semibold text-gray-600">
-                                                                {form.propertyType === "Apartment" ? "BHK / Type" : "Bedrooms"}
-                                                            </label>
-                                                            {form.propertyType === "Apartment" ? (
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {["Studio", "1", "2", "3", "4+"].map((val) => {
-                                                                        const numericVal = val === "Studio" ? "0" : (val === "4+" ? "4" : val);
-                                                                        const isActive = form.bedrooms === numericVal;
-                                                                        return (
-                                                                            <button
-                                                                                key={val}
-                                                                                type="button"
-                                                                                onClick={() => setForm({ ...form, bedrooms: numericVal })}
-                                                                                className={`px-4 py-2 rounded-xl border-2 font-bold transition-all ${isActive
-                                                                                    ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
-                                                                                    : "border-gray-100 text-gray-500 hover:border-primary/20 bg-gray-50/50"}`}
-                                                                            >
-                                                                                {val === "4+" ? "4+ BHK" : (val === "Studio" ? "Studio" : `${val} BHK`)}
-                                                                            </button>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            ) : (
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="e.g. 3"
-                                                                    className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold"
-                                                                    value={form.bedrooms}
-                                                                    onChange={(e) => setForm({ ...form, bedrooms: e.target.value })}
-                                                                />
-                                                            )}
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-semibold text-gray-600">Bathrooms</label>
-                                                            <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.bathrooms} onChange={(e) => setForm({ ...form, bathrooms: e.target.value })} />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-semibold text-gray-600">Total Floors</label>
-                                                            <input type="number" placeholder="e.g. 2" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.floors} onChange={(e) => setForm({ ...form, floors: e.target.value })} />
-                                                        </div>
-                                                    </>
-                                                )}
-                                                <div className={`space-y-2 ${isLand ? "md:col-span-2" : "lg:col-span-2"}`}>
-                                                    <label className="text-sm font-semibold text-gray-600">Dimensions <span className="text-gray-400 font-normal">(e.g. 40 x 60)</span></label>
-                                                    <input type="text" placeholder="e.g. 40 x 60" className="w-full px-4 py-3.5 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary/10 transition-all outline-none font-bold" value={form.dimensions} onChange={(e) => setForm({ ...form, dimensions: e.target.value })} />
-                                                </div>
-                                            </div>
-                                        )}
-                                        {currentStep === 3 && (
-                                            <div className="space-y-6">
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-gray-600">
-                                                        Asking Price (₹){" "}
-                                                        <span className="text-red-500">*</span>
-                                                    </label>
+                                    );
+                                })}
+                            </nav>
+                        </div>
+                    </aside>
 
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        className="w-full rounded-xl border border-gray-200 px-4 py-3.5 outline-none transition-all focus:ring-4 focus:ring-primary/10"
-                                                        placeholder="e.g. 5000000"
-                                                        value={form.price}
-                                                        onChange={(event) =>
-                                                            setForm((current) => ({
-                                                                ...current,
-                                                                price: event.target.value,
-                                                            }))
-                                                        }
-                                                    />
-                                                </div>
+                    <form onSubmit={handleWizardSubmit} className="min-w-0">
+                        <div className="mb-4 overflow-x-auto lg:hidden">
+                            <div className="flex min-w-max gap-2">
+                                {STEPS.map((step, index) => {
+                                    const Icon = step.icon;
+                                    const active = step.id === activeStep;
+                                    const complete = index < activeStepIndex;
 
-                                                <fieldset className="space-y-3">
-                                                    <legend className="text-sm font-semibold text-gray-600">
-                                                        Is this price negotiable?
+                                    return (
+                                        <button
+                                            key={step.id}
+                                            type="button"
+                                            disabled={index > activeStepIndex}
+                                            onClick={() => setActiveStep(step.id)}
+                                            className={`inline-flex h-11 items-center gap-2 rounded-xl border px-3 text-xs font-black ${
+                                                active
+                                                    ? "border-primary bg-primary text-white"
+                                                    : complete
+                                                        ? "border-teal-200 bg-teal-50 text-primary"
+                                                        : "border-slate-200 bg-white text-slate-400"
+                                            }`}
+                                        >
+                                            {complete ? (
+                                                <Check size={14} aria-hidden="true" />
+                                            ) : (
+                                                <Icon size={14} aria-hidden="true" />
+                                            )}
+                                            {step.shortTitle}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+                            <div className="border-b border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+                                <div className="flex items-center justify-between gap-4">
+                                    <p className="text-xs font-black text-slate-600">
+                                        Step {activeStepIndex + 1} of {STEPS.length}
+                                    </p>
+                                    <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200 sm:w-52">
+                                        <div
+                                            className="h-full rounded-full bg-primary transition-[width] duration-300"
+                                            style={{
+                                                width: `${
+                                                    ((activeStepIndex + 1) /
+                                                        STEPS.length) *
+                                                    100
+                                                }%`,
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-5 sm:p-7 lg:p-8">
+                                <AnimatePresence mode="wait">
+                                    <motion.section
+                                        key={activeStep}
+                                        initial={{ opacity: 0, x: 14 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -14 }}
+                                    >
+                                        {activeStep === "category" ? (
+                                            <div className="space-y-8">
+                                                <SectionHeading
+                                                    eyebrow="Listing type"
+                                                    title="What kind of property are you publishing?"
+                                                    description="Start with the broad category. Commercial listings then open a dedicated subtype selector."
+                                                    icon={Building2}
+                                                />
+
+                                                <fieldset>
+                                                    <legend className="text-sm font-black text-slate-950">
+                                                        Property category
                                                     </legend>
-
-                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                        {[
-                                                            {
-                                                                value: true,
-                                                                label: "Negotiable",
-                                                                description: "Buyers can submit an offer.",
-                                                            },
-                                                            {
-                                                                value: false,
-                                                                label: "Fixed price",
-                                                                description: "The listed amount is final.",
-                                                            },
-                                                        ].map((option) => {
-                                                            const isSelected =
-                                                                form.negotiable === option.value;
+                                                    <div className="mt-4 grid gap-4 md:grid-cols-3">
+                                                        {PROPERTY_CATEGORIES.map((category) => {
+                                                            const Icon =
+                                                                CATEGORY_ICONS[category.value];
+                                                            const selected =
+                                                                form.category === category.value;
 
                                                             return (
                                                                 <button
-                                                                    key={String(option.value)}
+                                                                    key={category.value}
                                                                     type="button"
-                                                                    aria-pressed={isSelected}
+                                                                    aria-pressed={selected}
                                                                     onClick={() =>
-                                                                        setForm((current) => ({
-                                                                            ...current,
-                                                                            negotiable: option.value,
-                                                                        }))
+                                                                        selectCategory(category.value)
                                                                     }
-                                                                    className={[
-                                                                        "rounded-2xl border-2 p-4 text-left transition-all",
-                                                                        isSelected
-                                                                            ? "border-primary bg-primary/5 shadow-sm"
-                                                                            : "border-gray-100 bg-white hover:border-primary/30",
-                                                                    ].join(" ")}
+                                                                    className={`relative overflow-hidden rounded-[1.5rem] border p-5 text-left transition ${
+                                                                        selected
+                                                                            ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                            : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
+                                                                    }`}
                                                                 >
-                                                                    <div className="flex items-center gap-3">
-                                <span
-                                    className={[
-                                        "flex h-5 w-5 items-center justify-center rounded-full border-2",
-                                        isSelected
-                                            ? "border-primary"
-                                            : "border-gray-300",
-                                    ].join(" ")}
-                                >
-                                    {isSelected && (
-                                        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                                    )}
-                                </span>
-
-                                                                        <span className="font-black text-gray-900">
-                                    {option.label}
-                                </span>
-                                                                    </div>
-
-                                                                    <p className="mt-2 pl-8 text-xs font-medium text-gray-500">
-                                                                        {option.description}
+                                  <span
+                                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                                          selected
+                                              ? "bg-primary text-white"
+                                              : "bg-slate-50 text-slate-500"
+                                      }`}
+                                  >
+                                    <Icon size={22} aria-hidden="true" />
+                                  </span>
+                                                                    <h3 className="mt-5 font-black text-slate-950">
+                                                                        {category.label}
+                                                                    </h3>
+                                                                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                                                                        {category.description}
                                                                     </p>
+                                                                    {selected ? (
+                                                                        <span className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white">
+                                      <Check size={14} aria-hidden="true" />
+                                    </span>
+                                                                    ) : null}
                                                                 </button>
                                                             );
                                                         })}
                                                     </div>
                                                 </fieldset>
-                                            </div>
-                                        )}
-                                        {currentStep === 4 && (
-                                            <div className="space-y-10">
-                                                {/* AMENITIES SECTION */}
-                                                <div className="space-y-6">
-                                                    <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-                                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                                            <LayoutGrid size={20} />
+
+                                                <fieldset className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
+                                                    <legend className="px-2 text-sm font-black text-slate-950">
+                                                        What do you want to do?
+                                                    </legend>
+                                                    <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                                                        {applicablePurposes.map((purpose) => {
+                                                            const selected =
+                                                                form.purpose === purpose;
+
+                                                            return (
+                                                                <button
+                                                                    key={purpose}
+                                                                    type="button"
+                                                                    aria-pressed={selected}
+                                                                    onClick={() =>
+                                                                        updateForm({ purpose })
+                                                                    }
+                                                                    className={`rounded-xl border p-4 text-left transition ${
+                                                                        selected
+                                                                            ? "border-primary bg-primary text-white shadow-lg shadow-primary/15"
+                                                                            : "border-slate-200 bg-white text-slate-700 hover:border-teal-200"
+                                                                    }`}
+                                                                >
+                                  <span className="block text-sm font-black">
+                                    {purpose}
+                                  </span>
+                                                                    <span
+                                                                        className={`mt-1 block text-xs leading-5 ${
+                                                                            selected
+                                                                                ? "text-teal-50/80"
+                                                                                : "text-slate-500"
+                                                                        }`}
+                                                                    >
+                                    {purpose === "Sell"
+                                        ? "Offer the property for sale."
+                                        : purpose === "Rent"
+                                            ? "Offer it for rent or lease."
+                                            : "List shared or managed accommodation."}
+                                  </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {errors.purpose ? (
+                                                        <ErrorText>{errors.purpose}</ErrorText>
+                                                    ) : null}
+                                                </fieldset>
+
+                                                {form.category === "residential" ? (
+                                                    <div>
+                                                        <h3 className="text-sm font-black text-slate-950">
+                                                            Residential type
+                                                        </h3>
+                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                            {RESIDENTIAL_PROPERTY_TYPES.map((type) => {
+                                                                const Icon =
+                                                                    PROPERTY_ICONS[type] ?? Home;
+                                                                const selected =
+                                                                    form.propertyType === type;
+
+                                                                return (
+                                                                    <button
+                                                                        key={type}
+                                                                        type="button"
+                                                                        aria-pressed={selected}
+                                                                        onClick={() =>
+                                                                            updateForm({
+                                                                                propertyType: type,
+                                                                            })
+                                                                        }
+                                                                        className={`flex items-start gap-4 rounded-2xl border p-5 text-left transition ${
+                                                                            selected
+                                                                                ? "border-primary bg-teal-50 text-primary ring-2 ring-primary/10"
+                                                                                : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
+                                                                        }`}
+                                                                    >
+                                    <span
+                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                                            selected
+                                                ? "bg-primary text-white"
+                                                : "bg-slate-50 text-slate-400"
+                                        }`}
+                                    >
+                                      <Icon size={20} aria-hidden="true" />
+                                    </span>
+
+                                                                        <span className="min-w-0">
+                                      <span className="block text-sm font-black">
+                                        {type}
+                                      </span>
+                                      <span
+                                          className={`mt-1 block text-xs leading-5 ${
+                                              selected
+                                                  ? "text-slate-600"
+                                                  : "text-slate-500"
+                                          }`}
+                                      >
+                                        {RESIDENTIAL_TYPE_DESCRIPTIONS[type]}
+                                      </span>
+                                    </span>
+                                                                    </button>
+                                                                );
+                                                            })}
                                                         </div>
+                                                    </div>
+                                                ) : null}
+
+                                                {form.category === "land" ? (
+                                                    <div>
+                                                        <h3 className="text-sm font-black text-slate-950">
+                                                            Land type
+                                                        </h3>
+                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                                            {LAND_PROPERTY_TYPES.map((type) => {
+                                                                const Icon =
+                                                                    PROPERTY_ICONS[type] ?? Map;
+                                                                const selected =
+                                                                    form.propertyType === type;
+
+                                                                return (
+                                                                    <button
+                                                                        key={type}
+                                                                        type="button"
+                                                                        aria-pressed={selected}
+                                                                        onClick={() =>
+                                                                            updateForm({
+                                                                                propertyType: type,
+                                                                            })
+                                                                        }
+                                                                        className={`flex items-center gap-4 rounded-2xl border p-5 text-left transition ${
+                                                                            selected
+                                                                                ? "border-primary bg-teal-50 text-primary ring-2 ring-primary/10"
+                                                                                : "border-slate-200 bg-white text-slate-700 hover:border-teal-200"
+                                                                        }`}
+                                                                    >
+                                    <span
+                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                                            selected
+                                                ? "bg-primary text-white"
+                                                : "bg-slate-50 text-slate-400"
+                                        }`}
+                                    >
+                                      <Icon size={21} aria-hidden="true" />
+                                    </span>
+                                                                        <span>
+                                      <span className="block font-black">
+                                        {type}
+                                      </span>
+                                      <span className="mt-1 block text-xs text-slate-500">
+                                        {type === "Plot"
+                                            ? "Residential or development plot."
+                                            : "Farm and agricultural land."}
+                                      </span>
+                                    </span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                {form.category === "commercial" ? (
+                                                    <div className="space-y-6">
+                                                        <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                                <Building2 size={19} aria-hidden="true" />
+                              </span>
+                                                            <div>
+                                                                <h3 className="font-black text-slate-950">
+                                                                    Commercial property
+                                                                </h3>
+                                                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                                    The public category remains Commercial,
+                                                                    while the subtype identifies the exact
+                                                                    business space.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {COMMERCIAL_TYPE_GROUPS.map((group) => (
+                                                            <fieldset key={group.label}>
+                                                                <legend className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                                    {group.label}
+                                                                </legend>
+                                                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                                    {group.items.map((item) => {
+                                                                        const Icon =
+                                                                            COMMERCIAL_ICONS[item.value] ??
+                                                                            Building2;
+                                                                        const selected =
+                                                                            form.commercialType === item.value;
+
+                                                                        return (
+                                                                            <button
+                                                                                key={item.value}
+                                                                                type="button"
+                                                                                aria-pressed={selected}
+                                                                                onClick={() =>
+                                                                                    updateForm({
+                                                                                        propertyType: "Commercial",
+                                                                                        commercialType: item.value,
+                                                                                    })
+                                                                                }
+                                                                                className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition ${
+                                                                                    selected
+                                                                                        ? "border-primary bg-slate-950 text-white shadow-lg"
+                                                                                        : "border-slate-200 bg-white text-slate-700 hover:border-teal-200 hover:bg-teal-50/40"
+                                                                                }`}
+                                                                            >
+                                        <span
+                                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                                                selected
+                                                    ? "bg-white/10 text-teal-300"
+                                                    : "bg-slate-50 text-primary"
+                                            }`}
+                                        >
+                                          <Icon
+                                              size={19}
+                                              aria-hidden="true"
+                                          />
+                                        </span>
+                                                                                <span className="min-w-0">
+                                          <span className="block text-sm font-black">
+                                            {item.value}
+                                          </span>
+                                          <span
+                                              className={`mt-1 block text-xs leading-5 ${
+                                                  selected
+                                                      ? "text-slate-400"
+                                                      : "text-slate-500"
+                                              }`}
+                                          >
+                                            {item.description}
+                                          </span>
+                                        </span>
+                                                                            </button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </fieldset>
+                                                        ))}
+
+                                                        {errors.commercialType ? (
+                                                            <ErrorText>
+                                                                {errors.commercialType}
+                                                            </ErrorText>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
+
+                                                <label className="block">
+                                                    <FieldLabel
+                                                        hint={`${form.description.length}/2000`}
+                                                    >
+                                                        Property description
+                                                    </FieldLabel>
+                                                    <textarea
+                                                        rows={6}
+                                                        maxLength={2000}
+                                                        value={form.description}
+                                                        onChange={(event) =>
+                                                            updateForm({
+                                                                description: event.target.value,
+                                                            })
+                                                        }
+                                                        placeholder={
+                                                            isCommercial
+                                                                ? "Describe access, frontage, fit-out, surrounding commercial activity and permitted use."
+                                                                : "Describe the property, condition, nearby advantages and anything a buyer or renter should understand."
+                                                        }
+                                                        className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                    />
+                                                </label>
+                                            </div>
+                                        ) : null}
+
+                                        {activeStep === "location" ? (
+                                            <div className="space-y-8">
+                                                <SectionHeading
+                                                    eyebrow="Location & area"
+                                                    title="Make the property easy to locate"
+                                                    description="Use structured Tamil Nadu city and locality data, then add the exact address and area."
+                                                    icon={MapPin}
+                                                />
+
+                                                <div className="rounded-[1.75rem] border border-slate-200 bg-slate-50 p-5 sm:p-6">
+                                                    <div className="grid gap-5 md:grid-cols-3">
+                                                        <label>
+                                                            <FieldLabel required>State</FieldLabel>
+                                                            <SelectField
+                                                                value="Tamil Nadu"
+                                                                disabled
+                                                                ariaLabel="State"
+                                                                onChange={() => {}}
+                                                            >
+                                                                <option value="Tamil Nadu">
+                                                                    Tamil Nadu
+                                                                </option>
+                                                            </SelectField>
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel required>City</FieldLabel>
+                                                            <SelectField
+                                                                value={form.city}
+                                                                ariaLabel="City"
+                                                                onChange={(city) =>
+                                                                    updateForm({
+                                                                        city,
+                                                                        locality: "",
+                                                                    })
+                                                                }
+                                                            >
+                                                                <option value="">Select city</option>
+                                                                {TAMIL_NADU_CITIES.map((city) => (
+                                                                    <option key={city} value={city}>
+                                                                        {city}
+                                                                    </option>
+                                                                ))}
+                                                            </SelectField>
+                                                            {errors.city ? (
+                                                                <ErrorText>{errors.city}</ErrorText>
+                                                            ) : null}
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel required>
+                                                                Locality / area
+                                                            </FieldLabel>
+                                                            <SelectField
+                                                                value={form.locality}
+                                                                disabled={!form.city}
+                                                                ariaLabel="Locality or area"
+                                                                onChange={(locality) =>
+                                                                    updateForm({ locality })
+                                                                }
+                                                            >
+                                                                <option value="">
+                                                                    {form.city
+                                                                        ? "Select locality"
+                                                                        : "Select city first"}
+                                                                </option>
+                                                                {localityOptions.map((locality) => (
+                                                                    <option
+                                                                        key={locality}
+                                                                        value={locality}
+                                                                    >
+                                                                        {locality}
+                                                                    </option>
+                                                                ))}
+                                                            </SelectField>
+                                                            {errors.locality ? (
+                                                                <ErrorText>
+                                                                    {errors.locality}
+                                                                </ErrorText>
+                                                            ) : null}
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                                                        <label className="sm:col-span-2">
+                                                            <FieldLabel required>
+                                                                Street address / property name
+                                                            </FieldLabel>
+                                                            <input
+                                                                value={form.address}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        address: event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder={
+                                                                    isCommercial
+                                                                        ? "Building name, unit or shop number and street"
+                                                                        : "House number, street and property name"
+                                                                }
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                            {errors.address ? (
+                                                                <ErrorText>
+                                                                    {errors.address}
+                                                                </ErrorText>
+                                                            ) : null}
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel>Nearby landmark</FieldLabel>
+                                                            <input
+                                                                value={form.landmark}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        landmark: event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="Optional"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel>Ownership type</FieldLabel>
+                                                            <SelectField
+                                                                value={form.ownershipType}
+                                                                ariaLabel="Ownership type"
+                                                                onChange={(ownershipType) =>
+                                                                    updateForm({ ownershipType })
+                                                                }
+                                                            >
+                                                                {OWNERSHIP_TYPES.map((type) => (
+                                                                    <option key={type} value={type}>
+                                                                        {type}
+                                                                    </option>
+                                                                ))}
+                                                            </SelectField>
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                    <div className="flex items-center gap-3">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                              <Ruler size={19} aria-hidden="true" />
+                            </span>
                                                         <div>
-                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">Select Amenities</h3>
-                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Help buyers understand the value</p>
+                                                            <h3 className="font-black text-slate-950">
+                                                                Property area
+                                                            </h3>
+                                                            <p className="mt-1 text-xs text-slate-500">
+                                                                Enter the actual usable or total area
+                                                                and select the matching unit.
+                                                            </p>
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-8">
-                                                        {AMENITY_CATEGORIES.map((category) => (
-                                                            <div key={category.name} className="space-y-4">
-                                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{category.name}</h4>
-                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                    <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+                                                        <label className="lg:col-span-2">
+                                                            <FieldLabel required>
+                                                                {form.propertyType === "Apartment"
+                                                                    ? "Built-up size"
+                                                                    : isCommercial
+                                                                        ? "Commercial area"
+                                                                        : "Total size"}
+                                                            </FieldLabel>
+                                                            <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="any"
+                                                                    value={form.size}
+                                                                    onChange={(event) =>
+                                                                        updateForm({
+                                                                            size: event.target.value,
+                                                                        })
+                                                                    }
+                                                                    placeholder="Enter size"
+                                                                    className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                />
+                                                                <SelectField
+                                                                    value={form.sizeUnit}
+                                                                    ariaLabel="Size unit"
+                                                                    onChange={(sizeUnit) =>
+                                                                        updateForm({ sizeUnit })
+                                                                    }
+                                                                >
+                                                                    {SIZE_UNITS.map((unit) => (
+                                                                        <option
+                                                                            key={unit.value}
+                                                                            value={unit.value}
+                                                                        >
+                                                                            {unit.label}
+                                                                        </option>
+                                                                    ))}
+                                                                </SelectField>
+                                                            </div>
+                                                            {errors.size ? (
+                                                                <ErrorText>{errors.size}</ErrorText>
+                                                            ) : null}
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel hint="sq ft">UDS</FieldLabel>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                step="any"
+                                                                value={form.uds}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        uds: event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="Optional"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                            {errors.uds ? (
+                                                                <ErrorText>{errors.uds}</ErrorText>
+                                                            ) : null}
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel
+                                                                hint={
+                                                                    isCommercial
+                                                                        ? "frontage / layout"
+                                                                        : "e.g. 40 × 60"
+                                                                }
+                                                            >
+                                                                Dimensions
+                                                            </FieldLabel>
+                                                            <input
+                                                                value={form.dimensions}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        dimensions: event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="Optional"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : null}
+
+                                        {activeStep === "details" ? (
+                                            <div className="space-y-8">
+                                                <SectionHeading
+                                                    eyebrow="Property details"
+                                                    title={
+                                                        isCommercial
+                                                            ? "Add the business-space specifications"
+                                                            : isLand
+                                                                ? "Add the land specifications"
+                                                                : "Add the residential specifications"
+                                                    }
+                                                    description={
+                                                        isCommercial
+                                                            ? "Commercial listings use washrooms, total floors and business facilities instead of bedroom fields."
+                                                            : isLand
+                                                                ? "Land listings focus on dimensions, ownership and access."
+                                                                : "Add bedroom, bathroom and floor information buyers commonly compare."
+                                                    }
+                                                    icon={
+                                                        isCommercial
+                                                            ? Briefcase
+                                                            : isLand
+                                                                ? Map
+                                                                : Home
+                                                    }
+                                                />
+
+                                                {form.category === "residential" ? (
+                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                        <div className="grid gap-5 sm:grid-cols-3">
+                                                            {[
+                                                                {
+                                                                    key: "bedrooms",
+                                                                    label:
+                                                                        form.propertyType ===
+                                                                        "Apartment"
+                                                                            ? "BHK / bedrooms"
+                                                                            : "Bedrooms",
+                                                                    value: form.bedrooms,
+                                                                },
+                                                                {
+                                                                    key: "bathrooms",
+                                                                    label: "Bathrooms",
+                                                                    value: form.bathrooms,
+                                                                },
+                                                                {
+                                                                    key: "floors",
+                                                                    label: "Total floors",
+                                                                    value: form.floors,
+                                                                },
+                                                            ].map((field) => (
+                                                                <label key={field.key}>
+                                                                    <FieldLabel>{field.label}</FieldLabel>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        value={field.value}
+                                                                        onChange={(event) =>
+                                                                            updateForm({
+                                                                                [field.key]:
+                                                                                event.target.value,
+                                                                            } as Partial<PropertyForm>)
+                                                                        }
+                                                                        placeholder="Optional"
+                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                    />
+                                                                    {errors[field.key] ? (
+                                                                        <ErrorText>
+                                                                            {errors[field.key]}
+                                                                        </ErrorText>
+                                                                    ) : null}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                {form.category === "commercial" ? (
+                                                    <div className="grid gap-6 lg:grid-cols-12">
+                                                        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
+                                                            <div className="grid gap-5 sm:grid-cols-2">
+                                                                <label>
+                                                                    <FieldLabel>Washrooms</FieldLabel>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        value={form.bathrooms}
+                                                                        onChange={(event) =>
+                                                                            updateForm({
+                                                                                bathrooms:
+                                                                                event.target.value,
+                                                                            })
+                                                                        }
+                                                                        placeholder="Optional"
+                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                    />
+                                                                    {errors.bathrooms ? (
+                                                                        <ErrorText>
+                                                                            {errors.bathrooms}
+                                                                        </ErrorText>
+                                                                    ) : null}
+                                                                </label>
+
+                                                                <label>
+                                                                    <FieldLabel>Total floors</FieldLabel>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        value={form.floors}
+                                                                        onChange={(event) =>
+                                                                            updateForm({
+                                                                                floors: event.target.value,
+                                                                            })
+                                                                        }
+                                                                        placeholder="Optional"
+                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                    />
+                                                                    {errors.floors ? (
+                                                                        <ErrorText>
+                                                                            {errors.floors}
+                                                                        </ErrorText>
+                                                                    ) : null}
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                                  <Info size={18} aria-hidden="true" />
+                                </span>
+                                                                <p className="text-xs leading-6 text-slate-600">
+                                                                    Parking, lifts, loading access,
+                                                                    frontage, fire safety, signage and
+                                                                    fit-out details are selected under
+                                                                    commercial facilities in the next
+                                                                    media step.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="relative overflow-hidden rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-[0_24px_65px_rgba(15,23,42,0.2)] lg:col-span-5">
+                                                            <div
+                                                                className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-teal-500/20 blur-3xl"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <div className="relative">
+                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+                                  <Building2
+                                      size={20}
+                                      aria-hidden="true"
+                                  />
+                                </span>
+                                                                <p className="mt-7 text-[10px] font-black uppercase tracking-[0.14em] text-teal-300">
+                                                                    Commercial subtype
+                                                                </p>
+                                                                <h3 className="mt-3 text-2xl font-black">
+                                                                    {form.commercialType}
+                                                                </h3>
+                                                                <p className="mt-3 text-sm leading-6 text-slate-400">
+                                                                    The facility choices shown next are
+                                                                    tailored for offices, retail,
+                                                                    hospitality, industrial and
+                                                                    special-use spaces.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+
+                                                {form.category === "land" ? (
+                                                    <div className="flex items-start gap-4 rounded-[1.75rem] border border-teal-100 bg-teal-50 p-5">
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                              <Map size={20} aria-hidden="true" />
+                            </span>
+                                                        <div>
+                                                            <h3 className="font-black text-slate-950">
+                                                                Land details are ready
+                                                            </h3>
+                                                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                                                                Size, dimensions, location and
+                                                                ownership were captured in the
+                                                                previous step. Continue to pricing or
+                                                                return to add more description.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        ) : null}
+
+                                        {activeStep === "pricing" ? (
+                                            <div className="space-y-8">
+                                                <SectionHeading
+                                                    eyebrow="Pricing"
+                                                    title="Set a clear asking price"
+                                                    description="Choose whether the amount is total or per square foot and tell users if it can be negotiated."
+                                                    icon={IndianRupee}
+                                                />
+
+                                                <div className="grid gap-6 lg:grid-cols-12">
+                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
+                                                        <div className="grid gap-5 sm:grid-cols-2">
+                                                            <label className="sm:col-span-2">
+                                                                <FieldLabel required>
+                                                                    Asking price
+                                                                </FieldLabel>
+                                                                <span className="relative block">
+                                  <IndianRupee
+                                      size={17}
+                                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                      aria-hidden="true"
+                                  />
+                                  <input
+                                      type="number"
+                                      min="1"
+                                      value={form.price}
+                                      onChange={(event) =>
+                                          updateForm({
+                                              price: event.target.value,
+                                          })
+                                      }
+                                      placeholder="Enter amount"
+                                      className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                  />
+                                </span>
+                                                                {errors.price ? (
+                                                                    <ErrorText>{errors.price}</ErrorText>
+                                                                ) : null}
+                                                            </label>
+
+                                                            <label>
+                                                                <FieldLabel>Price type</FieldLabel>
+                                                                <SelectField
+                                                                    value={form.priceType}
+                                                                    ariaLabel="Price type"
+                                                                    onChange={(priceType) =>
+                                                                        updateForm({ priceType })
+                                                                    }
+                                                                >
+                                                                    {PRICE_TYPES.map((type) => (
+                                                                        <option key={type} value={type}>
+                                                                            {type}
+                                                                        </option>
+                                                                    ))}
+                                                                </SelectField>
+                                                            </label>
+
+                                                            <div>
+                                                                <FieldLabel>Negotiability</FieldLabel>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={form.negotiable}
+                                                                    onClick={() =>
+                                                                        updateForm({
+                                                                            negotiable: !form.negotiable,
+                                                                        })
+                                                                    }
+                                                                    className={`flex h-12 w-full items-center justify-between rounded-xl border px-4 text-left transition ${
+                                                                        form.negotiable
+                                                                            ? "border-primary bg-teal-50"
+                                                                            : "border-slate-200 bg-slate-50"
+                                                                    }`}
+                                                                >
+                                  <span className="text-sm font-black text-slate-950">
+                                    {form.negotiable
+                                        ? "Negotiable"
+                                        : "Fixed price"}
+                                  </span>
+                                                                    <span
+                                                                        className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                                                                            form.negotiable
+                                                                                ? "border-primary bg-primary text-white"
+                                                                                : "border-slate-300 bg-white text-transparent"
+                                                                        }`}
+                                                                    >
+                                    <Check size={13} aria-hidden="true" />
+                                  </span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="relative overflow-hidden rounded-[1.75rem] bg-primary p-6 text-white shadow-[0_24px_65px_rgba(13,148,136,0.2)] lg:col-span-5">
+                                                        <div
+                                                            className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <div className="relative">
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-teal-100">
+                                                                Public price preview
+                                                            </p>
+                                                            <p className="mt-4 text-4xl font-black tracking-tight">
+                                                                {formatPrice(form.price)}
+                                                            </p>
+                                                            <p className="mt-2 text-sm text-teal-50/80">
+                                                                {form.priceType}
+                                                                {form.negotiable
+                                                                    ? " · Negotiable"
+                                                                    : " · Fixed"}
+                                                            </p>
+                                                            <div className="mt-7 rounded-xl border border-white/15 bg-white/10 p-4 text-xs leading-6 text-teal-50/85">
+                                                                Compare the amount with similar
+                                                                properties in the same locality
+                                                                before publishing.
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : null}
+
+                                        {activeStep === "media" ? (
+                                            <div className="space-y-8">
+                                                <SectionHeading
+                                                    eyebrow="Facilities & media"
+                                                    title={
+                                                        isCommercial
+                                                            ? "Show how the business space works"
+                                                            : "Show what the property includes"
+                                                    }
+                                                    description={
+                                                        isCommercial
+                                                            ? "Commercial facilities cover access, logistics, visibility, business infrastructure and compliance."
+                                                            : "Select genuine facilities, then add clear photos and eligible media."
+                                                    }
+                                                    icon={ImageIcon}
+                                                />
+
+                                                <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                    <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div>
+                                                            <h3 className="font-black text-slate-950">
+                                                                {isCommercial
+                                                                    ? "Commercial facilities"
+                                                                    : "Amenities"}
+                                                            </h3>
+                                                            <p className="mt-1 text-xs text-slate-500">
+                                                                {form.amenities.length} selected
+                                                            </p>
+                                                        </div>
+                                                        {form.amenities.length > 0 ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    updateForm({ amenities: [] })
+                                                                }
+                                                                className="text-xs font-black text-red-600"
+                                                            >
+                                                                Clear all
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="mt-6 space-y-8">
+                                                        {amenityCategories.map((category) => (
+                                                            <fieldset key={category.name}>
+                                                                <legend className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                                                                    {category.name}
+                                                                </legend>
+                                                                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                                                     {category.amenities.map((amenity) => {
-                                                                        const isSelected = form.amenities.includes(amenity);
+                                                                        const selected =
+                                                                            form.amenities.includes(
+                                                                                amenity,
+                                                                            );
+
                                                                         return (
                                                                             <button
                                                                                 key={amenity}
                                                                                 type="button"
-                                                                                onClick={() => {
-                                                                                    const next = isSelected
-                                                                                        ? form.amenities.filter(a => a !== amenity)
-                                                                                        : [...form.amenities, amenity];
-                                                                                    setForm({ ...form, amenities: next });
-                                                                                }}
-                                                                                className={`flex items-center gap-2 p-3 rounded-xl border text-[11px] font-bold text-left transition-all ${isSelected
-                                                                                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]"
-                                                                                    : "bg-white border-gray-100 text-gray-600 hover:border-primary/20 hover:bg-gray-50"
-                                                                                    }`}
+                                                                                aria-pressed={selected}
+                                                                                onClick={() =>
+                                                                                    updateForm({
+                                                                                        amenities: selected
+                                                                                            ? form.amenities.filter(
+                                                                                                (value) =>
+                                                                                                    value !==
+                                                                                                    amenity,
+                                                                                            )
+                                                                                            : [
+                                                                                                ...form.amenities,
+                                                                                                amenity,
+                                                                                            ],
+                                                                                    })
+                                                                                }
+                                                                                className={`flex min-h-14 items-center gap-3 rounded-xl border p-3 text-left text-xs font-bold transition ${
+                                                                                    selected
+                                                                                        ? "border-primary bg-primary text-white shadow-md shadow-primary/15"
+                                                                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-teal-200 hover:bg-white"
+                                                                                }`}
                                                                             >
-                                                                                <div className={`w-4 h-4 rounded flex items-center justify-center ${isSelected ? "bg-white/20" : "bg-gray-100"}`}>
-                                                                                    {isSelected && <Check size={10} />}
-                                                                                </div>
+                                        <span
+                                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${
+                                                selected
+                                                    ? "bg-white/15"
+                                                    : "bg-white text-transparent shadow-sm"
+                                            }`}
+                                        >
+                                          <Check
+                                              size={12}
+                                              aria-hidden="true"
+                                          />
+                                        </span>
                                                                                 {amenity}
                                                                             </button>
                                                                         );
                                                                     })}
                                                                 </div>
-                                                            </div>
+                                                            </fieldset>
                                                         ))}
                                                     </div>
                                                 </div>
 
-                                                {/* PHOTOS UPLOAD */}
-                                                <div className="space-y-6 pt-6 border-t border-gray-100">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary">
-                                                            <ImageIcon size={20} />
-                                                        </div>
-
+                                                <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                                         <div>
-                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">
-                                                                Property Photos
+                                                            <h3 className="text-lg font-black text-slate-950">
+                                                                Property photos
                                                             </h3>
-                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                                Add up to {maxImages} images
+                                                            <p className="mt-1 text-sm leading-6 text-slate-500">
+                                                                Add at least one. The first image is
+                                                                the public cover.
                                                             </p>
                                                         </div>
+                                                        <span className="rounded-full bg-teal-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-primary">
+                              {form.images.length}/{maxImages} photos
+                            </span>
                                                     </div>
 
-                                                    {message && (
-                                                        <p className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 text-sm font-bold text-gray-600">
-                                                            {message}
+                                                    {uploadMessage ? (
+                                                        <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-600">
+                                                            {uploadMessage}
                                                         </p>
-                                                    )}
+                                                    ) : null}
 
                                                     {form.images.length < maxImages ? (
-                                                        <UploadDropzone
-                                                            endpoint="propertyImageUploader"
-                                                            config={{ mode: "auto" }}
-                                                            onUploadBegin={() => {
-                                                                console.log("Upload started");
-                                                                setMessage("Uploading image...");
-                                                            }}
-                                                            onClientUploadComplete={(res) => {
-                                                                console.log("UploadThing response:", res);
-
-                                                                if (!res || res.length === 0) {
-                                                                    setMessage("Upload finished, but no file URL was returned.");
-                                                                    return;
+                                                        <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                                                            <UploadDropzone
+                                                                endpoint="propertyImageUploader"
+                                                                config={{ mode: "auto" }}
+                                                                onUploadBegin={() =>
+                                                                    setUploadMessage(
+                                                                        "Uploading image...",
+                                                                    )
                                                                 }
+                                                                onClientUploadComplete={(result) => {
+                                                                    const descriptors = (
+                                                                        (result ?? []) as UploadFile[]
+                                                                    )
+                                                                        .map(
+                                                                            getUploadedFileDescriptor,
+                                                                        )
+                                                                        .filter(
+                                                                            (
+                                                                                value,
+                                                                            ): value is UploadedFileDescriptor =>
+                                                                                Boolean(value),
+                                                                        );
 
-                                                                const urls = res
-                                                                    .map((file: any) => file.ufsUrl || file.url)
-                                                                    .filter(Boolean);
+                                                                    if (
+                                                                        descriptors.length === 0
+                                                                    ) {
+                                                                        setUploadMessage(
+                                                                            "Upload finished, but no image URL was returned.",
+                                                                        );
+                                                                        return;
+                                                                    }
 
-                                                                if (urls.length === 0) {
-                                                                    setMessage("Upload finished, but the image URL was missing.");
-                                                                    return;
+                                                                    const remaining =
+                                                                        Math.max(
+                                                                            maxImages -
+                                                                            form.images.length,
+                                                                            0,
+                                                                        );
+                                                                    const accepted =
+                                                                        descriptors.slice(
+                                                                            0,
+                                                                            remaining,
+                                                                        );
+                                                                    const overflow =
+                                                                        descriptors.slice(
+                                                                            remaining,
+                                                                        );
+
+                                                                    setForm((current) => {
+                                                                        const nextGrants = {
+                                                                            ...current.uploadDeleteGrants,
+                                                                        };
+
+                                                                        for (const file of accepted) {
+                                                                            if (
+                                                                                file.fileKey &&
+                                                                                file.deleteToken
+                                                                            ) {
+                                                                                nextGrants[
+                                                                                    file.url
+                                                                                    ] = {
+                                                                                    fileKey:
+                                                                                    file.fileKey,
+                                                                                    deleteToken:
+                                                                                    file.deleteToken,
+                                                                                };
+                                                                            }
+                                                                        }
+
+                                                                        return {
+                                                                            ...current,
+                                                                            images: [
+                                                                                ...current.images,
+                                                                                ...accepted.map(
+                                                                                    (file) =>
+                                                                                        file.url,
+                                                                                ),
+                                                                            ],
+                                                                            uploadDeleteGrants:
+                                                                            nextGrants,
+                                                                        };
+                                                                    });
+
+                                                                    if (
+                                                                        overflow.length > 0
+                                                                    ) {
+                                                                        const overflowFiles =
+                                                                            overflow
+                                                                                .filter(
+                                                                                    (file) =>
+                                                                                        file.fileKey &&
+                                                                                        file.deleteToken,
+                                                                                )
+                                                                                .map(
+                                                                                    (file) => ({
+                                                                                        url: file.url,
+                                                                                        fileKey:
+                                                                                            file.fileKey as string,
+                                                                                        deleteToken:
+                                                                                            file.deleteToken as string,
+                                                                                    }),
+                                                                                );
+
+                                                                        if (
+                                                                            overflowFiles.length > 0
+                                                                        ) {
+                                                                            void fetch(
+                                                                                "/api/uploadthing/delete",
+                                                                                {
+                                                                                    method:
+                                                                                        "POST",
+                                                                                    credentials:
+                                                                                        "include",
+                                                                                    headers: {
+                                                                                        "Content-Type":
+                                                                                            "application/json",
+                                                                                    },
+                                                                                    body: JSON.stringify(
+                                                                                        {
+                                                                                            files:
+                                                                                            overflowFiles,
+                                                                                        },
+                                                                                    ),
+                                                                                },
+                                                                            );
+                                                                        }
+                                                                    }
+
+                                                                    setUploadMessage(
+                                                                        accepted.length > 0
+                                                                            ? "Images uploaded successfully."
+                                                                            : "The plan image limit has already been reached.",
+                                                                    );
+                                                                }}
+                                                                onUploadError={(error: Error) =>
+                                                                    setUploadMessage(
+                                                                        error.message ||
+                                                                        "Image upload failed.",
+                                                                    )
                                                                 }
-
-                                                                setForm((prev) => {
-                                                                    const remainingSlots = maxImages - prev.images.length;
-                                                                    const allowedUrls = urls.slice(0, Math.max(remainingSlots, 0));
-
-                                                                    return {
-                                                                        ...prev,
-                                                                        images: [...prev.images, ...allowedUrls],
-                                                                    };
-                                                                });
-
-                                                                setMessage("Images uploaded successfully.");
-                                                            }}
-                                                            onUploadError={(error: Error) => {
-                                                                console.error("UploadThing error:", error);
-                                                                setMessage(error.message || "Image upload failed.");
-                                                            }}
-                                                        />
+                                                            />
+                                                        </div>
                                                     ) : (
-                                                        <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6 text-center">
-                                                            <p className="text-sm font-bold text-gray-600">
-                                                                You have reached your image limit for the {currentTier} plan.
-                                                            </p>
+                                                        <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4 text-sm font-bold text-slate-600">
+                                                            You have reached the image limit for
+                                                            the{" "}
+                                                            {
+                                                                currentPlan.presentation
+                                                                    .displayName
+                                                            }{" "}
+                                                            plan.
                                                         </div>
                                                     )}
 
-                                                    {isDeveloper && (
-                                                        <div className="space-y-4 pt-6 border-t border-gray-100">
-                                                            <div>
-                                                                <h3 className="text-lg font-black text-gray-900 tracking-tight">
-                                                                    Property Brochure
-                                                                </h3>
+                                                    {errors.images ? (
+                                                        <ErrorText>{errors.images}</ErrorText>
+                                                    ) : null}
 
-                                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                                    Upload one PDF brochure, up to 8 MB
-                                                                </p>
-                                                            </div>
-
-                                                            {!form.brochure ? (
-                                                                <UploadDropzone
-                                                                    endpoint="developerBrochureUploader"
-                                                                    config={{ mode: "auto" }}
-                                                                    onUploadBegin={() => {
-                                                                        setMessage("Uploading brochure...");
-                                                                    }}
-                                                                    onClientUploadComplete={(res) => {
-                                                                        const uploadedFile = res?.[0];
-
-                                                                        const url =
-                                                                            uploadedFile?.ufsUrl ||
-                                                                            uploadedFile?.url;
-
-                                                                        if (!url) {
-                                                                            setMessage(
-                                                                                "Upload completed, but no brochure URL was returned."
-                                                                            );
-                                                                            return;
-                                                                        }
-
-                                                                        setForm((prev) => ({
-                                                                            ...prev,
-                                                                            brochure: {
-                                                                                url,
-                                                                                fileName:
-                                                                                    uploadedFile.name ||
-                                                                                    "Property brochure.pdf",
-                                                                            },
-                                                                        }));
-
-                                                                        setMessage("Brochure uploaded successfully.");
-                                                                    }}
-                                                                    onUploadError={(error: Error) => {
-                                                                        setMessage(
-                                                                            error.message ||
-                                                                            "Brochure upload failed."
-                                                                        );
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <div className="flex items-center justify-between gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                                                                    <div className="min-w-0">
-                                                                        <p className="truncate text-sm font-bold text-gray-800">
-                                                                            {form.brochure.fileName}
-                                                                        </p>
-
-                                                                        <p className="text-xs text-gray-500">
-                                                                            PDF brochure uploaded
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            setForm((prev) => ({
-                                                                                ...prev,
-                                                                                brochure: null,
-                                                                            }))
-                                                                        }
-                                                                        className="rounded-xl bg-red-50 px-4 py-2 text-sm font-bold text-red-600"
+                                                    {form.images.length > 0 ? (
+                                                        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                                            {form.images.map(
+                                                                (imageUrl, index) => (
+                                                                    <div
+                                                                        key={`${imageUrl}-${index}`}
+                                                                        className={`group relative overflow-hidden rounded-2xl border bg-slate-100 ${
+                                                                            index === 0
+                                                                                ? "border-primary ring-2 ring-primary/10"
+                                                                                : "border-slate-200"
+                                                                        }`}
                                                                     >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
+                                                                        <img
+                                                                            src={imageUrl}
+                                                                            alt={`Property image ${
+                                                                                index + 1
+                                                                            }`}
+                                                                            className="h-44 w-full object-cover"
+                                                                        />
+                                                                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-slate-950/90 to-transparent p-3 pt-12">
+                                      <span className="rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-950">
+                                        {index === 0
+                                            ? "Cover"
+                                            : `Photo ${index + 1}`}
+                                      </span>
+                                                                            <div className="flex gap-2">
+                                                                                {index > 0 ? (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            updateForm({
+                                                                                                images: [
+                                                                                                    imageUrl,
+                                                                                                    ...form.images.filter(
+                                                                                                        (
+                                                                                                            _,
+                                                                                                            itemIndex,
+                                                                                                        ) =>
+                                                                                                            itemIndex !==
+                                                                                                            index,
+                                                                                                    ),
+                                                                                                ],
+                                                                                            })
+                                                                                        }
+                                                                                        className="rounded-lg bg-white/90 px-2.5 py-1.5 text-[9px] font-black text-primary"
+                                                                                    >
+                                                                                        Make cover
+                                                                                    </button>
+                                                                                ) : null}
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        void removeDraftImage(
+                                                                                            imageUrl,
+                                                                                        )
+                                                                                    }
+                                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white"
+                                                                                    aria-label={`Remove image ${
+                                                                                        index + 1
+                                                                                    }`}
+                                                                                >
+                                                                                    <Trash2
+                                                                                        size={14}
+                                                                                        aria-hidden="true"
+                                                                                    />
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ),
                                                             )}
                                                         </div>
-                                                    )}
+                                                    ) : null}
+                                                </div>
 
-                                                    {/* VIDEO LINKS */}
-                                                    <div className="space-y-4 pt-6 border-t border-gray-100">
-                                                        <div>
-                                                            <h3 className="text-lg font-black text-gray-900 tracking-tight">
-                                                                Video Links
-                                                            </h3>
-
-                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                                {form.videoLinks.length}/{maxVideoLinks} video links used
-                                                            </p>
+                                                <div className="grid gap-6 lg:grid-cols-2">
+                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div>
+                                                                <h3 className="text-lg font-black text-slate-950">
+                                                                    Video links
+                                                                </h3>
+                                                                <p className="mt-1 text-sm leading-6 text-slate-500">
+                                                                    YouTube or Vimeo only.
+                                                                </p>
+                                                            </div>
+                                                            <span className="rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                                {form.videoLinks.length}/
+                                                                {maxVideoLinks}
+                              </span>
                                                         </div>
 
                                                         {maxVideoLinks > 0 ? (
-                                                            <div className="space-y-3">
-                                                                {form.videoLinks.map((link, index) => (
-                                                                    <div key={index} className="flex gap-2">
-                                                                        <input
-                                                                            type="url"
-                                                                            value={link}
-                                                                            placeholder="Paste YouTube or Vimeo link"
-                                                                            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-4 focus:ring-primary/10 outline-none"
-                                                                            onChange={(e) => {
-                                                                                const value = e.target.value;
+                                                            <div className="mt-5 space-y-3">
+                                                                {form.videoLinks.map(
+                                                                    (link, index) => (
+                                                                        <div
+                                                                            key={index}
+                                                                            className="grid grid-cols-[minmax(0,1fr)_44px] gap-2"
+                                                                        >
+                                      <span className="relative block">
+                                        <Video
+                                            size={16}
+                                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                            aria-hidden="true"
+                                        />
+                                        <input
+                                            type="url"
+                                            value={link}
+                                            onChange={(event) =>
+                                                updateForm({
+                                                    videoLinks:
+                                                        form.videoLinks.map(
+                                                            (
+                                                                value,
+                                                                itemIndex,
+                                                            ) =>
+                                                                itemIndex ===
+                                                                index
+                                                                    ? event.target
+                                                                        .value
+                                                                    : value,
+                                                        ),
+                                                })
+                                            }
+                                            placeholder="YouTube or Vimeo URL"
+                                            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                        />
+                                      </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    updateForm({
+                                                                                        videoLinks:
+                                                                                            form.videoLinks.filter(
+                                                                                                (
+                                                                                                    _,
+                                                                                                    itemIndex,
+                                                                                                ) =>
+                                                                                                    itemIndex !== index,
+                                                                                            ),
+                                                                                    })
+                                                                                }
+                                                                                className="flex h-12 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                                                                aria-label={`Remove video link ${
+                                                                                    index + 1
+                                                                                }`}
+                                                                            >
+                                                                                <Trash2
+                                                                                    size={15}
+                                                                                    aria-hidden="true"
+                                                                                />
+                                                                            </button>
+                                                                        </div>
+                                                                    ),
+                                                                )}
 
-                                                                                setForm((prev) => ({
-                                                                                    ...prev,
-                                                                                    videoLinks: prev.videoLinks.map((item, i) =>
-                                                                                        i === index ? value : item
-                                                                                    ),
-                                                                                }));
-                                                                            }}
-                                                                        />
+                                                                {form.videoLinks.length <
+                                                                maxVideoLinks ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            updateForm({
+                                                                                videoLinks: [
+                                                                                    ...form.videoLinks,
+                                                                                    "",
+                                                                                ],
+                                                                            })
+                                                                        }
+                                                                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-black text-slate-700 transition hover:border-primary hover:text-primary"
+                                                                    >
+                                                                        <Plus size={15} aria-hidden="true" />
+                                                                        Add video link
+                                                                    </button>
+                                                                ) : null}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-5 rounded-2xl bg-slate-50 p-5 text-sm leading-6 text-slate-500">
+                                                                Video links are not included in this
+                                                                plan.
+                                                            </div>
+                                                        )}
 
+                                                        {errors.videoLinks ? (
+                                                            <ErrorText>
+                                                                {errors.videoLinks}
+                                                            </ErrorText>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                        <h3 className="text-lg font-black text-slate-950">
+                                                            Property brochure
+                                                        </h3>
+                                                        <p className="mt-1 text-sm leading-6 text-slate-500">
+                                                            PDF brochure for builder or developer
+                                                            accounts.
+                                                        </p>
+
+                                                        {isDeveloper ? (
+                                                            form.brochure ? (
+                                                                <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                                                    <div className="flex items-start gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                                      <FileText
+                                          size={18}
+                                          aria-hidden="true"
+                                      />
+                                    </span>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="truncate text-sm font-black text-slate-950">
+                                                                                {form.brochure.fileName}
+                                                                            </p>
+                                                                            <a
+                                                                                href={form.brochure.url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="mt-1 inline-flex text-xs font-black text-primary"
+                                                                            >
+                                                                                Open PDF
+                                                                            </a>
+                                                                        </div>
                                                                         <button
                                                                             type="button"
                                                                             onClick={() =>
-                                                                                setForm((prev) => ({
-                                                                                    ...prev,
-                                                                                    videoLinks: prev.videoLinks.filter((_, i) => i !== index),
-                                                                                }))
+                                                                                void removeDraftBrochure()
                                                                             }
-                                                                            className="px-4 rounded-xl bg-red-50 text-red-500 font-bold"
+                                                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                                                            aria-label="Remove brochure"
                                                                         >
-                                                                            Remove
+                                                                            <Trash2
+                                                                                size={15}
+                                                                                aria-hidden="true"
+                                                                            />
                                                                         </button>
                                                                     </div>
-                                                                ))}
-
-                                                                {form.videoLinks.length < maxVideoLinks && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            setForm((prev) => ({
-                                                                                ...prev,
-                                                                                videoLinks: [...prev.videoLinks, ""],
-                                                                            }))
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                                                                    <UploadDropzone
+                                                                        endpoint="developerBrochureUploader"
+                                                                        config={{ mode: "auto" }}
+                                                                        onUploadBegin={() =>
+                                                                            setUploadMessage(
+                                                                                "Uploading brochure...",
+                                                                            )
                                                                         }
-                                                                        className="w-full py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 font-bold"
-                                                                    >
-                                                                        Add Video Link
-                                                                    </button>
-                                                                )}
-                                                            </div>
+                                                                        onClientUploadComplete={(
+                                                                            result,
+                                                                        ) => {
+                                                                            const file = (
+                                                                                result ?? []
+                                                                            )[0] as
+                                                                                | UploadFile
+                                                                                | undefined;
+                                                                            const descriptor =
+                                                                                file
+                                                                                    ? getUploadedFileDescriptor(
+                                                                                        file,
+                                                                                    )
+                                                                                    : null;
+
+                                                                            if (!descriptor) {
+                                                                                setUploadMessage(
+                                                                                    "Upload completed, but no brochure URL was returned.",
+                                                                                );
+                                                                                return;
+                                                                            }
+
+                                                                            setForm((current) => {
+                                                                                const nextGrants = {
+                                                                                    ...current.uploadDeleteGrants,
+                                                                                };
+
+                                                                                if (
+                                                                                    descriptor.fileKey &&
+                                                                                    descriptor.deleteToken
+                                                                                ) {
+                                                                                    nextGrants[
+                                                                                        descriptor.url
+                                                                                        ] = {
+                                                                                        fileKey:
+                                                                                        descriptor.fileKey,
+                                                                                        deleteToken:
+                                                                                        descriptor.deleteToken,
+                                                                                    };
+                                                                                }
+
+                                                                                return {
+                                                                                    ...current,
+                                                                                    brochure: {
+                                                                                        url: descriptor.url,
+                                                                                        fileName:
+                                                                                            descriptor.fileName ||
+                                                                                            "Property brochure.pdf",
+                                                                                    },
+                                                                                    uploadDeleteGrants:
+                                                                                    nextGrants,
+                                                                                };
+                                                                            });
+
+                                                                            setUploadMessage(
+                                                                                "Brochure uploaded successfully.",
+                                                                            );
+                                                                        }}
+                                                                        onUploadError={(error: Error) =>
+                                                                            setUploadMessage(
+                                                                                error.message ||
+                                                                                "Brochure upload failed.",
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            )
                                                         ) : (
-                                                            <div className="rounded-3xl border border-gray-100 bg-gray-50 p-6 text-center">
-                                                                <p className="text-sm font-bold text-gray-600">
-                                                                    Video links are not included in your current plan.
-                                                                </p>
+                                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-500">
+                                                                Brochure upload appears after the
+                                                                account is approved as a builder or
+                                                                developer.
                                                             </div>
                                                         )}
                                                     </div>
-
-                                                    {form.images.length > 0 && (
-                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                                            {form.images.map((imageUrl) => (
-                                                                <div
-                                                                    key={imageUrl}
-                                                                    className="relative group rounded-2xl overflow-hidden border border-gray-100 bg-gray-50"
-                                                                >
-                                                                    <img
-                                                                        src={imageUrl}
-                                                                        alt="Property"
-                                                                        className="w-full h-28 object-cover"
-                                                                    />
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            setForm((prev) => ({
-                                                                                ...prev,
-                                                                                images: prev.images.filter((img) => img !== imageUrl),
-                                                                            }))
-                                                                        }
-                                                                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                    >
-                                                                        ×
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
-                                        )}
-                                        <div className="flex gap-4 pt-4">
-                                            <button type="button" onClick={handleBack} className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-xl font-bold transition-all">Back</button>
-                                            <button type="button" onClick={handleNext} className="flex-[2] bg-primary text-white py-4 rounded-xl font-bold shadow-lg shadow-primary/10 transition-all">Continue</button>
-                                        </div>
-                                    </motion.div>
-                                )}
-                                {currentStep === 5 && (
-                                    <motion.div key="step5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                                        {getValidationErrors().length > 0 ? (
-                                            <div className="text-center py-6 space-y-6">
-                                                <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4"><Info size={40} /></div>
-                                                <h2 className="text-2xl font-bold text-gray-900">Wait! You're Not Ready</h2>
-                                                <p className="text-gray-500 max-w-sm mx-auto">Please fix the following issues before publishing:</p>
-                                                <div className="max-w-md mx-auto grid gap-3">
-                                                    {getValidationErrors().map((field) => (
-                                                        <button key={field.key} type="button" onClick={() => setCurrentStep(field.step)} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-2xl hover:border-primary/30 hover:bg-white transition-all group text-left">
-                                                            <div><p className="font-bold text-gray-700">{field.label}</p><p className="text-xs font-bold text-red-500 mt-0.5 uppercase tracking-tighter">{field.error}</p></div>
-                                                            <div className="flex items-center gap-2 text-primary font-bold text-xs whitespace-nowrap">Fix in Step {field.step}<ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" /></div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <button type="button" onClick={handleBack} className="w-full bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-xl font-bold">Back to Edit</button>
-                                            </div>
-                                        ) : (
+                                        ) : null}
+
+                                        {activeStep === "review" ? (
                                             <div className="space-y-8">
-                                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                                    <div>
-                                                        <h2 className="text-2xl font-black text-gray-900 tracking-tight">Review Listing</h2>
-                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Verify your property details before publishing</p>
+                                                <SectionHeading
+                                                    eyebrow="Review & publish"
+                                                    title="Check the complete listing"
+                                                    description="Confirm that the property type, location, price and media are accurate before publishing."
+                                                    icon={BadgeCheck}
+                                                />
+
+                                                <div className="grid gap-6 lg:grid-cols-12">
+                                                    <div className="space-y-6 lg:col-span-7">
+                                                        <ReviewCard
+                                                            title="Property"
+                                                            onEdit={() =>
+                                                                setActiveStep("category")
+                                                            }
+                                                        >
+                                                            <ReviewRow
+                                                                label="Purpose"
+                                                                value={form.purpose}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Category"
+                                                                value={
+                                                                    form.category
+                                                                        .charAt(0)
+                                                                        .toUpperCase() +
+                                                                    form.category.slice(1)
+                                                                }
+                                                            />
+                                                            <ReviewRow
+                                                                label="Property type"
+                                                                value={displayType}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Description"
+                                                                value={
+                                                                    form.description ||
+                                                                    "No description provided"
+                                                                }
+                                                            />
+                                                        </ReviewCard>
+
+                                                        <ReviewCard
+                                                            title="Location & area"
+                                                            onEdit={() =>
+                                                                setActiveStep("location")
+                                                            }
+                                                        >
+                                                            <ReviewRow
+                                                                label="Address"
+                                                                value={`${form.address}, ${form.locality}, ${form.city}, Tamil Nadu`}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Landmark"
+                                                                value={
+                                                                    form.landmark ||
+                                                                    "Not provided"
+                                                                }
+                                                            />
+                                                            <ReviewRow
+                                                                label="Area"
+                                                                value={`${form.size} ${form.sizeUnit}`}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Ownership"
+                                                                value={form.ownershipType}
+                                                            />
+                                                        </ReviewCard>
+
+                                                        <ReviewCard
+                                                            title="Pricing & details"
+                                                            onEdit={() =>
+                                                                setActiveStep("pricing")
+                                                            }
+                                                        >
+                                                            <ReviewRow
+                                                                label="Price"
+                                                                value={`${formatPrice(
+                                                                    form.price,
+                                                                )} · ${form.priceType}`}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Negotiability"
+                                                                value={
+                                                                    form.negotiable
+                                                                        ? "Negotiable"
+                                                                        : "Fixed price"
+                                                                }
+                                                            />
+                                                            {form.category ===
+                                                            "residential" ? (
+                                                                <ReviewRow
+                                                                    label="Residential specifications"
+                                                                    value={`${
+                                                                        form.bedrooms || "—"
+                                                                    } beds · ${
+                                                                        form.bathrooms || "—"
+                                                                    } baths · ${
+                                                                        form.floors || "—"
+                                                                    } floors`}
+                                                                />
+                                                            ) : null}
+                                                            {form.category ===
+                                                            "commercial" ? (
+                                                                <ReviewRow
+                                                                    label="Commercial specifications"
+                                                                    value={`${
+                                                                        form.bathrooms || "—"
+                                                                    } washrooms · ${
+                                                                        form.floors || "—"
+                                                                    } floors`}
+                                                                />
+                                                            ) : null}
+                                                        </ReviewCard>
                                                     </div>
-                                                    <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
-                                                        <Check size={24} />
-                                                    </div>
-                                                </div>
 
-                                                <div className="grid md:grid-cols-2 gap-8">
-                                                    {/* Section 1: Core Info */}
-                                                    <div className="space-y-6">
-                                                        <div className="flex items-center justify-between">
-                                                            <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Core Details</h3>
-                                                            <button type="button" onClick={() => setCurrentStep(1)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
-                                                        </div>
-                                                        <div className="bg-gray-50/50 rounded-3xl p-6 space-y-4 border border-gray-100">
-                                                            <div>
-                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Type & Purpose</p>
-                                                                <p className="font-bold text-gray-800">{form.purpose} {form.propertyType}</p>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Address</p>
-                                                                <p className="font-bold text-gray-800 leading-tight">{form.address}, {form.locality}, {form.city}, {form.state}</p>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div>
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{form.propertyType === "Apartment" ? "Built Up Size" : "Size"}</p>
-                                                                    <p className="font-bold text-gray-800">{form.size} {form.sizeUnit}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">UDS</p>
-                                                                    <p className="font-bold text-gray-800">{form.uds || "N/A"} sqft</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                    <div className="space-y-6 lg:col-span-5">
+                                                        <ReviewCard
+                                                            title="Facilities & media"
+                                                            onEdit={() =>
+                                                                setActiveStep("media")
+                                                            }
+                                                        >
+                                                            <ReviewRow
+                                                                label="Facilities"
+                                                                value={`${form.amenities.length} selected`}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Photos"
+                                                                value={`${form.images.length}/${maxImages}`}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Video links"
+                                                                value={`${
+                                                                    form.videoLinks.filter(Boolean)
+                                                                        .length
+                                                                }/${maxVideoLinks}`}
+                                                            />
+                                                            {isDeveloper ? (
+                                                                <ReviewRow
+                                                                    label="Brochure"
+                                                                    value={
+                                                                        form.brochure?.fileName ||
+                                                                        "Not uploaded"
+                                                                    }
+                                                                />
+                                                            ) : null}
+                                                        </ReviewCard>
 
-                                                    {/* Section 2: Pricing & Specs */}
-                                                    <div className="space-y-6">
-                                                        <div className="flex items-center justify-between">
-                                                            <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Pricing & Specs</h3>
-                                                            <button type="button" onClick={() => setCurrentStep(3)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
-                                                        </div>
-                                                        <div className="bg-gray-50/50 rounded-3xl p-6 space-y-4 border border-gray-100">
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div>
-                                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                                                                        Asking Price
-                                                                    </p>
-
-                                                                    <p className="text-xl font-black text-gray-900">
-                                                                        ₹ {Number(form.price).toLocaleString("en-IN")}
-                                                                    </p>
-
-                                                                    <PriceNegotiabilityBadge
-                                                                        negotiable={form.negotiable}
-                                                                        className="mt-2"
+                                                        {form.images[0] ? (
+                                                            <div className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+                                                                <div className="relative">
+                                                                    <img
+                                                                        src={form.images[0]}
+                                                                        alt="Property cover preview"
+                                                                        className="h-56 w-full object-cover"
                                                                     />
+                                                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                                                                    <span className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-950">
+                                    Cover preview
+                                  </span>
                                                                 </div>
-                                                                <div>
-                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Dimensions</p>
-                                                                    <p className="font-bold text-gray-800">{form.dimensions || "N/A"}</p>
+                                                                <div className="p-5">
+                                                                    <p className="text-xs font-bold text-primary">
+                                                                        {form.locality}, {form.city}
+                                                                    </p>
+                                                                    <h3 className="mt-2 text-lg font-black text-slate-950">
+                                                                        {displayType}
+                                                                    </h3>
+                                                                    <p className="mt-3 text-xl font-black text-slate-950">
+                                                                        {formatPrice(form.price)}
+                                                                    </p>
                                                                 </div>
                                                             </div>
-                                                            {!isLand && (
-                                                                <div className="grid grid-cols-3 gap-4">
-                                                                    <div>
-                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">BHK</p>
-                                                                        <p className="font-bold text-gray-800">{form.bedrooms === "0" ? "Studio" : `${form.bedrooms} BHK`}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Baths</p>
-                                                                        <p className="font-bold text-gray-800">{form.bathrooms || "N/A"}</p>
-                                                                    </div>
-                                                                    <div>
-                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Floors</p>
-                                                                        <p className="font-bold text-gray-800">{form.floors || "N/A"}</p>
-                                                                    </div>
+                                                        ) : null}
+
+                                                        <div className="rounded-[1.75rem] border border-teal-100 bg-teal-50 p-5">
+                                                            <div className="flex items-start gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                                  <CircleCheckBig
+                                      size={18}
+                                      aria-hidden="true"
+                                  />
+                                </span>
+                                                                <div>
+                                                                    <h3 className="font-black text-slate-950">
+                                                                        Ready to publish
+                                                                    </h3>
+                                                                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                                        The server will recheck plan
+                                                                        capacity, media limits and
+                                                                        commercial subtype validity before
+                                                                        creating the listing.
+                                                                    </p>
                                                                 </div>
-                                                            )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Amenities */}
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">Amenities ({form.amenities.length})</h3>
-                                                        <button type="button" onClick={() => setCurrentStep(4)} className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1">EDIT <ChevronRight size={10} /></button>
-                                                    </div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {form.amenities.length > 0 ? form.amenities.map(a => (
-                                                            <span key={a} className="px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-600">{a}</span>
-                                                        )) : (
-                                                            <p className="text-xs font-bold text-gray-400 italic">No amenities selected</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                {/* Media */}
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em]">
-                                                            Media
-                                                        </h3>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentStep(4)}
-                                                            className="text-[10px] font-bold text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
-                                                        >
-                                                            EDIT <ChevronRight size={10} />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="space-y-3">
-                                                        <p className="text-xs font-bold text-gray-500">
-                                                            Photos: {form.images.length}/{maxImages}
-                                                        </p>
-
-                                                        <p className="text-xs font-bold text-gray-500">
-                                                            Video Links: {form.videoLinks.length}/{maxVideoLinks}
-                                                        </p>
-
-                                                        {isDeveloper && (
-                                                            <p className="text-xs font-bold text-gray-500">
-                                                                Brochure:{" "}
-                                                                {form.brochure
-                                                                    ? form.brochure.fileName
-                                                                    : "Not uploaded"}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="pt-6 border-t border-gray-100">
-                                                    {message && <p className="text-center text-primary font-bold mb-4">{message}</p>}
-
-                                                    <div className="flex gap-4">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setCurrentStep(1)}
-                                                            className="flex-1 bg-gray-50 border border-gray-200 text-gray-600 py-4 rounded-2xl font-bold transition-all hover:bg-gray-100"
-                                                        >
-                                                            Back to Start
-                                                        </button>
-
-                                                        <button
-                                                            type="submit"
-                                                            disabled={loading}
-                                                            className="flex-[2] bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 disabled:bg-gray-400 transform transition-all active:scale-95"
-                                                        >
-                                                            {loading ? "Publishing listing..." : "Publish Property"}
-                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
+                                        ) : null}
+                                    </motion.section>
+                                </AnimatePresence>
+
+                                {submitError ? (
+                                    <div className="mt-7 flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700">
+                                        <X
+                                            size={18}
+                                            className="mt-0.5 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <p className="text-sm font-bold leading-6">
+                                            {submitError}
+                                        </p>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <footer className="border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="text-xs leading-5 text-slate-500">
+                                        {STEPS[activeStepIndex].description}
+                                    </p>
+
+                                    <div className="grid grid-cols-2 gap-3 sm:flex">
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                activeStepIndex === 0
+                                                    ? () => router.push("/dashboard")
+                                                    : goBack
+                                            }
+                                            disabled={submitting}
+                                            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary disabled:opacity-50"
+                                        >
+                                            {activeStepIndex === 0 ? (
+                                                "Cancel"
+                                            ) : (
+                                                <>
+                                                    <ArrowLeft
+                                                        size={16}
+                                                        aria-hidden="true"
+                                                    />
+                                                    Back
+                                                </>
+                                            )}
+                                        </button>
+
+                                        {activeStep === "review" ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => void publishProperty()}
+                                                disabled={submitting}
+                                                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {submitting ? (
+                                                    <Loader2
+                                                        size={17}
+                                                        className="animate-spin"
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : (
+                                                    <Upload
+                                                        size={17}
+                                                        aria-hidden="true"
+                                                    />
+                                                )}
+                                                Publish property
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={goForward}
+                                                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 text-sm font-black text-white transition hover:bg-primary"
+                                            >
+                                                Continue
+                                                <ArrowRight
+                                                    size={16}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
                                         )}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </form>
-                    </div>
-                    <div className="mt-8 flex flex-col items-center gap-2">
-                        <p className="text-xs text-center text-gray-400 font-bold">By posting, you agree to our <span className="text-primary underline cursor-pointer">Terms of Use</span> and <span className="text-primary underline cursor-pointer">Privacy Policy</span> <HelpCircle size={14} className="inline ml-1" /></p>
-                    </div>
+                                    </div>
+                                </div>
+                            </footer>
+                        </div>
+                    </form>
                 </div>
             </main>
         </ProtectedRoute>
