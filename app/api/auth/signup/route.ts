@@ -6,7 +6,12 @@ import PhoneOtp from "@/models/PhoneOtp";
 
 export async function POST(req: Request) {
     try {
-        const { name, email, phone, password, role } = await req.json();
+        const {
+            name,
+            email,
+            phone,
+            password,
+        } = await req.json();
 
         if (!name || !email || !phone || !password) {
             return NextResponse.json(
@@ -58,7 +63,7 @@ export async function POST(req: Request) {
             email: normalizedEmail,
             phone: normalizedPhone,
             password: hashedPassword,
-            role: role || "User",
+            role: "User",
         });
 
         await PhoneOtp.deleteMany({ phone: normalizedPhone });
