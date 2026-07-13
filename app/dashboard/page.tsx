@@ -556,6 +556,8 @@ export default function DashboardPage() {
 
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteText, setDeleteText] = useState("");
+    const [deletePassword, setDeletePassword] =
+        useState("");
     const [deleting, setDeleting] = useState(false);
 
     const [toast, setToast] = useState<ToastState | null>(null);
@@ -812,22 +814,27 @@ export default function DashboardPage() {
 
             const payload: unknown = await response.json();
 
-            if (!response.ok) {
-                const message =
-                    typeof payload === "object" &&
-                    payload !== null &&
-                    "error" in payload &&
-                    typeof payload.error === "string"
-                        ? payload.error
-                        : "Unable to update your profile.";
-
-                throw new Error(message);
+            if (
+                typeof payload !== "object" ||
+                payload === null ||
+                !("user" in payload) ||
+                typeof payload.user !== "object" ||
+                payload.user === null
+            ) {
+                throw new Error(
+                    "The server returned an invalid profile response.",
+                );
             }
 
-            const updated = payload as DashboardUser;
+            const updated =
+                payload.user as DashboardUser;
+
             setUser(updated);
             setProfileFromUser(updated);
-            localStorage.setItem("user", JSON.stringify(updated));
+            localStorage.setItem(
+                "user",
+                JSON.stringify(updated),
+            );
             notify("success", "Profile updated successfully.");
         } catch (error) {
             notify(
@@ -845,8 +852,10 @@ export default function DashboardPage() {
 
         setPasswordError("");
 
-        if (passwords.next.length < 6) {
-            setPasswordError("The new password must be at least 6 characters.");
+        if (passwords.next.length < 12) {
+            setPasswordError(
+                "The new password must be at least 12 characters.",
+            );
             return;
         }
 
@@ -863,12 +872,6 @@ export default function DashboardPage() {
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    name: profile.name.trim(),
-                    email: profile.email.trim(),
-                    bio: profile.bio.trim(),
-                    company: profile.company.trim(),
-                    address: profile.address.trim(),
-                    city: profile.city.trim(),
                     oldPassword: passwords.current,
                     newPassword: passwords.next,
                 }),
@@ -902,15 +905,32 @@ export default function DashboardPage() {
 
     async function deleteAccount(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!user || deleteText !== "DELETE") return;
+        if (
+            !user ||
+            deleteText !== "DELETE" ||
+            deletePassword.length === 0
+        ) {
+            return;
+        }
 
         setDeleting(true);
 
         try {
-            const response = await fetch(`/api/user/${userId(user)}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            const response = await fetch(
+                `/api/user/${userId(user)}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify({
+                        currentPassword:
+                        deletePassword,
+                    }),
+                },
+            );
 
             const payload: unknown = await response.json();
 
@@ -929,6 +949,9 @@ export default function DashboardPage() {
             clearStoredUser();
             router.replace("/");
             router.refresh();
+
+            setDeleteText("");
+            setDeletePassword("");
         } catch (error) {
             setDeleteOpen(false);
             notify(
@@ -2017,6 +2040,7 @@ export default function DashboardPage() {
                                             type="button"
                                             onClick={() => {
                                                 setDeleteText("");
+                                                setDeletePassword("");
                                                 setDeleteOpen(true);
                                             }}
                                             className="mt-7 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black text-white shadow-lg shadow-red-600/15 transition hover:bg-red-700"
@@ -2084,8 +2108,14 @@ export default function DashboardPage() {
                 open={deleteOpen}
                 saving={deleting}
                 value={deleteText}
+                password={deletePassword}
                 onChange={setDeleteText}
-                onClose={() => setDeleteOpen(false)}
+                onPasswordChange={setDeletePassword}
+                onClose={() => {
+                    setDeleteOpen(false);
+                    setDeleteText("");
+                    setDeletePassword("");
+                }}
                 onSubmit={deleteAccount}
             />
         </main>
@@ -2306,14 +2336,18 @@ function DeleteModal({
                          open,
                          saving,
                          value,
+                         password,
                          onChange,
+                         onPasswordChange,
                          onClose,
                          onSubmit,
                      }: {
     open: boolean;
     saving: boolean;
     value: string;
+    password: string;
     onChange: (value: string) => void;
+    onPasswordChange: (value: string) => void;
     onClose: () => void;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -2365,17 +2399,45 @@ function DeleteModal({
 
                         <form onSubmit={onSubmit} className="mt-7">
                             <label className="block">
-                <span className="mb-2 block text-xs font-black uppercase tracking-[0.1em] text-red-600">
-                  Type DELETE to confirm
-                </span>
+        <span className="mb-2 block text-xs font-black uppercase tracking-[0.1em] text-red-600">
+            Type DELETE to confirm
+        </span>
+
                                 <input
                                     required
                                     value={value}
-                                    onChange={(event) => onChange(event.target.value)}
+                                    onChange={(event) =>
+                                        onChange(event.target.value)
+                                    }
                                     placeholder="DELETE"
                                     className="h-12 w-full rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-black text-red-950 outline-none placeholder:text-red-300 focus:border-red-500 focus:bg-white focus:ring-4 focus:ring-red-500/10"
                                 />
                             </label>
+
+                            {/* Put the password field here */}
+                            <div className="mt-4">
+                                <label
+                                    htmlFor="delete-password"
+                                    className="text-sm font-black text-slate-900"
+                                >
+                                    Current password
+                                </label>
+
+                                <input
+                                    id="delete-password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(event) =>
+                                        onPasswordChange(
+                                            event.target.value,
+                                        )
+                                    }
+                                    autoComplete="current-password"
+                                    required
+                                    className="mt-2 h-12 w-full rounded-xl border border-slate-200 px-4 outline-none transition focus:border-primary"
+                                    placeholder="Enter your current password"
+                                />
+                            </div>
 
                             <div className="mt-6 grid grid-cols-2 gap-3">
                                 <button
@@ -2388,7 +2450,11 @@ function DeleteModal({
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={value !== "DELETE" || saving}
+                                    disabled={
+                                        value !== "DELETE" ||
+                                        password.length === 0 ||
+                                        saving
+                                    }
                                     className="flex h-12 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     {saving ? (
