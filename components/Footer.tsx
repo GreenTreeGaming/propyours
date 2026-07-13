@@ -150,7 +150,7 @@ export default function Footer() {
           <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-8 text-xs text-gray-400 md:flex-row">
             <p>
               © {new Date().getFullYear()} PropYours Real Estate Solutions India
-              Pvt Ltd. All rights reserved.
+              All rights reserved.
             </p>
 
             <div className="flex items-center gap-6 font-medium">
