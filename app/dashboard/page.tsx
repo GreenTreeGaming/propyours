@@ -788,10 +788,9 @@ export default function DashboardPage() {
         if (!user) return;
 
         const name = profile.name.trim();
-        const email = profile.email.trim();
 
-        if (!name || !email) {
-            notify("error", "Name and email are required.");
+        if (!name) {
+            notify("error", "Name is required.");
             return;
         }
 
@@ -804,7 +803,6 @@ export default function DashboardPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name,
-                    email,
                     bio: profile.bio.trim(),
                     company: profile.company.trim(),
                     address: profile.address.trim(),
@@ -813,6 +811,18 @@ export default function DashboardPage() {
             });
 
             const payload: unknown = await response.json();
+
+            if (!response.ok) {
+                const message =
+                    typeof payload === "object" &&
+                    payload !== null &&
+                    "error" in payload &&
+                    typeof payload.error === "string"
+                        ? payload.error
+                        : "Unable to update your profile.";
+
+                throw new Error(message);
+            }
 
             if (
                 typeof payload !== "object" ||
@@ -926,8 +936,7 @@ export default function DashboardPage() {
                             "application/json",
                     },
                     body: JSON.stringify({
-                        currentPassword:
-                        deletePassword,
+                        currentPassword: deletePassword,
                     }),
                 },
             );
@@ -1587,20 +1596,21 @@ export default function DashboardPage() {
                                                     />
                                                 </FieldLabel>
 
-                                                <FieldLabel label="Email address" icon={Mail}>
-                                                    <input
-                                                        required
-                                                        type="email"
-                                                        value={profile.email}
-                                                        onChange={(event) =>
-                                                            setProfile((current) => ({
-                                                                ...current,
-                                                                email: event.target.value,
-                                                            }))
-                                                        }
-                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                    />
-                                                </FieldLabel>
+                                                <div>
+                                                    <FieldLabel label="Email address" icon={Mail}>
+                                                        <input
+                                                            disabled
+                                                            type="email"
+                                                            value={profile.email}
+                                                            className="h-12 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 pl-11 pr-4 text-sm font-bold text-slate-500"
+                                                        />
+                                                    </FieldLabel>
+
+                                                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                                                        Email changes require your current password and should be
+                                                        completed from the Security section.
+                                                    </p>
+                                                </div>
 
                                                 <FieldLabel label="Verified phone" icon={Phone}>
                                                     <input
@@ -1724,8 +1734,8 @@ export default function DashboardPage() {
 
                                     <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
                                         <p className="text-xs text-slate-500">
-                                            Account type and phone number are intentionally excluded
-                                            from ordinary profile updates.
+                                            Account type, email, and phone number are intentionally
+                                            excluded from ordinary profile updates.
                                         </p>
                                         <button
                                             type="submit"
@@ -2248,7 +2258,7 @@ function PasswordModal({
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-slate-500">
                             Enter the current password and choose a new password with at least
-                            six characters.
+                            12 characters.
                         </p>
 
                         <form onSubmit={onSubmit} className="mt-7 space-y-4">
@@ -2322,7 +2332,11 @@ function PasswordField({
             <input
                 required
                 type="password"
-                minLength={label === "Current password" ? undefined : 6}
+                minLength={
+                    label === "Current password"
+                        ? undefined
+                        : 12
+                }
                 autoComplete={autoComplete}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}

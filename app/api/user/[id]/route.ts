@@ -25,6 +25,14 @@ type UpdateAccountBody = {
     newPassword?: unknown;
 };
 
+type PropertyForDeletion = {
+    _id: mongoose.Types.ObjectId;
+    images?: unknown;
+    brochure?: {
+        url?: unknown;
+    };
+};
+
 function cleanOptionalString(
     value: unknown,
     maxLength: number,
@@ -328,15 +336,17 @@ export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
-    const session = await mongoose.startSession();
+    let session: mongoose.ClientSession | null = null;
 
     try {
+        // 1. Require authentication.
         const auth = await getAuthenticatedUser();
 
         if (isAuthError(auth)) {
             return auth;
         }
 
+        // 2. Validate the target user ID.
         const { id } = await params;
 
         if (!mongoose.isValidObjectId(id)) {
@@ -346,6 +356,7 @@ export async function DELETE(
             );
         }
 
+        // 3. Users may only delete their own account.
         if (auth.userId !== id) {
             return NextResponse.json(
                 {
@@ -356,6 +367,7 @@ export async function DELETE(
             );
         }
 
+        // 4. Read and validate the request body.
         let body: {
             currentPassword?: unknown;
         };
@@ -382,6 +394,7 @@ export async function DELETE(
             );
         }
 
+        // 5. Connect before starting the MongoDB session.
         await connectDB();
 
         const user = await User.findById(auth.userId);
@@ -393,6 +406,7 @@ export async function DELETE(
             );
         }
 
+        // 6. Confirm the current password.
         const passwordMatches = await bcrypt.compare(
             body.currentPassword,
             user.password,
@@ -408,94 +422,158 @@ export async function DELETE(
             );
         }
 
-        const properties = await Property.find({
-            userId: user._id,
-        })
-            .select("_id images brochure.url")
-            .lean();
+        // 7. Collect the user's properties and uploaded-media URLs.
+        const properties =
+            (await Property.find({
+                userId: user._id,
+            })
+                .select("_id images brochure.url")
+                .lean()) as PropertyForDeletion[];
 
         const propertyIds = properties.map(
             (property) => property._id,
         );
 
-        const mediaUrls = properties.flatMap(
-            (property) => [
-                ...(property.images ?? []),
-                property.brochure?.url ?? null,
-            ],
+        const mediaUrls: string[] = properties.flatMap(
+            (property) => {
+                const urls: string[] = [];
+
+                if (Array.isArray(property.images)) {
+                    const imageUrls = property.images.filter(
+                        (url: unknown): url is string =>
+                            typeof url === "string" &&
+                            url.trim().length > 0,
+                    );
+
+                    urls.push(...imageUrls);
+                }
+
+                const brochureUrl =
+                    property.brochure?.url;
+
+                if (
+                    typeof brochureUrl === "string" &&
+                    brochureUrl.trim().length > 0
+                ) {
+                    urls.push(brochureUrl);
+                }
+
+                return urls;
+            },
         );
 
-        await session.withTransaction(async () => {
-            await Lead.deleteMany({
-                $or: [
-                    { ownerId: user._id },
-                    { viewerId: user._id },
-                ],
-            }).session(session);
+        // 8. Start the transaction only after connecting.
+        session = await mongoose.startSession();
+        const activeSession = session;
 
-            await BoostTransaction.deleteMany({
-                $or: [
-                    { userId: user._id },
-                    {
-                        propertyId: {
-                            $in: propertyIds,
+        await activeSession.withTransaction(
+            async () => {
+                // Delete leads where the user was either
+                // the property owner or prospective buyer.
+                await Lead.deleteMany({
+                    $or: [
+                        { ownerId: user._id },
+                        { viewerId: user._id },
+                    ],
+                }).session(activeSession);
+
+                // Delete boost records belonging to the user
+                // or referring to one of their properties.
+                await BoostTransaction.deleteMany({
+                    $or: [
+                        { userId: user._id },
+                        {
+                            propertyId: {
+                                $in: propertyIds,
+                            },
                         },
-                    },
-                ],
-            }).session(session);
+                    ],
+                }).session(activeSession);
 
-            await User.updateMany(
-                {
-                    favorites: {
-                        $in: propertyIds,
-                    },
-                },
-                {
-                    $pull: {
-                        favorites: {
-                            $in: propertyIds,
+                // Remove deleted property IDs from every
+                // other user's favorites.
+                if (propertyIds.length > 0) {
+                    await User.updateMany(
+                        {
+                            favorites: {
+                                $in: propertyIds,
+                            },
                         },
-                    },
-                },
-                { session },
-            );
+                        {
+                            $pull: {
+                                favorites: {
+                                    $in: propertyIds,
+                                },
+                            },
+                        },
+                        {
+                            session: activeSession,
+                        },
+                    );
+                }
 
-            if (user.phone) {
-                await PhoneOtp.deleteMany({
-                    phone: user.phone,
-                }).session(session);
+                // Remove any remaining OTP records associated
+                // with the account's phone number.
+                if (
+                    typeof user.phone === "string" &&
+                    user.phone.length > 0
+                ) {
+                    await PhoneOtp.deleteMany({
+                        phone: user.phone,
+                    }).session(activeSession);
+                }
+
+                // Delete the user's properties.
+                await Property.deleteMany({
+                    userId: user._id,
+                }).session(activeSession);
+
+                // Delete the account last.
+                const deleteResult =
+                    await User.deleteOne({
+                        _id: user._id,
+                    }).session(activeSession);
+
+                if (deleteResult.deletedCount !== 1) {
+                    throw new Error(
+                        "Account deletion did not complete.",
+                    );
+                }
+            },
+        );
+
+        // 9. External file storage cannot participate in the
+        // MongoDB transaction, so clean it up after commit.
+        let mediaCleanupWarning:
+            | string
+            | undefined;
+
+        if (mediaUrls.length > 0) {
+            try {
+                await deleteUploadThingFilesByUrls(
+                    mediaUrls,
+                );
+            } catch (cleanupError) {
+                console.error(
+                    "Account deleted, but uploaded-media cleanup failed:",
+                    cleanupError,
+                );
+
+                mediaCleanupWarning =
+                    "The account was deleted, but some uploaded files may require manual cleanup.";
             }
-
-            await Property.deleteMany({
-                userId: user._id,
-            }).session(session);
-
-            await User.deleteOne({
-                _id: user._id,
-            }).session(session);
-        });
-
-        let mediaCleanupWarning: string | undefined;
-
-        try {
-            await deleteUploadThingFilesByUrls(
-                mediaUrls,
-            );
-        } catch (cleanupError) {
-            console.error(
-                "Account deleted, but media cleanup failed:",
-                cleanupError,
-            );
-
-            mediaCleanupWarning =
-                "The account was deleted, but some uploaded files may require cleanup.";
         }
 
+        // 10. Clear the user's authentication cookie.
         const response = NextResponse.json({
             success: true,
-            message: "Account deleted successfully.",
+            message:
+                "Account deleted successfully.",
             ...(mediaCleanupWarning
-                ? { warning: mediaCleanupWarning }
+                ? {
+                    warning:
+                    mediaCleanupWarning,
+                }
                 : {}),
         });
 
@@ -513,13 +591,21 @@ export async function DELETE(
 
         return response;
     } catch (error) {
-        console.error("Delete account error:", error);
+        console.error(
+            "Delete account error:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Unable to delete account." },
+            {
+                error:
+                    "Unable to delete account.",
+            },
             { status: 500 },
         );
     } finally {
-        await session.endSession();
+        if (session) {
+            await session.endSession();
+        }
     }
 }
