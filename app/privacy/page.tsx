@@ -20,7 +20,7 @@ const sections: LegalSection[] = [
         content: (
             <p>
                 PropYours Real Estate Solutions
-                India Pvt Ltd operates the
+                India operates the
                 PropYours website and property
                 marketplace.
             </p>
