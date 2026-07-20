@@ -66,15 +66,23 @@ export interface BubbyChatMessage {
 }
 
 export interface BubbySearchFilters {
-    listingPurpose: BubbyListingPurpose | null;
-    propertyType: BubbyPropertyType | null;
-    commercialType: BubbyCommercialType | null;
+    listingPurpose:
+        | BubbyListingPurpose
+        | null;
+    propertyType:
+        | BubbyPropertyType
+        | null;
+    commercialType:
+        | BubbyCommercialType
+        | null;
     city: string | null;
     locality: string | null;
     minPrice: number | null;
     maxPrice: number | null;
     minBedrooms: number | null;
     maxBedrooms: number | null;
+    minBathrooms: number | null;
+    maxBathrooms: number | null;
     minSize: number | null;
     maxSize: number | null;
     amenities: string[];
@@ -120,4 +128,5 @@ export interface BubbyApiResponse {
     reply: string;
     properties: BubbyPropertyResult[];
     actions: BubbyActionLink[];
+    searchFilters: BubbySearchFilters | null;
 }

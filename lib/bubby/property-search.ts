@@ -246,9 +246,34 @@ function addNumberFilters(
         bedroomRange.$lte = filters.maxBedrooms;
     }
 
-    if (Object.keys(bedroomRange).length > 0) {
+    if (
+        Object.keys(bedroomRange).length > 0
+    ) {
         clauses.push({
             bedrooms: bedroomRange,
+        });
+    }
+
+    const bathroomRange: Record<
+        string,
+        number
+    > = {};
+
+    if (filters.minBathrooms !== null) {
+        bathroomRange.$gte =
+            filters.minBathrooms;
+    }
+
+    if (filters.maxBathrooms !== null) {
+        bathroomRange.$lte =
+            filters.maxBathrooms;
+    }
+
+    if (
+        Object.keys(bathroomRange).length > 0
+    ) {
+        clauses.push({
+            bathrooms: bathroomRange,
         });
     }
 

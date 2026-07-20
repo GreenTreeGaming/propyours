@@ -31,6 +31,7 @@ import type {
     BubbyApiResponse,
     BubbyChatMessage,
     BubbyPropertyResult,
+    BubbySearchFilters,
 } from "@/lib/bubby/types";
 
 interface UiMessage {
@@ -39,6 +40,9 @@ interface UiMessage {
     content: string;
     properties?: BubbyPropertyResult[];
     actions?: BubbyActionLink[];
+    searchFilters?:
+        | BubbySearchFilters
+        | null;
 }
 
 const STORAGE_KEY =
@@ -214,6 +218,16 @@ export default function BubbyChat() {
             userMessage,
         ];
 
+        const previousFilters =
+            [...messages]
+                .reverse()
+                .find(
+                    (message) =>
+                        message.role ===
+                        "assistant" &&
+                        message.searchFilters != null,
+                )?.searchFilters ?? null;
+
         setMessages(requestMessages);
         setInput("");
         setLoading(true);
@@ -230,13 +244,12 @@ export default function BubbyChat() {
                     credentials: "same-origin",
                     body: JSON.stringify({
                         messages: requestMessages.map(
-                            (
-                                message,
-                            ): BubbyChatMessage => ({
+                            (message) => ({
                                 role: message.role,
                                 content: message.content,
                             }),
                         ),
+                        previousFilters,
                     }),
                 },
             );
@@ -274,6 +287,8 @@ export default function BubbyChat() {
                     content: data.reply,
                     properties: data.properties,
                     actions: data.actions,
+                    searchFilters:
+                    data.searchFilters,
                 },
             ]);
         } catch (error) {
@@ -822,14 +837,15 @@ function parseStoredMessages(
         return [];
     }
 
-    const messages = value
+    return value
         .filter(isRecord)
         .filter(
             (item) =>
                 typeof item.id === "string" &&
                 (item.role === "user" ||
                     item.role === "assistant") &&
-                typeof item.content === "string",
+                typeof item.content ===
+                "string",
         )
         .map(
             (item): UiMessage => ({
@@ -840,16 +856,27 @@ function parseStoredMessages(
                 content: (
                     item.content as string
                 ).slice(0, 2_000),
+
                 properties: Array.isArray(
                     item.properties,
                 )
                     ? (item.properties as BubbyPropertyResult[])
                     : undefined,
+
+                actions: Array.isArray(
+                    item.actions,
+                )
+                    ? (item.actions as BubbyActionLink[])
+                    : undefined,
+
+                searchFilters: isRecord(
+                    item.searchFilters,
+                )
+                    ? (item.searchFilters as BubbySearchFilters)
+                    : null,
             }),
         )
         .slice(-30);
-
-    return messages;
 }
 
 function parseApiResponse(
@@ -858,7 +885,9 @@ function parseApiResponse(
     if (
         !isRecord(value) ||
         typeof value.reply !== "string" ||
-        !Array.isArray(value.properties) ||
+        !Array.isArray(
+            value.properties,
+        ) ||
         !Array.isArray(value.actions)
     ) {
         return null;
@@ -870,6 +899,12 @@ function parseApiResponse(
             value.properties as BubbyPropertyResult[],
         actions:
             value.actions as BubbyActionLink[],
+        searchFilters:
+            isRecord(
+                value.searchFilters,
+            )
+                ? (value.searchFilters as BubbySearchFilters)
+                : null,
     };
 }
 
