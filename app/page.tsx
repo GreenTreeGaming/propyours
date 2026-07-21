@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
+  Bot,
   Building2,
   CheckCircle2,
   ChevronRight,
@@ -19,6 +20,7 @@ import {
   MapPin,
   Search,
   ShieldCheck,
+  Sparkles,
   Store,
   Trees,
 } from "lucide-react";
@@ -150,6 +152,35 @@ function getPropertyBadge(property: Property): string | null {
   return null;
 }
 
+type BubbyDemoMessage = {
+  id: string;
+  sender: "user" | "bubby";
+  text: string;
+};
+
+const BUBBY_DEMO_MESSAGES: BubbyDemoMessage[] = [
+  {
+    id: "initial-search",
+    sender: "user",
+    text: "Can you find me any 3 bedroom 2 bath houses?",
+  },
+  {
+    id: "initial-response",
+    sender: "bubby",
+    text: "I found 2 matching houses. One is in Thillai Nagar, Trichy, and another is in Maharaja Nagar, Tirunelveli.",
+  },
+  {
+    id: "budget-follow-up",
+    sender: "user",
+    text: "Any under ₹60 lakh?",
+  },
+  {
+    id: "budget-response",
+    sender: "bubby",
+    text: "Yes — I found a 3 bedroom house in Maharaja Nagar, Tirunelveli for ₹50 lakh.",
+  },
+];
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -160,6 +191,171 @@ export default function HomePage() {
   const [maxPrice, setMaxPrice] = useState("");
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [demoMessages, setDemoMessages] = useState<BubbyDemoMessage[]>([]);
+  const [demoMessageIndex, setDemoMessageIndex] = useState(0);
+  const [demoTypedText, setDemoTypedText] = useState("");
+  const [demoThinking, setDemoThinking] = useState(false);
+  const [demoComplete, setDemoComplete] = useState(false);
+  const [showDemoProperty, setShowDemoProperty] = useState(false);
+
+  const demoUserMessage =
+      "Find me a 3 bedroom house under ₹60 lakh.";
+
+  const demoBubbyMessage =
+      "I found a matching 3 BHK house for ₹50 lakh. Would you like to narrow it down by city?";
+
+  const [demoPhase, setDemoPhase] = useState(0);
+  const [typedUserMessage, setTypedUserMessage] = useState("");
+  const [typedBubbyMessage, setTypedBubbyMessage] = useState("");
+
+  useEffect(() => {
+    const currentMessage = BUBBY_DEMO_MESSAGES[demoMessageIndex];
+
+    if (!currentMessage) {
+      const propertyTimer = window.setTimeout(() => {
+        setShowDemoProperty(true);
+      }, 350);
+
+      const restartTimer = window.setTimeout(() => {
+        setDemoMessages([]);
+        setDemoMessageIndex(0);
+        setDemoTypedText("");
+        setDemoThinking(false);
+        setDemoComplete(false);
+        setShowDemoProperty(false);
+      }, 7000);
+
+      return () => {
+        window.clearTimeout(propertyTimer);
+        window.clearTimeout(restartTimer);
+      };
+    }
+
+    const isBubbyMessage = currentMessage.sender === "bubby";
+
+    if (
+        isBubbyMessage &&
+        demoTypedText.length === 0 &&
+        !demoThinking &&
+        !demoComplete
+    ) {
+      const thinkingTimer = window.setTimeout(() => {
+        setDemoThinking(true);
+      }, 300);
+
+      return () => window.clearTimeout(thinkingTimer);
+    }
+
+    if (isBubbyMessage && demoThinking) {
+      const thinkingTimer = window.setTimeout(() => {
+        setDemoThinking(false);
+        setDemoComplete(true);
+      }, 1100);
+
+      return () => window.clearTimeout(thinkingTimer);
+    }
+
+    if (!isBubbyMessage && !demoComplete) {
+      const startingTimer = window.setTimeout(() => {
+        setDemoComplete(true);
+      }, demoMessageIndex === 0 ? 700 : 900);
+
+      return () => window.clearTimeout(startingTimer);
+    }
+
+    if (demoTypedText.length < currentMessage.text.length) {
+      const typingSpeed =
+          currentMessage.sender === "user"
+              ? 36
+              : 22;
+
+      const typingTimer = window.setTimeout(() => {
+        setDemoTypedText(
+            currentMessage.text.slice(0, demoTypedText.length + 1),
+        );
+      }, typingSpeed);
+
+      return () => window.clearTimeout(typingTimer);
+    }
+
+    const nextMessageTimer = window.setTimeout(() => {
+      setDemoMessages((previousMessages) => [
+        ...previousMessages,
+        currentMessage,
+      ]);
+
+      setDemoTypedText("");
+      setDemoComplete(false);
+      setDemoThinking(false);
+      setDemoMessageIndex((previousIndex) => previousIndex + 1);
+    }, currentMessage.sender === "bubby" ? 1300 : 650);
+
+    return () => window.clearTimeout(nextMessageTimer);
+  }, [
+    demoMessageIndex,
+    demoTypedText,
+    demoThinking,
+    demoComplete,
+  ]);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+
+    // Type the user's message
+    if (demoPhase === 0) {
+      if (typedUserMessage.length < demoUserMessage.length) {
+        timeout = setTimeout(() => {
+          setTypedUserMessage(
+              demoUserMessage.slice(0, typedUserMessage.length + 1),
+          );
+        }, 45);
+      } else {
+        timeout = setTimeout(() => {
+          setDemoPhase(1);
+        }, 500);
+      }
+    }
+
+    // Show Bubby thinking
+    if (demoPhase === 1) {
+      timeout = setTimeout(() => {
+        setDemoPhase(2);
+      }, 1400);
+    }
+
+    // Type Bubby's response
+    if (demoPhase === 2) {
+      if (typedBubbyMessage.length < demoBubbyMessage.length) {
+        timeout = setTimeout(() => {
+          setTypedBubbyMessage(
+              demoBubbyMessage.slice(0, typedBubbyMessage.length + 1),
+          );
+        }, 28);
+      } else {
+        timeout = setTimeout(() => {
+          setDemoPhase(3);
+        }, 400);
+      }
+    }
+
+    // Hold the completed conversation, then restart
+    if (demoPhase === 3) {
+      timeout = setTimeout(() => {
+        setTypedUserMessage("");
+        setTypedBubbyMessage("");
+        setDemoPhase(0);
+      }, 4000);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [
+    demoPhase,
+    typedUserMessage,
+    typedBubbyMessage,
+    demoUserMessage,
+    demoBubbyMessage,
+  ]);
 
   const localities = useMemo(
       () =>
@@ -355,84 +551,376 @@ export default function HomePage() {
           />
 
           <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-12 sm:px-6 lg:px-8 lg:pb-20 lg:pt-16">
-            {/* Main hero content */}
             <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.86fr)] lg:gap-16">
-              {/* Copy */}
+              {/* Hero copy */}
               <motion.div
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-2xl"
               >
-                <h1 className="mt-6 font-heading text-4xl font-black leading-[1.06] tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-[3.8rem]">
-                  Find the right property.
-                  <span className="mt-1 block text-primary">
-            Know what you are choosing.
-          </span>
+
+                <h1 className="mt-6 font-heading text-4xl font-black leading-[1.04] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-[3.8rem]">
+                  Finding a property
+                  <span className="block text-primary">
+        should feel like a conversation.
+      </span>
                 </h1>
 
                 <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                  Discover apartments, independent houses, villas, plots,
-                  agricultural land and commercial spaces with clear information
-                  before you enquire.
+                  Tell Bubby what you need in your own words. Mention your city, budget,
+                  property type, bedrooms or anything else, and Bubby will help find
+                  suitable listings.
                 </p>
 
-                <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                  <button
+                      type="button"
+                      onClick={() =>
+                          window.dispatchEvent(new CustomEvent("open-bubby-chat"))
+                      }
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary-dark"
+                  >
+                    <Bot size={18} aria-hidden="true" />
+                    Ask Bubby
+                    <ArrowRight size={17} aria-hidden="true" />
+                  </button>
+
+                  <Link
+                      href="/buy"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-black text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
+                  >
+                    Browse manually
+                  </Link>
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
                   {[
-                    "Multiple property types",
-                    "City and locality search",
-                    "Clear listing information",
+                    "Search naturally",
+                    "Refine with follow-ups",
+                    "Discover matching listings",
                   ].map((item) => (
                       <div
                           key={item}
                           className="flex items-center gap-2 text-sm font-semibold text-slate-600"
                       >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                <CheckCircle2 size={13} aria-hidden="true" />
-              </span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <CheckCircle2 size={13} aria-hidden="true" />
+          </span>
+
                         {item}
                       </div>
                   ))}
                 </div>
               </motion.div>
 
-              {/* Image */}
+              {/* Bubby preview */}
+              {/* Animated Bubby preview */}
               <motion.div
                   initial={{ opacity: 0, x: 24 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.08 }}
-                  className="mx-auto w-full max-w-[540px] lg:mx-0 lg:justify-self-end"
+                  className="mx-auto w-full max-w-[570px] lg:mx-0 lg:justify-self-end"
               >
-                <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border-[6px] border-white bg-slate-200 shadow-[0_28px_75px_rgba(15,23,42,0.18)]">
-                  <Image
-                      src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=86&w=1200"
-                      alt="Modern property interior"
-                      fill
-                      priority
-                      sizes="(max-width: 1024px) 100vw, 540px"
-                      className="object-cover"
+                <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.15)]">
+                  {/* Decorative glow */}
+                  <div
+                      className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-teal-100/80 blur-3xl"
+                      aria-hidden="true"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/5" />
+                  {/* Header */}
+                  <div className="relative flex items-center justify-between border-b border-slate-100 bg-white/90 px-5 py-4 backdrop-blur sm:px-6">
+                    <div className="flex items-center gap-3">
+        <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/25">
+          <Bot size={22} aria-hidden="true" />
 
-                  <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/90 px-3.5 py-2 text-xs font-bold text-slate-900 shadow-md backdrop-blur">
-                    <ShieldCheck
-                        size={15}
-                        className="text-emerald-600"
+          <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500" />
+        </span>
+
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-slate-950">
+                            Bubby AI
+                          </p>
+
+                          <Sparkles
+                              size={14}
+                              className="text-primary"
+                              aria-hidden="true"
+                          />
+                        </div>
+
+                        <p className="mt-0.5 text-xs font-semibold text-emerald-600">
+                          Online · Ready to search
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conversation area */}
+                  <div className="relative h-[430px] overflow-hidden bg-[linear-gradient(180deg,#f8fafc_0%,#f0fdfa_100%)]">
+                    <div
+                        className="pointer-events-none absolute left-1/2 top-10 h-48 w-48 -translate-x-1/2 rounded-full bg-white/70 blur-3xl"
                         aria-hidden="true"
                     />
-                    Clear property details
+
+                    <div className="relative flex h-full flex-col">
+                      <div className="flex-1 overflow-hidden px-4 py-5 sm:px-6">
+                        <div className="space-y-4">
+                          {/* Finished messages */}
+                          {demoMessages.map((message) => (
+                              <motion.div
+                                  key={message.id}
+                                  initial={{
+                                    opacity: 0,
+                                    y: 10,
+                                    scale: 0.98,
+                                  }}
+                                  animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                  }}
+                                  transition={{
+                                    duration: 0.3,
+                                  }}
+                                  className={
+                                    message.sender === "user"
+                                        ? "flex justify-end"
+                                        : "flex items-end gap-2.5"
+                                  }
+                              >
+                                {message.sender === "bubby" && (
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+                    <Bot size={15} aria-hidden="true" />
+                  </span>
+                                )}
+
+                                <div
+                                    className={
+                                      message.sender === "user"
+                                          ? "max-w-[85%] rounded-2xl rounded-br-md bg-slate-950 px-4 py-3 text-sm leading-6 text-white shadow-sm"
+                                          : "max-w-[84%] rounded-2xl rounded-bl-md border border-teal-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm"
+                                    }
+                                >
+                                  {message.text}
+                                </div>
+                              </motion.div>
+                          ))}
+
+                          {/* Currently typing user message */}
+                          {BUBBY_DEMO_MESSAGES[demoMessageIndex]?.sender ===
+                              "user" &&
+                              demoTypedText.length > 0 && (
+                                  <div className="flex justify-end">
+                                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-slate-950 px-4 py-3 text-sm leading-6 text-white shadow-sm">
+                                      {demoTypedText}
+
+                                      <span className="ml-1 inline-block h-4 w-[2px] animate-pulse bg-white align-middle" />
+                                    </div>
+                                  </div>
+                              )}
+
+                          {/* Bubby thinking */}
+                          {BUBBY_DEMO_MESSAGES[demoMessageIndex]?.sender ===
+                              "bubby" &&
+                              demoThinking && (
+                                  <motion.div
+                                      initial={{
+                                        opacity: 0,
+                                        y: 8,
+                                      }}
+                                      animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                      }}
+                                      className="flex items-end gap-2.5"
+                                  >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+                    <Bot size={15} aria-hidden="true" />
+                  </span>
+
+                                    <div className="rounded-2xl rounded-bl-md border border-teal-100 bg-white px-4 py-3.5 shadow-sm">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+                                        <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+                                        <span className="h-2 w-2 animate-bounce rounded-full bg-primary" />
+                                      </div>
+                                    </div>
+
+                                    <span className="mb-2 text-[10px] font-semibold text-slate-400">
+                    Searching listings
+                  </span>
+                                  </motion.div>
+                              )}
+
+                          {/* Currently typing Bubby response */}
+                          {BUBBY_DEMO_MESSAGES[demoMessageIndex]?.sender ===
+                              "bubby" &&
+                              !demoThinking &&
+                              demoTypedText.length > 0 && (
+                                  <div className="flex items-end gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+                    <Bot size={15} aria-hidden="true" />
+                  </span>
+
+                                    <div className="max-w-[84%] rounded-2xl rounded-bl-md border border-teal-100 bg-white px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
+                                      {demoTypedText}
+
+                                      <span className="ml-1 inline-block h-4 w-[2px] animate-pulse bg-primary align-middle" />
+                                    </div>
+                                  </div>
+                              )}
+
+                          {/* Matching property */}
+                          {showDemoProperty && (
+                              <motion.button
+                                  type="button"
+                                  initial={{
+                                    opacity: 0,
+                                    y: 16,
+                                    scale: 0.97,
+                                  }}
+                                  animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                  }}
+                                  transition={{
+                                    type: "spring",
+                                    stiffness: 180,
+                                    damping: 18,
+                                  }}
+                                  onClick={() =>
+                                      window.dispatchEvent(
+                                          new CustomEvent("open-bubby-chat"),
+                                      )
+                                  }
+                                  className="ml-10 block w-[calc(100%-2.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.10)] transition hover:-translate-y-0.5 hover:border-primary"
+                              >
+                                <div className="flex items-center gap-3 p-3">
+                                  <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-200">
+                                    <Image
+                                        src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=500"
+                                        alt="Independent house preview"
+                                        fill
+                                        sizes="96px"
+                                        className="object-cover"
+                                    />
+
+                                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-primary shadow-sm backdrop-blur">
+                      Match
+                    </span>
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-sm font-black text-slate-950">
+                                          Independent House
+                                        </p>
+
+                                        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                                          <MapPin
+                                              size={12}
+                                              className="text-primary"
+                                              aria-hidden="true"
+                                          />
+                                          Maharaja Nagar, Tirunelveli
+                                        </p>
+                                      </div>
+
+                                      <ArrowRight
+                                          size={16}
+                                          className="mt-0.5 shrink-0 text-primary"
+                                          aria-hidden="true"
+                                      />
+                                    </div>
+
+                                    <div className="mt-3 flex items-end justify-between gap-3">
+                                      <div>
+                                        <p className="text-base font-black text-primary">
+                                          ₹50 Lakh
+                                        </p>
+
+                                        <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                                          3 bedrooms · 2 bathrooms
+                                        </p>
+                                      </div>
+
+                                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-700">
+                        Under budget
+                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Progress line */}
+                      <div className="px-5 pb-3 sm:px-6">
+                        <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+                          <motion.div
+                              className="h-full rounded-full bg-primary"
+                              animate={{
+                                width: `${
+                                    Math.min(
+                                        ((demoMessageIndex +
+                                                (showDemoProperty ? 1 : 0)) /
+                                            (BUBBY_DEMO_MESSAGES.length + 1)) *
+                                        100,
+                                        100,
+                                    )
+                                }%`,
+                              }}
+                              transition={{
+                                duration: 0.4,
+                              }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-7">
-                    <p className="text-sm font-bold text-teal-200">
-                      More choices. Better clarity.
-                    </p>
+                  {/* Fake input */}
+                  <div className="relative border-t border-slate-100 bg-white p-4 sm:p-5">
+                    <button
+                        type="button"
+                        onClick={() =>
+                            window.dispatchEvent(
+                                new CustomEvent("open-bubby-chat"),
+                            )
+                        }
+                        className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-left transition hover:border-primary hover:bg-white hover:ring-4 hover:ring-primary/10"
+                    >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+          <Sparkles size={15} aria-hidden="true" />
+        </span>
 
-                    <p className="mt-2 max-w-md text-2xl font-black leading-tight">
-                      Property options for every plan and every stage of life.
-                    </p>
+                      <span className="flex-1 text-sm text-slate-400">
+          Ask Bubby about location, budget or property type...
+        </span>
+
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white transition group-hover:translate-x-0.5">
+          <ArrowRight size={17} aria-hidden="true" />
+        </span>
+                    </button>
+
+                    <div className="mt-3 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                      <span>Natural language</span>
+                      <span className="h-1 w-1 rounded-full bg-slate-300" />
+                      <span>Follow-up searches</span>
+                      <span className="h-1 w-1 rounded-full bg-slate-300" />
+                      <span>Real listings</span>
+                    </div>
                   </div>
                 </div>
+
+                <p className="mt-4 text-center text-xs font-semibold text-slate-500">
+                  Bubby remembers your search preferences while you refine the conversation.
+                </p>
               </motion.div>
             </div>
 

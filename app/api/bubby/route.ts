@@ -169,15 +169,19 @@ interface DeterministicSiteHelp {
 function getSimplePropertySearch(
     latestMessage: string,
 ): BubbySearchFilters | null {
-    const message =
-        latestMessage.toLowerCase();
+    const message = latestMessage.toLowerCase();
 
     const hasSearchLanguage =
         /\b(?:find|show|search|looking for|need|want|house|houses|home|homes|apartment|apartments|flat|flats|villa|villas|bedroom|bedrooms|bhk|bath|baths|bathroom|bathrooms)\b/i.test(
             message,
         );
 
-    if (!hasSearchLanguage) {
+    const maxPrice = parseMaximumPrice(message);
+
+    // Allow budget-only follow-ups such as:
+    // "any under 60 L?"
+    // "below 80 lakh"
+    if (!hasSearchLanguage && maxPrice === null) {
         return null;
     }
 
@@ -244,10 +248,6 @@ function getSimplePropertySearch(
     ) {
         filters.listingPurpose = "sale";
     }
-
-    const maxPrice = parseMaximumPrice(
-        message,
-    );
 
     if (maxPrice !== null) {
         filters.maxPrice = maxPrice;

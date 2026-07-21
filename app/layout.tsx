@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import {
-  Space_Grotesk,
-  Inter,
-  Noto_Sans_Tamil,
+    Manrope,
+    Noto_Sans_Tamil,
 } from "next/font/google";
 import "./globals.css";
 
@@ -14,16 +13,18 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BubbyChat from "@/components/BubbyChat";
 
-const headingFont = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  display: "swap",
+const headingFont = Manrope({
+    subsets: ["latin"],
+    variable: "--font-heading",
+    display: "swap",
+    weight: ["600", "700", "800"],
 });
 
-const bodyFont = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
-  display: "swap",
+const bodyFont = Manrope({
+    subsets: ["latin"],
+    variable: "--font-body",
+    display: "swap",
+    weight: ["400", "500", "600", "700"],
 });
 
 const notoTamil = Noto_Sans_Tamil({

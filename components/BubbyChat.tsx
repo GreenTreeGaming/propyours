@@ -97,6 +97,24 @@ export default function BubbyChat() {
     const hidden = isHiddenRoute(pathname);
 
     useEffect(() => {
+        function handleOpenBubbyChat() {
+            setOpen(true);
+        }
+
+        window.addEventListener(
+            "open-bubby-chat",
+            handleOpenBubbyChat,
+        );
+
+        return () => {
+            window.removeEventListener(
+                "open-bubby-chat",
+                handleOpenBubbyChat,
+            );
+        };
+    }, []);
+
+    useEffect(() => {
         try {
             const savedConversation =
                 sessionStorage.getItem(STORAGE_KEY);
