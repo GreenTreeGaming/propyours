@@ -13,6 +13,9 @@ import Lead from "@/models/Lead";
 import PhoneOtp from "@/models/PhoneOtp";
 import Property from "@/models/Property";
 import User from "@/models/User";
+import {
+    findInappropriateField,
+} from "@/lib/content-moderation";
 
 type UpdateAccountBody = {
     name?: unknown;
@@ -191,6 +194,28 @@ export async function PUT(
         const company = cleanOptionalString(body.company, 150);
         const address = cleanOptionalString(body.address, 300);
         const city = cleanOptionalString(body.city, 100);
+
+        const inappropriateField =
+            findInappropriateField({
+                name,
+                bio,
+                company,
+                city,
+            });
+
+        if (inappropriateField) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Your profile contains language that is not permitted. Please revise it and try again.",
+                    field:
+                    inappropriateField,
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
 
         if (body.name !== undefined) {
             if (!name) {

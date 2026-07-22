@@ -9,6 +9,9 @@ import {
 } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import {
+    findInappropriateField,
+} from "@/lib/content-moderation";
+import {
     COMMERCIAL_TYPES,
     LAND_PROPERTY_TYPES,
     PROPERTY_PURPOSES,
@@ -252,6 +255,33 @@ export async function POST(
                 {
                     error:
                         "Address, locality and city are required.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const inappropriateField =
+            findInappropriateField({
+                description:
+                body.description,
+                address,
+                locality,
+                city,
+                landmark:
+                body.landmark,
+                dimensions:
+                body.dimensions,
+            });
+
+        if (inappropriateField) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Your listing contains language that is not permitted. Please revise it and try again.",
+                    field:
+                    inappropriateField,
                 },
                 {
                     status: 400,

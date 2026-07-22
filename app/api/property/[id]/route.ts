@@ -13,6 +13,9 @@ import {
     deleteUploadThingFilesByUrls,
 } from "@/lib/uploadthing-storage";
 import {
+    findInappropriateField,
+} from "@/lib/content-moderation";
+import {
     LAND_PROPERTY_TYPES,
     PROPERTY_PURPOSES,
     PROPERTY_TYPES,
@@ -213,6 +216,33 @@ export async function GET(
                 },
                 {
                     status: 404,
+                },
+            );
+        }
+
+        const inappropriateField =
+            findInappropriateField({
+                description:
+                body.description,
+                address,
+                locality,
+                city,
+                landmark:
+                body.landmark,
+                dimensions:
+                body.dimensions,
+            });
+
+        if (inappropriateField) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Your listing contains language that is not permitted. Please revise it and try again.",
+                    field:
+                    inappropriateField,
+                },
+                {
+                    status: 400,
                 },
             );
         }

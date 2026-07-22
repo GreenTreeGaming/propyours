@@ -21,6 +21,9 @@ import {
 
 import PhoneOtp from "@/models/PhoneOtp";
 import User from "@/models/User";
+import {
+    hasInappropriateContent,
+} from "@/lib/content-moderation";
 
 export async function POST(
     request: Request,
@@ -42,6 +45,22 @@ export async function POST(
             phone,
             password,
         } = parsed.data;
+
+        if (
+            hasInappropriateContent(
+                name,
+            )
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Please enter an appropriate display name.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
 
         await enforceRateLimit(
             request,
