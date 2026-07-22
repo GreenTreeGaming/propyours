@@ -288,20 +288,30 @@ function formatSize(size?: number, unit?: string): string | null {
   return `${size.toLocaleString("en-IN")} ${unit ?? "sqft"}`;
 }
 
-function getListingBadge(property: Property): string | null {
+function getListingBadge(
+    property: Property,
+): string | null {
   if (
       property.promotedUntil &&
-      new Date(property.promotedUntil).getTime() > Date.now()
+      new Date(
+          property.promotedUntil,
+      ).getTime() > Date.now()
   ) {
     return "Promoted";
   }
 
-  if (property.planSnapshot?.badgeLevel === "premium") {
+  if (
+      property.planSnapshot
+          ?.badgeLevel === "premium"
+  ) {
     return "Premium";
   }
 
-  if (property.planSnapshot?.badgeLevel === "verified") {
-    return "Verified";
+  if (
+      property.planSnapshot
+          ?.badgeLevel === "verified"
+  ) {
+    return "Featured";
   }
 
   if (property.featured) {
@@ -1507,7 +1517,7 @@ function BuyPageContent() {
                     Visible listing labels
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Featured and verified status stays clear.
+                    Featured and promoted status stays clear.
                   </p>
                 </div>
 

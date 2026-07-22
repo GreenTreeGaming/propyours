@@ -178,6 +178,10 @@ export const PLAN_CATALOG = {
 
             rankingLevel: "featured",
             compareVisibility: "highlighted",
+
+            // Legacy internal value.
+// This currently represents a paid featured-listing label,
+// not identity or document verification.
             badgeLevel: "verified",
             analyticsLevel: "basic",
 
@@ -225,6 +229,10 @@ export const PLAN_CATALOG = {
 
             rankingLevel: "priority",
             compareVisibility: "priority",
+
+            // Legacy internal value.
+// This currently represents a paid featured-listing label,
+// not identity or document verification.
             badgeLevel: "verified",
             analyticsLevel: "advanced",
 

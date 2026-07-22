@@ -529,7 +529,7 @@ export default function HomePage() {
                 </h1>
 
                 <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                  Browse verified listings across apartments, villas, plots, commercial spaces and more—or simply tell Bubby what you're looking for and let AI do the searching for you.
+                  Browse featured listings across apartments, villas, plots, commercial spaces and more—or simply tell Bubby what you're looking for and let AI do the searching for you.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -1994,7 +1994,7 @@ export default function HomePage() {
                       },
                       {
                         title: "Listing labels",
-                        description: "Recognise featured or verified listings.",
+                        description: "Recognise featured or promoted listings.",
                         icon: BadgeCheck,
                       },
                     ].map((item) => {
