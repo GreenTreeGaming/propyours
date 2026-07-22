@@ -34,6 +34,13 @@ import type {
     BubbySearchFilters,
 } from "@/lib/bubby/types";
 
+import {
+    BUBBY_COMMERCIAL_TYPES,
+    BUBBY_LISTING_PURPOSES,
+    BUBBY_PROPERTY_TYPES,
+    BUBBY_SORT_OPTIONS,
+} from "@/lib/bubby/types";
+
 interface UiMessage {
     id: string;
     role: "user" | "assistant";
@@ -848,6 +855,169 @@ function createId(): string {
         .slice(2)}`;
 }
 
+function isNullableString(
+    value: unknown,
+): value is string | null {
+    return (
+        value === null ||
+        typeof value === "string"
+    );
+}
+
+function isNullableNumber(
+    value: unknown,
+): value is number | null {
+    return (
+        value === null ||
+        (
+            typeof value === "number" &&
+            Number.isFinite(value)
+        )
+    );
+}
+
+function parseStoredSearchFilters(
+    value: unknown,
+): BubbySearchFilters | null {
+    if (!isRecord(value)) {
+        return null;
+    }
+
+    const requiredKeys = [
+        "listingPurpose",
+        "propertyType",
+        "commercialType",
+        "city",
+        "locality",
+        "minPrice",
+        "maxPrice",
+        "minBedrooms",
+        "maxBedrooms",
+        "minBathrooms",
+        "maxBathrooms",
+        "minSize",
+        "maxSize",
+        "amenities",
+        "negotiable",
+        "sort",
+        "searchText",
+    ] as const;
+
+    if (
+        !requiredKeys.every(
+            (key) => key in value,
+        )
+    ) {
+        return null;
+    }
+
+    if (
+        !isNullableString(
+            value.listingPurpose,
+        ) ||
+        !isNullableString(
+            value.propertyType,
+        ) ||
+        !isNullableString(
+            value.commercialType,
+        ) ||
+        !isNullableString(
+            value.city,
+        ) ||
+        !isNullableString(
+            value.locality,
+        ) ||
+        !isNullableNumber(
+            value.minPrice,
+        ) ||
+        !isNullableNumber(
+            value.maxPrice,
+        ) ||
+        !isNullableNumber(
+            value.minBedrooms,
+        ) ||
+        !isNullableNumber(
+            value.maxBedrooms,
+        ) ||
+        !isNullableNumber(
+            value.minBathrooms,
+        ) ||
+        !isNullableNumber(
+            value.maxBathrooms,
+        ) ||
+        !isNullableNumber(
+            value.minSize,
+        ) ||
+        !isNullableNumber(
+            value.maxSize,
+        ) ||
+        !Array.isArray(
+            value.amenities,
+        ) ||
+        !value.amenities.every(
+            (item) =>
+                typeof item ===
+                "string",
+        ) ||
+        !(
+            value.negotiable ===
+            null ||
+            typeof value.negotiable ===
+            "boolean"
+        ) ||
+        !isNullableString(
+            value.sort,
+        ) ||
+        !isNullableString(
+            value.searchText,
+        )
+    ) {
+        return null;
+    }
+
+    return {
+        listingPurpose:
+            value.listingPurpose as
+                BubbySearchFilters["listingPurpose"],
+
+        propertyType:
+            value.propertyType as
+                BubbySearchFilters["propertyType"],
+
+        commercialType:
+            value.commercialType as
+                BubbySearchFilters["commercialType"],
+
+        city: value.city,
+        locality: value.locality,
+        minPrice: value.minPrice,
+        maxPrice: value.maxPrice,
+        minBedrooms:
+        value.minBedrooms,
+        maxBedrooms:
+        value.maxBedrooms,
+        minBathrooms:
+        value.minBathrooms,
+        maxBathrooms:
+        value.maxBathrooms,
+        minSize: value.minSize,
+        maxSize: value.maxSize,
+
+        amenities:
+            value.amenities as string[],
+
+        negotiable:
+        value.negotiable,
+
+        sort:
+            value.sort as
+                BubbySearchFilters["sort"],
+
+        searchText:
+        value.searchText,
+    };
+}
+
 function parseStoredMessages(
     value: unknown,
 ): UiMessage[] {
@@ -887,11 +1057,9 @@ function parseStoredMessages(
                     ? (item.actions as BubbyActionLink[])
                     : undefined,
 
-                searchFilters: isRecord(
+                searchFilters: parseStoredSearchFilters(
                     item.searchFilters,
-                )
-                    ? (item.searchFilters as BubbySearchFilters)
-                    : null,
+                ),
             }),
         )
         .slice(-30);
@@ -918,11 +1086,9 @@ function parseApiResponse(
         actions:
             value.actions as BubbyActionLink[],
         searchFilters:
-            isRecord(
+            parseStoredSearchFilters(
                 value.searchFilters,
-            )
-                ? (value.searchFilters as BubbySearchFilters)
-                : null,
+            ),
     };
 }
 

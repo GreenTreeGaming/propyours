@@ -5,6 +5,28 @@ import User from "@/models/User";
 import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 
+import {
+    createHash,
+} from "node:crypto";
+import mongoose from "mongoose";
+
+import {
+    getHashedClientIdentifier,
+} from "@/lib/request-identity";
+import {
+    createRateLimitResponse,
+    enforceRateLimit,
+    RateLimitError,
+} from "@/lib/rate-limit";
+import {
+    parseJsonBody,
+} from "@/lib/validation/api";
+import {
+    analyticsEventSchema,
+} from "@/lib/validation/analytics";
+
+import AnalyticsEvent from "@/models/AnalyticsEvent";
+
 type AnalyticsEventType = "view" | "phoneClick";
 
 function getTodayKey() {
@@ -71,100 +93,418 @@ function getAllowedAnalytics(property: any, analyticsLevel: string) {
     };
 }
 
+function getAnalyticsWindowMs(
+    eventType:
+        | "view"
+        | "phoneClick",
+): number {
+    return eventType === "view"
+        ? 30 * 60 * 1_000
+        : 5 * 60 * 1_000;
+}
+
+function createAnalyticsDedupeId({
+                                     propertyId,
+                                     eventType,
+                                     clientIdentifier,
+                                     windowStart,
+                                 }: {
+    propertyId: string;
+    eventType:
+        | "view"
+        | "phoneClick";
+    clientIdentifier: string;
+    windowStart: number;
+}): string {
+    return createHash("sha256")
+        .update(
+            [
+                propertyId,
+                eventType,
+                clientIdentifier,
+                windowStart,
+            ].join(":"),
+        )
+        .digest("hex");
+}
+
+function isDuplicateKeyError(
+    error: unknown,
+): error is {
+    code: number;
+} {
+    return (
+        typeof error ===
+        "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === 11000
+    );
+}
+
 export async function POST(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    request: Request,
+    {
+        params,
+    }: {
+        params: Promise<{
+            id: string;
+        }>;
+    },
 ) {
     try {
-        await connectDB();
+        const parsed =
+            await parseJsonBody(
+                request,
+                analyticsEventSchema,
+            );
 
-        const { id } = await params;
-        const body = await req.json();
-        const eventType = body.type as AnalyticsEventType;
+        if (!parsed.success) {
+            return parsed.response;
+        }
 
-        if (!["view", "phoneClick"].includes(eventType)) {
+        const {
+            type: eventType,
+        } = parsed.data;
+
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "property-analytics",
+                windowMs:
+                    60 * 1_000,
+                maximumRequests: 60,
+            },
+        );
+
+        const {
+            id,
+        } = await params;
+
+        if (
+            !mongoose.isValidObjectId(
+                id,
+            )
+        ) {
             return NextResponse.json(
-                { error: "Invalid analytics event type" },
-                { status: 400 }
+                {
+                    error:
+                        "Invalid property ID",
+                },
+                {
+                    status: 400,
+                },
             );
         }
 
-        const today = getTodayKey();
+        await connectDB();
 
-        const property = await Property.findById(id);
+        const property =
+            await Property.findById(
+                id,
+            )
+                .select(
+                    "_id userId status listingExpiresAt",
+                )
+                .lean();
 
         if (!property) {
             return NextResponse.json(
-                { error: "Property not found" },
-                { status: 404 }
+                {
+                    error:
+                        "Property not found",
+                },
+                {
+                    status: 404,
+                },
             );
         }
 
-        let viewerUserId: string | null = null;
+        if (
+            property.status !==
+            "active"
+        ) {
+            return NextResponse.json(
+                {
+                    success: true,
+                    skipped:
+                        "inactive_property",
+                },
+            );
+        }
+
+        if (
+            property.listingExpiresAt &&
+            new Date(
+                property.listingExpiresAt,
+            ).getTime() <=
+            Date.now()
+        ) {
+            return NextResponse.json(
+                {
+                    success: true,
+                    skipped:
+                        "expired_property",
+                },
+            );
+        }
+
+        let viewerUserId:
+            string | null = null;
 
         try {
-            const auth = await getAuthenticatedUser();
+            const auth =
+                await getAuthenticatedUser();
 
-            if (!isAuthError(auth)) {
-                viewerUserId = auth.userId;
+            if (
+                !isAuthError(auth)
+            ) {
+                viewerUserId =
+                    auth.userId;
             }
         } catch {
             viewerUserId = null;
         }
 
-        if (viewerUserId && property.userId.toString() === viewerUserId) {
-            return NextResponse.json({
-                success: true,
-                skipped: "owner_view",
+        if (
+            viewerUserId &&
+            property.userId.toString() ===
+            viewerUserId
+        ) {
+            return NextResponse.json(
+                {
+                    success: true,
+                    skipped:
+                        "owner_activity",
+                },
+            );
+        }
+
+        const clientIdentifier =
+            viewerUserId
+                ? `user:${viewerUserId}`
+                : `client:${getHashedClientIdentifier(
+                    request,
+                )}`;
+
+        const windowMs =
+            getAnalyticsWindowMs(
+                eventType,
+            );
+
+        const now = Date.now();
+
+        const windowStart =
+            Math.floor(
+                now / windowMs,
+            ) * windowMs;
+
+        const dedupeId =
+            createAnalyticsDedupeId({
+                propertyId: id,
+                eventType,
+                clientIdentifier,
+                windowStart,
             });
-        }
 
-        if (eventType === "view") {
-            property.analytics.views = (property.analytics.views || 0) + 1;
-
-            const existingDay = property.analytics.dailyStats.find(
-                (stat: any) => stat.date === today
-            );
-
-            if (existingDay) {
-                existingDay.views = (existingDay.views || 0) + 1;
-            } else {
-                property.analytics.dailyStats.push({
-                    date: today,
-                    views: 1,
-                    phoneClicks: 0,
+        try {
+            await AnalyticsEvent.create({
+                _id: dedupeId,
+                propertyId:
+                property._id,
+                eventType,
+                expiresAt:
+                    new Date(
+                        windowStart +
+                        windowMs *
+                        2,
+                    ),
+            });
+        } catch (error) {
+            if (
+                isDuplicateKeyError(
+                    error,
+                )
+            ) {
+                return NextResponse.json({
+                    success: true,
+                    skipped:
+                        "duplicate_event",
                 });
             }
+
+            throw error;
         }
 
-        if (eventType === "phoneClick") {
-            property.analytics.phoneClicks =
-                (property.analytics.phoneClicks || 0) + 1;
+        const today =
+            getTodayKey();
 
-            const existingDay = property.analytics.dailyStats.find(
-                (stat: any) => stat.date === today
-            );
+        const totalField =
+            eventType === "view"
+                ? "analytics.views"
+                : "analytics.phoneClicks";
 
-            if (existingDay) {
-                existingDay.phoneClicks = (existingDay.phoneClicks || 0) + 1;
-            } else {
-                property.analytics.dailyStats.push({
-                    date: today,
-                    views: 0,
-                    phoneClicks: 1,
-                });
-            }
-        }
+        const dailyField =
+            eventType === "view"
+                ? "views"
+                : "phoneClicks";
 
-        await property.save();
+        await Property.updateOne(
+            {
+                _id: property._id,
+            },
+            [
+                {
+                    $set: {
+                        [totalField]: {
+                            $add: [
+                                {
+                                    $ifNull: [
+                                        `$${totalField}`,
+                                        0,
+                                    ],
+                                },
+                                1,
+                            ],
+                        },
 
-        return NextResponse.json({ success: true });
+                        "analytics.dailyStats":
+                            {
+                                $let: {
+                                    vars: {
+                                        stats: {
+                                            $ifNull: [
+                                                "$analytics.dailyStats",
+                                                [],
+                                            ],
+                                        },
+                                    },
+
+                                    in: {
+                                        $cond: [
+                                            {
+                                                $in: [
+                                                    today,
+                                                    "$$stats.date",
+                                                ],
+                                            },
+
+                                            {
+                                                $map: {
+                                                    input:
+                                                        "$$stats",
+                                                    as: "stat",
+
+                                                    in: {
+                                                        $cond: [
+                                                            {
+                                                                $eq: [
+                                                                    "$$stat.date",
+                                                                    today,
+                                                                ],
+                                                            },
+
+                                                            {
+                                                                $mergeObjects:
+                                                                    [
+                                                                        "$$stat",
+
+                                                                        {
+                                                                            [dailyField]:
+                                                                                {
+                                                                                    $add: [
+                                                                                        {
+                                                                                            $ifNull:
+                                                                                                [
+                                                                                                    `$$stat.${dailyField}`,
+                                                                                                    0,
+                                                                                                ],
+                                                                                        },
+                                                                                        1,
+                                                                                    ],
+                                                                                },
+                                                                        },
+                                                                    ],
+                                                            },
+
+                                                            "$$stat",
+                                                        ],
+                                                    },
+                                                },
+                                            },
+
+                                            {
+                                                $concatArrays:
+                                                    [
+                                                        "$$stats",
+
+                                                        [
+                                                            {
+                                                                date: today,
+                                                                views:
+                                                                    eventType ===
+                                                                    "view"
+                                                                        ? 1
+                                                                        : 0,
+
+                                                                phoneClicks:
+                                                                    eventType ===
+                                                                    "phoneClick"
+                                                                        ? 1
+                                                                        : 0,
+                                                            },
+                                                        ],
+                                                    ],
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                    },
+                },
+
+                {
+                    $set: {
+                        "analytics.dailyStats":
+                            {
+                                $slice: [
+                                    "$analytics.dailyStats",
+                                    -90,
+                                ],
+                            },
+                    },
+                },
+            ],
+        );
+
+        return NextResponse.json({
+            success: true,
+            recorded: true,
+        });
     } catch (error) {
-        console.error("Failed to record analytics:", error);
+        if (
+            error instanceof
+            RateLimitError
+        ) {
+            return createRateLimitResponse(
+                error,
+            );
+        }
+
+        console.error(
+            "Failed to record analytics:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Failed to record analytics" },
-            { status: 500 }
+            {
+                error:
+                    "Failed to record analytics",
+            },
+            {
+                status: 500,
+            },
         );
     }
 }

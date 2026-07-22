@@ -5,6 +5,7 @@ import {
   Suspense,
   useEffect,
   useMemo,
+  useCallback,
   useRef,
   useState,
 } from "react";
@@ -72,6 +73,68 @@ interface Property {
     badgeLevel?: "none" | "verified" | "premium" | string;
     rankingLevel?: "standard" | "featured" | "priority" | "top" | string;
   };
+}
+
+interface PropertySearchApiResponse {
+  properties: Property[];
+
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+function isPropertySearchApiResponse(
+    value: unknown,
+): value is PropertySearchApiResponse {
+  if (
+      typeof value !== "object" ||
+      value === null
+  ) {
+    return false;
+  }
+
+  const record =
+      value as Record<
+          string,
+          unknown
+      >;
+
+  if (
+      !Array.isArray(
+          record.properties,
+      ) ||
+      typeof record.pagination !==
+      "object" ||
+      record.pagination === null
+  ) {
+    return false;
+  }
+
+  const pagination =
+      record.pagination as Record<
+          string,
+          unknown
+      >;
+
+  return (
+      typeof pagination.page ===
+      "number" &&
+      typeof pagination.limit ===
+      "number" &&
+      typeof pagination.total ===
+      "number" &&
+      typeof pagination.totalPages ===
+      "number" &&
+      typeof pagination.hasNextPage ===
+      "boolean" &&
+      typeof pagination.hasPreviousPage ===
+      "boolean"
+  );
 }
 
 type SearchMode = "buy" | "rent" | "commercial";
@@ -740,10 +803,42 @@ function BuyPageContent() {
 
   const initialMode = parseMode(searchParams.get("purpose"));
 
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [requestKey, setRequestKey] = useState(0);
+  const [properties, setProperties] =
+      useState<Property[]>([]);
+
+  const [loading, setLoading] =
+      useState(true);
+
+  const [loadingMore, setLoadingMore] =
+      useState(false);
+
+  const [
+    loadError,
+    setLoadError,
+  ] = useState("");
+
+  const [
+    loadMoreError,
+    setLoadMoreError,
+  ] = useState("");
+
+  const [
+    requestKey,
+    setRequestKey,
+  ] = useState(0);
+
+  const [currentPage, setCurrentPage] =
+      useState(1);
+
+  const [
+    totalProperties,
+    setTotalProperties,
+  ] = useState(0);
+
+  const [
+    hasNextPage,
+    setHasNextPage,
+  ] = useState(false);
 
   const [mode, setMode] = useState<SearchMode>(initialMode);
   const [selectedCity, setSelectedCity] = useState(
@@ -778,8 +873,6 @@ function BuyPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(8);
-
   const searchRef = useRef<HTMLDivElement>(null);
 
   const availablePropertyTypes = useMemo(
@@ -829,68 +922,271 @@ function BuyPageContent() {
     );
   }, [searchParams]);
 
+  const fetchProperties =
+      useCallback(
+          async ({
+                   page,
+                   append,
+                   signal,
+                 }: {
+            page: number;
+            append: boolean;
+            signal?: AbortSignal;
+          }) => {
+            if (append) {
+              setLoadingMore(true);
+              setLoadMoreError("");
+            } else {
+              setLoading(true);
+              setLoadError("");
+              setLoadMoreError("");
+            }
+
+            try {
+              const apiParams =
+                  new URLSearchParams();
+
+              apiParams.set(
+                  "purpose",
+                  mode,
+              );
+
+              apiParams.set(
+                  "page",
+                  String(page),
+              );
+
+              apiParams.set(
+                  "limit",
+                  "8",
+              );
+
+              if (
+                  selectedCity !== "All"
+              ) {
+                apiParams.set(
+                    "city",
+                    selectedCity,
+                );
+              }
+
+              if (searchQuery) {
+                apiParams.set(
+                    "location",
+                    searchQuery,
+                );
+              }
+
+              if (
+                  selectedType !== "All"
+              ) {
+                apiParams.set(
+                    "type",
+                    selectedType,
+                );
+              }
+
+              if (
+                  selectedBHK !== "All"
+              ) {
+                apiParams.set(
+                    "bhk",
+                    selectedBHK,
+                );
+              }
+
+              if (minPrice) {
+                apiParams.set(
+                    "minPrice",
+                    minPrice,
+                );
+              }
+
+              if (maxPrice) {
+                apiParams.set(
+                    "maxPrice",
+                    maxPrice,
+                );
+              }
+
+              if (featuredOnly) {
+                apiParams.set(
+                    "filter",
+                    "featured",
+                );
+              }
+
+              if (
+                  sortBy !== "default"
+              ) {
+                apiParams.set(
+                    "sort",
+                    sortBy,
+                );
+              }
+
+              const response =
+                  await fetch(
+                      `/api/property?${apiParams.toString()}`,
+                      {
+                        signal,
+                      },
+                  );
+
+              const payload: unknown =
+                  await response.json();
+
+              if (!response.ok) {
+                const message =
+                    typeof payload ===
+                    "object" &&
+                    payload !== null &&
+                    "error" in payload &&
+                    typeof payload.error ===
+                    "string"
+                        ? payload.error
+                        : `Property request failed with status ${response.status}`;
+
+                throw new Error(
+                    message,
+                );
+              }
+
+              if (
+                  !isPropertySearchApiResponse(
+                      payload,
+                  )
+              ) {
+                throw new Error(
+                    "Property API returned an invalid response.",
+                );
+              }
+
+              if (append) {
+                setProperties(
+                    (
+                        existingProperties,
+                    ) => {
+                      const propertyMap =
+                          new Map(
+                              existingProperties.map(
+                                  (
+                                      property,
+                                  ) => [
+                                    property._id,
+                                    property,
+                                  ],
+                              ),
+                          );
+
+                      for (
+                          const property of
+                          payload.properties
+                          ) {
+                        propertyMap.set(
+                            property._id,
+                            property,
+                        );
+                      }
+
+                      return Array.from(
+                          propertyMap.values(),
+                      );
+                    },
+                );
+              } else {
+                setProperties(
+                    payload.properties,
+                );
+              }
+
+              setCurrentPage(
+                  payload.pagination
+                      .page,
+              );
+
+              setTotalProperties(
+                  payload.pagination
+                      .total,
+              );
+
+              setHasNextPage(
+                  payload.pagination
+                      .hasNextPage,
+              );
+            } catch (error) {
+              if (
+                  error instanceof
+                  DOMException &&
+                  error.name ===
+                  "AbortError"
+              ) {
+                return;
+              }
+
+              console.error(
+                  "Unable to load properties:",
+                  error,
+              );
+
+              const message =
+                  error instanceof Error
+                      ? error.message
+                      : "We could not load the property listings. Please try again.";
+
+              if (append) {
+                setLoadMoreError(
+                    message,
+                );
+              } else {
+                setProperties([]);
+                setTotalProperties(0);
+                setHasNextPage(false);
+
+                setLoadError(
+                    message,
+                );
+              }
+            } finally {
+              if (append) {
+                setLoadingMore(false);
+              } else if (
+                  !signal?.aborted
+              ) {
+                setLoading(false);
+              }
+            }
+          },
+          [
+            featuredOnly,
+            maxPrice,
+            minPrice,
+            mode,
+            searchQuery,
+            selectedBHK,
+            selectedCity,
+            selectedType,
+            sortBy,
+          ],
+      );
+
   useEffect(() => {
-    const controller = new AbortController();
+    const controller =
+        new AbortController();
 
-    async function fetchProperties() {
-      setLoading(true);
-      setLoadError("");
+    void fetchProperties({
+      page: 1,
+      append: false,
+      signal:
+      controller.signal,
+    });
 
-      try {
-        const apiParams = new URLSearchParams();
-
-        if (featuredOnly) {
-          apiParams.set("filter", "featured");
-        }
-
-        if (sortBy !== "default") {
-          apiParams.set("sort", sortBy);
-        }
-
-        const query = apiParams.toString();
-        const endpoint = query ? `/api/property?${query}` : "/api/property";
-
-        const response = await fetch(endpoint, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(
-              `Property request failed with status ${response.status}`,
-          );
-        }
-
-        const payload: unknown = await response.json();
-
-        if (!Array.isArray(payload)) {
-          throw new Error("Property API returned an invalid response.");
-        }
-
-        setProperties(payload as Property[]);
-      } catch (error) {
-        if (
-            error instanceof DOMException &&
-            error.name === "AbortError"
-        ) {
-          return;
-        }
-
-        console.error("Unable to load properties:", error);
-        setProperties([]);
-        setLoadError(
-            "We could not load the property listings. Please try again.",
-        );
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void fetchProperties();
-
-    return () => controller.abort();
-  }, [featuredOnly, requestKey, sortBy]);
+    return () =>
+        controller.abort();
+  }, [
+    fetchProperties,
+    requestKey,
+  ]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -1024,92 +1320,6 @@ function BuyPageContent() {
         .filter((item) => item.label.toLowerCase().includes(query))
         .slice(0, 8);
   }, [searchTerm, searchableItems]);
-
-  const filteredProperties = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    return properties.filter((property) => {
-      const matchesMode =
-          mode === "rent"
-              ? property.purpose === "Rent"
-              : mode === "commercial"
-                  ? property.propertyType === "Commercial"
-                  : property.purpose !== "Rent" &&
-                  property.purpose !== "PG/CO-Living";
-
-      const matchesCity =
-          selectedCity === "All" ||
-          property.city.toLowerCase() === selectedCity.toLowerCase();
-
-      const matchesSearch =
-          !normalizedQuery ||
-          property.address?.toLowerCase().includes(normalizedQuery) ||
-          property.locality?.toLowerCase().includes(normalizedQuery) ||
-          property.city?.toLowerCase().includes(normalizedQuery) ||
-          property.propertyType?.toLowerCase().includes(normalizedQuery);
-
-      const normalizedSelectedType =
-          selectedType === "Apartments"
-              ? "Apartment"
-              : selectedType === "Villas"
-                  ? "Villa"
-                  : selectedType;
-
-      const matchesType =
-          normalizedSelectedType === "All" ||
-          property.propertyType === normalizedSelectedType;
-
-      const bedrooms = property.bedrooms ?? 0;
-      const matchesBHK =
-          selectedBHK === "All" ||
-          (selectedBHK === "Studio"
-              ? bedrooms === 0
-              : selectedBHK === "4+"
-                  ? bedrooms >= 4
-                  : bedrooms === Number.parseInt(selectedBHK, 10));
-
-      const matchesMinPrice =
-          !minPrice || property.price >= Number.parseInt(minPrice, 10);
-
-      const matchesMaxPrice =
-          !maxPrice || property.price <= Number.parseInt(maxPrice, 10);
-
-      return (
-          matchesMode &&
-          matchesCity &&
-          matchesSearch &&
-          matchesType &&
-          matchesBHK &&
-          matchesMinPrice &&
-          matchesMaxPrice
-      );
-    });
-  }, [
-    maxPrice,
-    minPrice,
-    mode,
-    properties,
-    searchQuery,
-    selectedBHK,
-    selectedCity,
-    selectedType,
-  ]);
-
-  const visibleProperties = filteredProperties.slice(0, visibleCount);
-
-  useEffect(() => {
-    setVisibleCount(8);
-  }, [
-    featuredOnly,
-    maxPrice,
-    minPrice,
-    mode,
-    searchQuery,
-    selectedBHK,
-    selectedCity,
-    selectedType,
-    sortBy,
-  ]);
 
   const activeFilters = [
     selectedCity !== "All"
@@ -1247,6 +1457,20 @@ function BuyPageContent() {
     setShowSuggestions(false);
   }
 
+  async function handleLoadMore() {
+    if (
+        loadingMore ||
+        !hasNextPage
+    ) {
+      return;
+    }
+
+    await fetchProperties({
+      page: currentPage + 1,
+      append: true,
+    });
+  }
+
   const resultHeading =
       selectedCity === "All"
           ? `Properties across Tamil Nadu`
@@ -1338,8 +1562,8 @@ function BuyPageContent() {
                 <p className="text-xs font-semibold text-slate-400">
                   {loading
                       ? "Loading available properties…"
-                      : `${filteredProperties.length} matching ${
-                          filteredProperties.length === 1
+                      : `${totalProperties} matching ${
+                          totalProperties === 1
                               ? "property"
                               : "properties"
                       }`}
@@ -1536,8 +1760,8 @@ function BuyPageContent() {
                     <p className="mt-1 text-sm text-slate-500">
                       {loading
                           ? "Checking available listings…"
-                          : `${filteredProperties.length} ${
-                              filteredProperties.length === 1
+                          : `${totalProperties} ${
+                              totalProperties === 1
                                   ? "match"
                                   : "matches"
                           } based on your current search`}
@@ -1703,7 +1927,7 @@ function BuyPageContent() {
                         Try again
                       </button>
                     </div>
-                ) : filteredProperties.length > 0 ? (
+                ) : properties.length > 0 ? (
                     <>
                       <div
                           className={
@@ -1712,7 +1936,7 @@ function BuyPageContent() {
                                 : "space-y-5"
                           }
                       >
-                        {visibleProperties.map((property, index) => (
+                        {properties.map((property, index) => (
                             <PropertyCard
                                 key={property._id}
                                 property={property}
@@ -1722,23 +1946,58 @@ function BuyPageContent() {
                         ))}
                       </div>
 
-                      {visibleCount < filteredProperties.length ? (
+                      {hasNextPage ? (
                           <div className="mt-8 flex flex-col items-center">
                             <p className="mb-3 text-xs font-semibold text-slate-400">
-                              Showing {visibleProperties.length} of{" "}
-                              {filteredProperties.length} properties
+                              Showing{" "}
+                              {properties.length} of{" "}
+                              {totalProperties} properties
                             </p>
+
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setVisibleCount((count) => count + 8)
+                                onClick={
+                                  handleLoadMore
                                 }
-                                className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-800 shadow-sm transition hover:border-primary hover:text-primary"
+                                disabled={
+                                  loadingMore
+                                }
+                                className="inline-flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-sm font-black text-slate-800 shadow-sm transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              Load more properties
-                              <ArrowRight size={16} aria-hidden="true" />
+                              {loadingMore ? (
+                                  <>
+                                    <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                        aria-hidden="true"
+                                    />
+                                    Loading more
+                                  </>
+                              ) : (
+                                  <>
+                                    Load more properties
+                                    <ArrowRight
+                                        size={16}
+                                        aria-hidden="true"
+                                    />
+                                  </>
+                              )}
                             </button>
+
+                            {loadMoreError ? (
+                                <p className="mt-3 text-center text-xs font-semibold text-red-500">
+                                  {loadMoreError}
+                                </p>
+                            ) : null}
                           </div>
+                      ) : properties.length > 0 ? (
+                          <p className="mt-8 text-center text-xs font-semibold text-slate-400">
+                            Showing all{" "}
+                            {totalProperties} matching{" "}
+                            {totalProperties === 1
+                                ? "property"
+                                : "properties"}
+                          </p>
                       ) : null}
                     </>
                 ) : (
@@ -1838,7 +2097,7 @@ function BuyPageContent() {
                         Refine results
                       </h2>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {filteredProperties.length} current matches
+                        {totalProperties} current matches
                       </p>
                     </div>
 

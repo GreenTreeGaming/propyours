@@ -1,76 +1,218 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/mongoose";
+import {
+    NextResponse,
+} from "next/server";
+
+import {
+    connectDB,
+} from "@/lib/mongoose";
+import {
+    createRateLimitResponse,
+    enforceRateLimit,
+    RateLimitError,
+} from "@/lib/rate-limit";
+import {
+    parseJsonBody,
+} from "@/lib/validation/api";
+import {
+    verifyPhoneOtpSchema,
+} from "@/lib/validation/auth";
+
 import PhoneOtp from "@/models/PhoneOtp";
 
-export async function POST(req: Request) {
-    try {
-        const { phone, otp } = await req.json();
+const MAX_OTP_ATTEMPTS = 5;
 
-        if (!phone || !otp) {
-            return NextResponse.json(
-                { error: "Phone number and OTP are required" },
-                { status: 400 }
+export async function POST(
+    request: Request,
+) {
+    try {
+        const parsed =
+            await parseJsonBody(
+                request,
+                verifyPhoneOtpSchema,
             );
+
+        if (!parsed.success) {
+            return parsed.response;
         }
 
-        const normalizedPhone = phone.trim();
-        const normalizedOtp = otp.trim();
+        const {
+            phone,
+            otp,
+        } = parsed.data;
+
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "verify-phone-otp-ip",
+                windowMs:
+                    15 * 60 * 1_000,
+                maximumRequests: 20,
+            },
+        );
+
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "verify-phone-otp-phone",
+                windowMs:
+                    15 * 60 * 1_000,
+                maximumRequests: 8,
+                subject: phone,
+            },
+        );
 
         await connectDB();
 
-        const record = await PhoneOtp.findOne({ phone: normalizedPhone });
+        const record =
+            await PhoneOtp.findOne({
+                phone,
+                expiresAt: {
+                    $gt: new Date(),
+                },
+                verified: false,
+                attempts: {
+                    $lt:
+                    MAX_OTP_ATTEMPTS,
+                },
+            });
 
         if (!record) {
             return NextResponse.json(
-                { error: "OTP not found or expired" },
-                { status: 400 }
+                {
+                    error:
+                        "OTP not found, expired, or locked.",
+                },
+                {
+                    status: 400,
+                },
             );
         }
 
-        if (record.expiresAt < new Date()) {
-            await PhoneOtp.deleteOne({ _id: record._id });
-
-            return NextResponse.json(
-                { error: "OTP has expired" },
-                { status: 400 }
+        const isValid =
+            await bcrypt.compare(
+                otp,
+                record.otpHash,
             );
-        }
-
-        if (record.attempts >= 5) {
-            await PhoneOtp.deleteOne({ _id: record._id });
-
-            return NextResponse.json(
-                { error: "Too many incorrect attempts. Please request a new OTP." },
-                { status: 429 }
-            );
-        }
-
-        const isValid = await bcrypt.compare(normalizedOtp, record.otpHash);
 
         if (!isValid) {
-            record.attempts += 1;
-            await record.save();
+            const updated =
+                await PhoneOtp.findOneAndUpdate(
+                    {
+                        _id:
+                        record._id,
+                        verified: false,
+                        attempts: {
+                            $lt:
+                            MAX_OTP_ATTEMPTS,
+                        },
+                    },
+                    {
+                        $inc: {
+                            attempts: 1,
+                        },
+                    },
+                    {
+                        new: true,
+                    },
+                );
+
+            const attempts =
+                updated?.attempts ??
+                MAX_OTP_ATTEMPTS;
+
+            if (
+                attempts >=
+                MAX_OTP_ATTEMPTS
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "Too many incorrect attempts. Request a new OTP.",
+                    },
+                    {
+                        status: 429,
+                    },
+                );
+            }
 
             return NextResponse.json(
-                { error: "Invalid OTP" },
-                { status: 400 }
+                {
+                    error:
+                        "Invalid OTP",
+
+                    attemptsRemaining:
+                        MAX_OTP_ATTEMPTS -
+                        attempts,
+                },
+                {
+                    status: 400,
+                },
             );
         }
 
-        record.verified = true;
-        await record.save();
+        const verified =
+            await PhoneOtp.findOneAndUpdate(
+                {
+                    _id: record._id,
+                    verified: false,
+                    expiresAt: {
+                        $gt: new Date(),
+                    },
+                },
+                {
+                    $set: {
+                        verified: true,
+                        verifiedAt:
+                            new Date(),
+                    },
+                },
+                {
+                    new: true,
+                },
+            );
 
-        return NextResponse.json(
-            { message: "Phone verified successfully" },
-            { status: 200 }
-        );
+        if (!verified) {
+            return NextResponse.json(
+                {
+                    error:
+                        "OTP could not be verified.",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            message:
+                "Phone verified successfully",
+        });
     } catch (error) {
-        console.error("Verify Phone OTP Error:", error);
+        if (
+            error instanceof
+            RateLimitError
+        ) {
+            return createRateLimitResponse(
+                error,
+            );
+        }
+
+        console.error(
+            "Verify Phone OTP Error:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+            {
+                error:
+                    "Unable to verify OTP",
+            },
+            {
+                status: 500,
+            },
         );
     }
 }

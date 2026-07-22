@@ -65,12 +65,12 @@ const BUBBY_SITE_ACTIONS = {
     },
     rent: {
         label: "Rental Properties",
-        href: "/buy?mode=rent",
+        href: "/buy?purpose=rent",
         description: "Browse properties available for rent.",
     },
     commercial: {
         label: "Commercial Properties",
-        href: "/buy?mode=commercial",
+        href: "/buy?purpose=commercial",
         description: "Browse commercial property listings.",
     },
     favorites: {
@@ -125,8 +125,8 @@ PropYours is a property marketplace.
 Allowed site information:
 - Home: /
 - Properties for sale: /buy
-- Rental properties: /buy?mode=rent
-- Commercial properties: /buy?mode=commercial
+- Rental properties: /buy?purpose=rent
+- Commercial properties: /buy?purpose=commercial
 - Selling and property services: /sell
 - Builder information: /builders
 - Pricing and listing plans: /pricing

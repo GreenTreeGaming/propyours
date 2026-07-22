@@ -1,83 +1,245 @@
-import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/mongoose";
-import User from "@/models/User";
-import PhoneOtp from "@/models/PhoneOtp";
+import mongoose from "mongoose";
+import {
+    NextResponse,
+} from "next/server";
 
-export async function POST(req: Request) {
+import {
+    connectDB,
+} from "@/lib/mongoose";
+import {
+    createRateLimitResponse,
+    enforceRateLimit,
+    RateLimitError,
+} from "@/lib/rate-limit";
+import {
+    parseJsonBody,
+} from "@/lib/validation/api";
+import {
+    signupSchema,
+} from "@/lib/validation/auth";
+
+import PhoneOtp from "@/models/PhoneOtp";
+import User from "@/models/User";
+
+export async function POST(
+    request: Request,
+) {
     try {
+        const parsed =
+            await parseJsonBody(
+                request,
+                signupSchema,
+            );
+
+        if (!parsed.success) {
+            return parsed.response;
+        }
+
         const {
             name,
             email,
             phone,
             password,
-        } = await req.json();
+        } = parsed.data;
 
-        if (!name || !email || !phone || !password) {
-            return NextResponse.json(
-                { error: "Name, email, phone, and password are required" },
-                { status: 400 }
-            );
-        }
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "auth-signup-ip",
+                windowMs:
+                    60 * 60 * 1_000,
+                maximumRequests: 8,
+            },
+        );
 
-        const normalizedEmail = email.toLowerCase().trim();
-        const normalizedPhone = phone.trim();
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "auth-signup-email",
+                windowMs:
+                    60 * 60 * 1_000,
+                maximumRequests: 3,
+                subject: email,
+            },
+        );
 
         await connectDB();
 
-        const existingUser = await User.findOne({ email: normalizedEmail });
-
-        if (existingUser) {
-            return NextResponse.json(
-                { error: "Account already exists" },
-                { status: 409 }
+        const hashedPassword =
+            await bcrypt.hash(
+                password,
+                12,
             );
-        }
 
-        const existingPhoneUser = await User.findOne({ phone: normalizedPhone });
+        const session =
+            await mongoose.startSession();
 
-        if (existingPhoneUser) {
-            return NextResponse.json(
-                { error: "Phone number is already registered" },
-                { status: 409 }
+        try {
+            await session.withTransaction(
+                async () => {
+                    const existingUser =
+                        await User.findOne({
+                            $or: [
+                                {
+                                    email,
+                                },
+                                {
+                                    phone,
+                                },
+                            ],
+                        })
+                            .session(
+                                session,
+                            )
+                            .lean();
+
+                    if (existingUser) {
+                        throw new SignupConflictError();
+                    }
+
+                    const consumedOtp =
+                        await PhoneOtp.findOneAndDelete(
+                            {
+                                phone,
+                                verified: true,
+                                expiresAt: {
+                                    $gt:
+                                        new Date(),
+                                },
+                            },
+                            {
+                                session,
+                            },
+                        );
+
+                    if (!consumedOtp) {
+                        throw new OtpRequiredError();
+                    }
+
+                    await User.create(
+                        [
+                            {
+                                name,
+                                email,
+                                phone,
+                                password:
+                                hashedPassword,
+                                role: "User",
+                                tokenVersion:
+                                    0,
+                            },
+                        ],
+                        {
+                            session,
+                        },
+                    );
+                },
             );
+        } finally {
+            await session.endSession();
         }
-
-        const verifiedOtp = await PhoneOtp.findOne({
-            phone: normalizedPhone,
-            verified: true,
-            expiresAt: { $gt: new Date() },
-        });
-
-        if (!verifiedOtp) {
-            return NextResponse.json(
-                { error: "Please verify your phone number before creating an account" },
-                { status: 403 }
-            );
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 12);
-
-        await User.create({
-            name: name.trim(),
-            email: normalizedEmail,
-            phone: normalizedPhone,
-            password: hashedPassword,
-            role: "User",
-        });
-
-        await PhoneOtp.deleteMany({ phone: normalizedPhone });
 
         return NextResponse.json(
-            { message: "Account created successfully" },
-            { status: 201 }
+            {
+                message:
+                    "Account created successfully",
+            },
+            {
+                status: 201,
+            },
         );
     } catch (error) {
-        console.error("Signup Error:", error);
+        if (
+            error instanceof
+            RateLimitError
+        ) {
+            return createRateLimitResponse(
+                error,
+            );
+        }
+
+        if (
+            error instanceof
+            SignupConflictError
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "An account already exists with that email or phone number.",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        if (
+            error instanceof
+            OtpRequiredError
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Verify your phone number before creating an account.",
+                },
+                {
+                    status: 403,
+                },
+            );
+        }
+
+        if (
+            isMongoDuplicateError(
+                error,
+            )
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "An account already exists with that email or phone number.",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        console.error(
+            "Signup Error:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+            {
+                error:
+                    "Unable to create account",
+            },
+            {
+                status: 500,
+            },
         );
     }
+}
+
+class SignupConflictError
+    extends Error {}
+
+class OtpRequiredError
+    extends Error {}
+
+function isMongoDuplicateError(
+    error: unknown,
+): error is {
+    code: number;
+} {
+    return (
+        typeof error ===
+        "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === 11000
+    );
 }

@@ -1,82 +1,194 @@
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/mongoose";
-import User from "@/models/User";
-import PhoneOtp from "@/models/PhoneOtp";
-import { sendSms } from "@/lib/send-sms";
+import {
+    randomInt,
+} from "node:crypto";
 
-function generateOtp() {
-    if (process.env.NODE_ENV !== "production") {
+import bcrypt from "bcryptjs";
+import {
+    NextResponse,
+} from "next/server";
+
+import {
+    connectDB,
+} from "@/lib/mongoose";
+import {
+    createRateLimitResponse,
+    enforceRateLimit,
+    RateLimitError,
+} from "@/lib/rate-limit";
+import {
+    sendSms,
+} from "@/lib/send-sms";
+import {
+    parseJsonBody,
+} from "@/lib/validation/api";
+import {
+    sendPhoneOtpSchema,
+} from "@/lib/validation/auth";
+
+import PhoneOtp from "@/models/PhoneOtp";
+import User from "@/models/User";
+
+function generateOtp(): string {
+    if (
+        process.env.NODE_ENV !==
+        "production"
+    ) {
         return "123456";
     }
 
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(
+        100_000,
+        1_000_000,
+    ).toString();
 }
 
-export async function POST(req: Request) {
+export async function POST(
+    request: Request,
+) {
     try {
-        const { phone, email } = await req.json();
-
-        if (!phone) {
-            return NextResponse.json(
-                { error: "Phone number is required" },
-                { status: 400 }
+        const parsed =
+            await parseJsonBody(
+                request,
+                sendPhoneOtpSchema,
             );
+
+        if (!parsed.success) {
+            return parsed.response;
         }
 
-        const normalizedPhone = phone.trim();
-        const normalizedEmail = email ? email.toLowerCase().trim() : "";
+        const {
+            phone,
+            email,
+        } = parsed.data;
+
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "send-phone-otp-ip",
+                windowMs:
+                    60 * 60 * 1_000,
+                maximumRequests: 10,
+            },
+        );
+
+        await enforceRateLimit(
+            request,
+            {
+                namespace:
+                    "send-phone-otp-phone",
+                windowMs:
+                    15 * 60 * 1_000,
+                maximumRequests: 3,
+                subject: phone,
+            },
+        );
 
         await connectDB();
 
-        if (normalizedEmail) {
-            const existingUser = await User.findOne({ email: normalizedEmail });
+        if (email) {
+            const existingUser =
+                await User.exists({
+                    email,
+                });
 
             if (existingUser) {
                 return NextResponse.json(
-                    { error: "Account already exists" },
-                    { status: 409 }
+                    {
+                        error:
+                            "Account already exists",
+                    },
+                    {
+                        status: 409,
+                    },
                 );
             }
         }
 
-        const existingPhoneUser = await User.findOne({ phone: normalizedPhone });
+        const existingPhoneUser =
+            await User.exists({
+                phone,
+            });
 
         if (existingPhoneUser) {
             return NextResponse.json(
-                { error: "Phone number is already registered" },
-                { status: 409 }
+                {
+                    error:
+                        "Phone number is already registered",
+                },
+                {
+                    status: 409,
+                },
             );
         }
 
-        const otp = generateOtp();
-        const otpHash = await bcrypt.hash(otp, 10);
+        const otp =
+            generateOtp();
 
-        await PhoneOtp.deleteMany({ phone: normalizedPhone });
+        const otpHash =
+            await bcrypt.hash(
+                otp,
+                12,
+            );
 
-        await PhoneOtp.create({
-            phone: normalizedPhone,
-            otpHash,
-            attempts: 0,
-            verified: false,
-            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        });
+        await PhoneOtp.findOneAndUpdate(
+            {
+                phone,
+            },
+            {
+                $set: {
+                    otpHash,
+                    attempts: 0,
+                    verified: false,
+                    expiresAt:
+                        new Date(
+                            Date.now() +
+                            10 *
+                            60 *
+                            1_000,
+                        ),
+                },
+            },
+            {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert:
+                    true,
+            },
+        );
 
         await sendSms(
-            normalizedPhone,
-            `Your PROPYOURS verification code is ${otp}. It expires in 10 minutes.`
+            phone,
+            `Your PROPYOURS verification code is ${otp}. It expires in 10 minutes.`,
         );
 
-        return NextResponse.json(
-            { message: "OTP sent successfully" },
-            { status: 200 }
-        );
+        return NextResponse.json({
+            message:
+                "OTP sent successfully",
+        });
     } catch (error) {
-        console.error("Send Phone OTP Error:", error);
+        if (
+            error instanceof
+            RateLimitError
+        ) {
+            return createRateLimitResponse(
+                error,
+            );
+        }
+
+        console.error(
+            "Send Phone OTP Error:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Something went wrong" },
-            { status: 500 }
+            {
+                error:
+                    "Unable to send OTP",
+            },
+            {
+                status: 500,
+            },
         );
     }
 }

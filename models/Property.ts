@@ -300,6 +300,38 @@ const PropertySchema =
         },
     );
 
+PropertySchema.index({
+    status: 1,
+    purpose: 1,
+    city: 1,
+    propertyType: 1,
+    price: 1,
+    createdAt: -1,
+});
+
+PropertySchema.index({
+    status: 1,
+    featured: 1,
+    promotedUntil: -1,
+    createdAt: -1,
+});
+
+PropertySchema.index({
+    userId: 1,
+    status: 1,
+    createdAt: -1,
+});
+
+PropertySchema.index({
+    status: 1,
+    listingExpiresAt: 1,
+});
+
+PropertySchema.index({
+    "planSnapshot.rankingLevel": 1,
+    createdAt: -1,
+});
+
 if (
     process.env.NODE_ENV ===
     "development"

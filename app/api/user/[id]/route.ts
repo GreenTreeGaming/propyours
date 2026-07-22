@@ -171,9 +171,11 @@ export async function PUT(
 
         await connectDB();
 
-        // Password is selected by default in your current schema.
-        // If you later add select: false, use .select("+password").
-        const user = await User.findById(auth.userId);
+        const user = await User.findById(
+            auth.userId,
+        ).select(
+            "+password +tokenVersion",
+        );
 
         if (!user) {
             return NextResponse.json(
@@ -307,21 +309,68 @@ export async function PUT(
             );
         }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            auth.userId,
-            {
-                $set: updateData,
-            },
-            {
-                new: true,
-                runValidators: true,
-            },
-        ).select("-password");
+        const updateOperations: {
+            $set: Record<
+                string,
+                string
+            >;
+            $inc?: {
+                tokenVersion: number;
+            };
+        } = {
+            $set: updateData,
+        };
 
-        return NextResponse.json({
-            success: true,
-            user: updatedUser,
-        });
+        if (passwordIsChanging) {
+            updateOperations.$inc = {
+                tokenVersion: 1,
+            };
+        }
+
+        const updatedUser =
+            await User.findByIdAndUpdate(
+                auth.userId,
+                updateOperations,
+                {
+                    new: true,
+                    runValidators: true,
+                },
+            ).select(
+                "-password -tokenVersion",
+            );
+
+        const response =
+            NextResponse.json({
+                success: true,
+                user: updatedUser,
+
+                ...(passwordIsChanging
+                    ? {
+                        message:
+                            "Password updated successfully. Please sign in again.",
+                        requiresLogin:
+                            true,
+                    }
+                    : {}),
+            });
+
+        if (passwordIsChanging) {
+            response.cookies.set({
+                name:
+                    "auth-token",
+                value: "",
+                path: "/",
+                maxAge: 0,
+                httpOnly: true,
+                secure:
+                    process.env
+                        .NODE_ENV ===
+                    "production",
+                sameSite: "lax",
+            });
+        }
+
+        return response;
     } catch (error) {
         console.error("Update account error:", error);
 
@@ -397,7 +446,12 @@ export async function DELETE(
         // 5. Connect before starting the MongoDB session.
         await connectDB();
 
-        const user = await User.findById(auth.userId);
+        const user =
+            await User.findById(
+                auth.userId,
+            ).select(
+                "+password",
+            );
 
         if (!user) {
             return NextResponse.json(

@@ -75,6 +75,20 @@ const LeadSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+LeadSchema.index(
+    {
+        propertyId: 1,
+        ownerId: 1,
+        viewerId: 1,
+        source: 1,
+    },
+    {
+        unique: true,
+        name:
+            "unique_property_lead_source",
+    },
+);
+
 if (process.env.NODE_ENV === "development") {
     try {
         mongoose.deleteModel("Lead");

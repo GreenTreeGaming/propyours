@@ -11,16 +11,22 @@ const UserSchema = new Schema(
             type: String,
             required: true,
             unique: true,
-        },
-
-        password: {
-            type: String,
-            required: true,
+            lowercase: true,
+            trim: true,
+            index: true,
         },
 
         phone: {
             type: String,
             required: false,
+            trim: true,
+        },
+
+        tokenVersion: {
+            type: Number,
+            default: 0,
+            min: 0,
+            select: false,
         },
 
         role: {
@@ -124,6 +130,29 @@ const UserSchema = new Schema(
         },
     },
     { timestamps: true }
+);
+
+UserSchema.index(
+    {
+        phone: 1,
+    },
+    {
+        unique: true,
+        sparse: true,
+        name:
+            "unique_user_phone",
+    },
+);
+
+UserSchema.index(
+    {
+        email: 1,
+    },
+    {
+        unique: true,
+        name:
+            "unique_user_email",
+    },
 );
 
 // Force fresh model in development to reflect schema changes immediately

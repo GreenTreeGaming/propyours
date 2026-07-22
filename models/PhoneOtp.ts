@@ -5,7 +5,8 @@ const PhoneOtpSchema = new Schema(
         phone: {
             type: String,
             required: true,
-            index: true,
+            unique: true,
+            trim: true,
         },
 
         otpHash: {
@@ -23,6 +24,11 @@ const PhoneOtpSchema = new Schema(
             default: false,
         },
 
+        verifiedAt: {
+            type: Date,
+            required: false,
+        },
+
         expiresAt: {
             type: Date,
             required: true,
@@ -30,6 +36,17 @@ const PhoneOtpSchema = new Schema(
         },
     },
     { timestamps: true }
+);
+
+PhoneOtpSchema.index(
+    {
+        phone: 1,
+    },
+    {
+        unique: true,
+        name:
+            "unique_phone_otp",
+    },
 );
 
 if (process.env.NODE_ENV === "development") {

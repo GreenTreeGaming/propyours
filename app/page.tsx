@@ -167,7 +167,7 @@ const BUBBY_DEMO_MESSAGES: BubbyDemoMessage[] = [
   {
     id: "initial-response",
     sender: "bubby",
-    text: "I found 2 matching houses. One is in Thillai Nagar, Trichy, and another is in Maharaja Nagar, Tirunelveli.",
+    text: "I found 6 matching houses across Trichy, Tirunelveli and Madurai. Would you like to narrow them down by budget?",
   },
   {
     id: "budget-follow-up",
@@ -193,7 +193,7 @@ const BUBBY_DEMO_PROPERTIES = [
   },
   {
     id: "demo-property-2",
-    title: "3 BHK Villa",
+    title: "Independent House",
     location: "Thillai Nagar, Trichy",
     price: "₹56 Lakh",
     details: "3 bedrooms · 2 bathrooms",
@@ -202,7 +202,7 @@ const BUBBY_DEMO_PROPERTIES = [
   },
   {
     id: "demo-property-3",
-    title: "Residential House",
+    title: "Independent House",
     location: "KK Nagar, Madurai",
     price: "₹59 Lakh",
     details: "3 bedrooms · 2 bathrooms",
@@ -228,16 +228,6 @@ export default function HomePage() {
   const [demoThinking, setDemoThinking] = useState(false);
   const [demoComplete, setDemoComplete] = useState(false);
   const [showDemoProperty, setShowDemoProperty] = useState(false);
-
-  const demoUserMessage =
-      "Find me a 3 bedroom house under ₹60 lakh.";
-
-  const demoBubbyMessage =
-      "I found a matching 3 BHK house for ₹50 lakh. Would you like to narrow it down by city?";
-
-  const [demoPhase, setDemoPhase] = useState(0);
-  const [typedUserMessage, setTypedUserMessage] = useState("");
-  const [typedBubbyMessage, setTypedBubbyMessage] = useState("");
 
   useEffect(() => {
     const currentMessage = BUBBY_DEMO_MESSAGES[demoMessageIndex];
@@ -327,64 +317,6 @@ export default function HomePage() {
     demoTypedText,
     demoThinking,
     demoComplete,
-  ]);
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-
-    // Type the user's message
-    if (demoPhase === 0) {
-      if (typedUserMessage.length < demoUserMessage.length) {
-        timeout = setTimeout(() => {
-          setTypedUserMessage(
-              demoUserMessage.slice(0, typedUserMessage.length + 1),
-          );
-        }, 45);
-      } else {
-        timeout = setTimeout(() => {
-          setDemoPhase(1);
-        }, 500);
-      }
-    }
-
-    // Show Bubby thinking
-    if (demoPhase === 1) {
-      timeout = setTimeout(() => {
-        setDemoPhase(2);
-      }, 1400);
-    }
-
-    // Type Bubby's response
-    if (demoPhase === 2) {
-      if (typedBubbyMessage.length < demoBubbyMessage.length) {
-        timeout = setTimeout(() => {
-          setTypedBubbyMessage(
-              demoBubbyMessage.slice(0, typedBubbyMessage.length + 1),
-          );
-        }, 28);
-      } else {
-        timeout = setTimeout(() => {
-          setDemoPhase(3);
-        }, 400);
-      }
-    }
-
-    // Hold the completed conversation, then restart
-    if (demoPhase === 3) {
-      timeout = setTimeout(() => {
-        setTypedUserMessage("");
-        setTypedBubbyMessage("");
-        setDemoPhase(0);
-      }, 4000);
-    }
-
-    return () => clearTimeout(timeout);
-  }, [
-    demoPhase,
-    typedUserMessage,
-    typedBubbyMessage,
-    demoUserMessage,
-    demoBubbyMessage,
   ]);
 
   const localities = useMemo(
@@ -975,13 +907,13 @@ export default function HomePage() {
                       <span className="h-1 w-1 rounded-full bg-slate-300" />
                       <span>Follow-up searches</span>
                       <span className="h-1 w-1 rounded-full bg-slate-300" />
-                      <span>Real listings</span>
+                      <span>Smart matching</span>
                     </div>
                   </div>
                 </div>
 
                 <p className="mt-4 text-center text-xs font-semibold text-slate-500">
-                  Bubby remembers your search preferences while you refine the conversation.
+                  Example conversation showing how Bubby can refine a property search.
                 </p>
               </motion.div>
             </div>

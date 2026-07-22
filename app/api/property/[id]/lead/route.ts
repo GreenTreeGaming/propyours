@@ -8,6 +8,12 @@ import { getAuthenticatedUser, isAuthError } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import { sendLeadNotificationEmail } from "@/lib/send-lead-notification";
 
+import {
+    createRateLimitResponse,
+    enforceRateLimit,
+    RateLimitError,
+} from "@/lib/rate-limit";
+
 type LeadSource = "phone" | "email" | "whatsapp" | "favorite";
 
 function cleanString(value: unknown) {
@@ -81,6 +87,30 @@ export async function POST(
                 { status: 401 }
             );
         }
+
+        await enforceRateLimit(
+            req,
+            {
+                namespace:
+                    "property-lead-ip",
+                windowMs:
+                    15 * 60 * 1_000,
+                maximumRequests: 20,
+            },
+        );
+
+        await enforceRateLimit(
+            req,
+            {
+                namespace:
+                    "property-lead-user",
+                windowMs:
+                    60 * 60 * 1_000,
+                maximumRequests: 30,
+                subject:
+                viewerUserId,
+            },
+        );
 
         if (property.userId.toString() === viewerUserId) {
             return NextResponse.json(
@@ -172,11 +202,41 @@ export async function POST(
             { status: 201 }
         );
     } catch (error) {
-        console.error("Failed to create lead:", error);
+        if (
+            error instanceof
+            RateLimitError
+        ) {
+            return createRateLimitResponse(
+                error,
+            );
+        }
+
+        if (
+            typeof error ===
+            "object" &&
+            error !== null &&
+            "code" in error &&
+            error.code === 11000
+        ) {
+            return NextResponse.json({
+                success: true,
+                duplicate: true,
+            });
+        }
+
+        console.error(
+            "Failed to create lead:",
+            error,
+        );
 
         return NextResponse.json(
-            { error: "Failed to create lead" },
-            { status: 500 }
+            {
+                error:
+                    "Failed to create lead",
+            },
+            {
+                status: 500,
+            },
         );
     }
 }
