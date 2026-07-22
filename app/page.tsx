@@ -177,7 +177,37 @@ const BUBBY_DEMO_MESSAGES: BubbyDemoMessage[] = [
   {
     id: "budget-response",
     sender: "bubby",
-    text: "Yes — I found a 3 bedroom house in Maharaja Nagar, Tirunelveli for ₹50 lakh.",
+    text: "Yes — I found 3 matching houses under ₹60 lakh. Here are the best options.",
+  },
+];
+
+const BUBBY_DEMO_PROPERTIES = [
+  {
+    id: "demo-property-1",
+    title: "Independent House",
+    location: "Maharaja Nagar, Tirunelveli",
+    price: "₹50 Lakh",
+    details: "3 bedrooms · 2 bathrooms",
+    image:
+        "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "demo-property-2",
+    title: "3 BHK Villa",
+    location: "Thillai Nagar, Trichy",
+    price: "₹56 Lakh",
+    details: "3 bedrooms · 2 bathrooms",
+    image:
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=600",
+  },
+  {
+    id: "demo-property-3",
+    title: "Residential House",
+    location: "KK Nagar, Madurai",
+    price: "₹59 Lakh",
+    details: "3 bedrooms · 2 bathrooms",
+    image:
+        "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&q=80&w=600",
   },
 ];
 
@@ -560,16 +590,14 @@ export default function HomePage() {
               >
 
                 <h1 className="mt-6 font-heading text-4xl font-black leading-[1.04] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-[3.8rem]">
-                  Finding a property
+                  Find your next property,
                   <span className="block text-primary">
-        should feel like a conversation.
+        with confidence.
       </span>
                 </h1>
 
                 <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                  Tell Bubby what you need in your own words. Mention your city, budget,
-                  property type, bedrooms or anything else, and Bubby will help find
-                  suitable listings.
+                  Browse verified listings across apartments, villas, plots, commercial spaces and more—or simply tell Bubby what you're looking for and let AI do the searching for you.
                 </p>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -589,7 +617,7 @@ export default function HomePage() {
                       href="/buy"
                       className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-3.5 text-sm font-black text-slate-700 shadow-sm transition hover:border-primary hover:text-primary"
                   >
-                    Browse manually
+                    Browse properties
                   </Link>
                 </div>
 
@@ -658,15 +686,15 @@ export default function HomePage() {
                   </div>
 
                   {/* Conversation area */}
-                  <div className="relative h-[430px] overflow-hidden bg-[linear-gradient(180deg,#f8fafc_0%,#f0fdfa_100%)]">
+                  <div className="relative h-[430px] bg-[linear-gradient(180deg,#f8fafc_0%,#f0fdfa_100%)]">
                     <div
                         className="pointer-events-none absolute left-1/2 top-10 h-48 w-48 -translate-x-1/2 rounded-full bg-white/70 blur-3xl"
                         aria-hidden="true"
                     />
 
                     <div className="relative flex h-full flex-col">
-                      <div className="flex-1 overflow-hidden px-4 py-5 sm:px-6">
-                        <div className="space-y-4">
+                      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+                        <div className="space-y-4 pb-6">
                           {/* Finished messages */}
                           {demoMessages.map((message) => (
                               <motion.div
@@ -772,89 +800,123 @@ export default function HomePage() {
                                   </div>
                               )}
 
-                          {/* Matching property */}
+                          {/* Matching properties */}
                           {showDemoProperty && (
-                              <motion.button
-                                  type="button"
-                                  initial={{
-                                    opacity: 0,
-                                    y: 16,
-                                    scale: 0.97,
-                                  }}
-                                  animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                    scale: 1,
-                                  }}
-                                  transition={{
-                                    type: "spring",
-                                    stiffness: 180,
-                                    damping: 18,
-                                  }}
-                                  onClick={() =>
-                                      window.dispatchEvent(
-                                          new CustomEvent("open-bubby-chat"),
-                                      )
-                                  }
-                                  className="ml-10 block w-[calc(100%-2.5rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_16px_40px_rgba(15,23,42,0.10)] transition hover:-translate-y-0.5 hover:border-primary"
+                              <motion.div
+                                  initial={{ opacity: 0, y: 16 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="ml-10 space-y-3"
                               >
-                                <div className="flex items-center gap-3 p-3">
-                                  <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-200">
-                                    <Image
-                                        src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=500"
-                                        alt="Independent house preview"
-                                        fill
-                                        sizes="96px"
-                                        className="object-cover"
-                                    />
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                                    3 matching properties
+                                  </p>
 
-                                    <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-primary shadow-sm backdrop-blur">
-                      Match
-                    </span>
-                                  </div>
-
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0">
-                                        <p className="truncate text-sm font-black text-slate-950">
-                                          Independent House
-                                        </p>
-
-                                        <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-slate-500">
-                                          <MapPin
-                                              size={12}
-                                              className="text-primary"
-                                              aria-hidden="true"
-                                          />
-                                          Maharaja Nagar, Tirunelveli
-                                        </p>
-                                      </div>
-
-                                      <ArrowRight
-                                          size={16}
-                                          className="mt-0.5 shrink-0 text-primary"
-                                          aria-hidden="true"
-                                      />
-                                    </div>
-
-                                    <div className="mt-3 flex items-end justify-between gap-3">
-                                      <div>
-                                        <p className="text-base font-black text-primary">
-                                          ₹50 Lakh
-                                        </p>
-
-                                        <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
-                                          3 bedrooms · 2 bathrooms
-                                        </p>
-                                      </div>
-
-                                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-700">
-                        Under budget
-                      </span>
-                                    </div>
-                                  </div>
+                                  <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-700">
+        Under ₹60 lakh
+      </span>
                                 </div>
-                              </motion.button>
+
+                                {BUBBY_DEMO_PROPERTIES.map((property, index) => (
+                                    <motion.button
+                                        key={property.id}
+                                        type="button"
+                                        initial={{
+                                          opacity: 0,
+                                          y: 14,
+                                          scale: 0.98,
+                                        }}
+                                        animate={{
+                                          opacity: 1,
+                                          y: 0,
+                                          scale: 1,
+                                        }}
+                                        transition={{
+                                          delay: index * 0.12,
+                                          duration: 0.35,
+                                        }}
+                                        onClick={() =>
+                                            window.dispatchEvent(
+                                                new CustomEvent("open-bubby-chat"),
+                                            )
+                                        }
+                                        className="group block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_12px_32px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
+                                    >
+                                      <div className="flex items-center gap-3 p-3">
+                                        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-200">
+                                          <Image
+                                              src={property.image}
+                                              alt={property.title}
+                                              fill
+                                              sizes="96px"
+                                              className="object-cover transition duration-300 group-hover:scale-105"
+                                          />
+
+                                          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-primary shadow-sm backdrop-blur">
+              Match
+            </span>
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                              <p className="truncate text-sm font-black text-slate-950">
+                                                {property.title}
+                                              </p>
+
+                                              <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                                                <MapPin
+                                                    size={12}
+                                                    className="shrink-0 text-primary"
+                                                    aria-hidden="true"
+                                                />
+
+                                                <span className="truncate">
+                    {property.location}
+                  </span>
+                                              </p>
+                                            </div>
+
+                                            <ArrowRight
+                                                size={16}
+                                                className="mt-0.5 shrink-0 text-primary transition-transform group-hover:translate-x-0.5"
+                                                aria-hidden="true"
+                                            />
+                                          </div>
+
+                                          <div className="mt-3 flex items-end justify-between gap-3">
+                                            <div>
+                                              <p className="text-base font-black text-primary">
+                                                {property.price}
+                                              </p>
+
+                                              <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                                                {property.details}
+                                              </p>
+                                            </div>
+
+                                            <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-emerald-700 sm:inline-flex">
+                Under budget
+              </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.button>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        window.dispatchEvent(
+                                            new CustomEvent("open-bubby-chat"),
+                                        )
+                                    }
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-teal-50 px-4 py-3 text-xs font-black text-primary transition hover:border-primary/40 hover:bg-teal-100"
+                                >
+                                  View all matching properties
+                                  <ArrowRight size={14} aria-hidden="true" />
+                                </button>
+                              </motion.div>
                           )}
                         </div>
                       </div>
