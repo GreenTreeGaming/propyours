@@ -220,33 +220,6 @@ export async function GET(
             );
         }
 
-        const inappropriateField =
-            findInappropriateField({
-                description:
-                body.description,
-                address,
-                locality,
-                city,
-                landmark:
-                body.landmark,
-                dimensions:
-                body.dimensions,
-            });
-
-        if (inappropriateField) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Your listing contains language that is not permitted. Please revise it and try again.",
-                    field:
-                    inappropriateField,
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
         return NextResponse.json(
             property,
         );
@@ -293,6 +266,36 @@ export async function PUT(
             string,
             unknown
         > = await req.json();
+
+        const inappropriateField =
+            findInappropriateField({
+                description:
+                body.description,
+                address:
+                body.address,
+                locality:
+                body.locality,
+                city:
+                body.city,
+                landmark:
+                body.landmark,
+                dimensions:
+                body.dimensions,
+            });
+
+        if (inappropriateField) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Your listing contains language that is not permitted. Please revise it and try again.",
+                    field:
+                    inappropriateField,
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
 
         const property =
             await Property.findById(id);
