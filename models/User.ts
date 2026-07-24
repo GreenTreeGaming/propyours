@@ -1,4 +1,7 @@
 import mongoose, { Schema, models } from "mongoose";
+import {
+    USER_ROLES,
+} from "@/lib/admin/roles";
 
 const UserSchema = new Schema(
     {
@@ -37,8 +40,9 @@ const UserSchema = new Schema(
 
         role: {
             type: String,
-            enum: ["User", "Admin", "Agent", "Builder", "Property Owner"],
+            enum: USER_ROLES,
             default: "User",
+            index: true,
         },
 
         bio: {
