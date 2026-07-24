@@ -2,7 +2,6 @@
 
 import {
     Suspense,
-    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -1030,12 +1029,6 @@ function PricingPageContent() {
     const [recommendedTier, setRecommendedTier] =
         useState<PlanTier | null>(null);
 
-    useEffect(() => {
-        setAudience(queryAudience);
-        setFinderAnswers({});
-        setRecommendedTier(null);
-    }, [queryAudience]);
-
     const plans = useMemo(
         () => getPlansForAudience(audience),
         [audience],
@@ -1177,7 +1170,10 @@ function PricingPageContent() {
         if (nextAudience === "owner") {
             params.delete("audience");
         } else {
-            params.set("audience", "builder");
+            params.set(
+                "audience",
+                "builder",
+            );
         }
 
         const query = params.toString();

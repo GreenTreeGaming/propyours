@@ -1327,18 +1327,6 @@ export default function TermsOfServicePage() {
                                         {CONTACT_EMAIL}
                                     </a>
                                 </p>
-
-                                <p className="mt-1">
-                                    Legal entity: Replace with the
-                                    registered legal name operating
-                                    PropYours
-                                </p>
-
-                                <p className="mt-1">
-                                    Address: Replace with the
-                                    registered business or legal
-                                    notice address
-                                </p>
                             </div>
                         </TermsSection>
                     </div>
