@@ -93,3 +93,25 @@ h6 {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Add this block to the bottom of app/globals.css. */
+.admin-input {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(203 213 225);
+  background: white;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: rgb(15 23 42);
+  outline: none;
+  transition:
+          border-color 150ms ease,
+          box-shadow 150ms ease;
+}
+
+.admin-input:focus {
+  border-color: rgb(16 185 129);
+  box-shadow: 0 0 0 4px rgb(16 185 129 / 0.1);
+}

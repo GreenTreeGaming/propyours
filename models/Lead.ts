@@ -88,15 +88,6 @@ LeadSchema.index(
             "unique_property_lead_source",
     },
 );
-
-if (process.env.NODE_ENV === "development") {
-    try {
-        mongoose.deleteModel("Lead");
-    } catch {
-        // Model might not have been registered yet
-    }
-}
-
 const Lead = mongoose.models.Lead || mongoose.model("Lead", LeadSchema);
 
 export default Lead;

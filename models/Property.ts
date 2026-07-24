@@ -332,17 +332,6 @@ PropertySchema.index({
     createdAt: -1,
 });
 
-if (
-    process.env.NODE_ENV ===
-    "development"
-) {
-    try {
-        mongoose.deleteModel("Property");
-    } catch {
-        // Model may not have been registered.
-    }
-}
-
 const Property =
     mongoose.models.Property ||
     mongoose.model(

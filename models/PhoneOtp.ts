@@ -49,14 +49,6 @@ PhoneOtpSchema.index(
     },
 );
 
-if (process.env.NODE_ENV === "development") {
-    try {
-        mongoose.deleteModel("PhoneOtp");
-    } catch (e) {
-        // Model might not have been registered yet
-    }
-}
-
 const PhoneOtp = models.PhoneOtp || mongoose.model("PhoneOtp", PhoneOtpSchema);
 
 export default PhoneOtp;

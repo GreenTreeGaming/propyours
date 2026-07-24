@@ -35,6 +35,10 @@ export async function getAuthenticatedAdmin():
         )?.value;
 
     if (!token) {
+        console.error(
+            "Admin authentication failed: admin-token cookie is missing.",
+        );
+
         return null;
     }
 
@@ -43,6 +47,11 @@ export async function getAuthenticatedAdmin():
             verifyAdminSessionToken(
                 token,
             );
+
+        console.log(
+            "Admin token verified for:",
+            payload.adminId,
+        );
 
         await connectDB();
 
@@ -55,28 +64,63 @@ export async function getAuthenticatedAdmin():
                 )
                 .lean();
 
-        if (
-            !user ||
-            !isAdminRole(user.role)
-        ) {
+        if (!user) {
+            console.error(
+                "Admin authentication failed: user does not exist.",
+            );
+
             return null;
         }
 
         if (
-            (user.tokenVersion ?? 0) !==
+            !isAdminRole(
+                user.role,
+            )
+        ) {
+            console.error(
+                "Admin authentication failed: account role is not administrative:",
+                user.role,
+            );
+
+            return null;
+        }
+
+        const currentTokenVersion =
+            user.tokenVersion ?? 0;
+
+        if (
+            currentTokenVersion !==
             payload.tokenVersion
         ) {
+            console.error(
+                "Admin authentication failed: token version mismatch.",
+                {
+                    stored:
+                    currentTokenVersion,
+                    token:
+                    payload.tokenVersion,
+                },
+            );
+
             return null;
         }
 
         return {
             userId:
                 user._id.toString(),
-            name: user.name,
-            email: user.email,
-            role: user.role,
+            name:
+            user.name,
+            email:
+            user.email,
+            role:
+            user.role,
         };
-    } catch {
+    } catch (error) {
+        console.error(
+            "Admin session validation failed:",
+            error,
+        );
+
         return null;
     }
 }

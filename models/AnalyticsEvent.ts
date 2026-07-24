@@ -58,20 +58,6 @@ AnalyticsEventSchema.index(
         createdAt: -1,
     },
 );
-
-if (
-    process.env.NODE_ENV ===
-    "development"
-) {
-    try {
-        mongoose.deleteModel(
-            "AnalyticsEvent",
-        );
-    } catch {
-        // Model may not exist yet.
-    }
-}
-
 const AnalyticsEvent =
     models.AnalyticsEvent ||
     mongoose.model(

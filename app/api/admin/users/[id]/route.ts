@@ -1,21 +1,14 @@
 import mongoose from "mongoose";
-import {
-    NextResponse,
-} from "next/server";
+import { NextResponse } from "next/server";
 
-import {
-    getAuthenticatedAdmin,
-} from "@/lib/admin/auth";
-import {
-    writeAdminAudit,
-} from "@/lib/admin/audit";
-import {
-    connectDB,
-} from "@/lib/mongoose";
+import { getAuthenticatedAdmin } from "@/lib/admin/auth";
+import { writeAdminAudit } from "@/lib/admin/audit";
+import { connectDB } from "@/lib/mongoose";
 
-import User from "@/models/User";
-import Property from "@/models/Property";
+import AdminAuditLog from "@/models/AdminAuditLog";
 import Lead from "@/models/Lead";
+import Property from "@/models/Property";
+import User from "@/models/User";
 
 type RouteContext = {
     params: Promise<{
@@ -23,144 +16,96 @@ type RouteContext = {
     }>;
 };
 
-function parsePage(
-    value: string | null,
-): number {
-    return Math.max(
-        1,
-        Number(value ?? 1) || 1,
-    );
-}
-
 export async function GET(
     request: Request,
     context: RouteContext,
 ) {
-    const admin =
-        await getAuthenticatedAdmin();
+    const admin = await getAuthenticatedAdmin();
 
     if (!admin) {
         return NextResponse.json(
-            {
-                error:
-                    "Unauthorized.",
-            },
-            {
-                status: 401,
-            },
+            { error: "Unauthorized." },
+            { status: 401 },
         );
     }
 
-    const {
-        id,
-    } = await context.params;
+    const { id } = await context.params;
 
-    if (
-        !mongoose.Types
-            .ObjectId
-            .isValid(id)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
         return NextResponse.json(
-            {
-                error:
-                    "Invalid user ID.",
-            },
-            {
-                status: 400,
-            },
+            { error: "Invalid user ID." },
+            { status: 400 },
         );
     }
 
     await connectDB();
 
-    const url =
-        new URL(request.url);
-
-    const propertyPage =
-        parsePage(
-            url.searchParams.get(
-                "propertyPage",
-            ),
-        );
-
-    const leadPage =
-        parsePage(
-            url.searchParams.get(
-                "leadPage",
-            ),
-        );
-
-    const limit = 25;
-
-    const user =
-        await User.findById(id)
-            .select(
-                [
-                    "name",
-                    "email",
-                    "phone",
-                    "role",
-                    "bio",
-                    "company",
-                    "address",
-                    "city",
-                    "favorites",
-                    "plan",
-                    "createdAt",
-                    "updatedAt",
-                ].join(" "),
-            )
-            .lean();
+    const user = await User.findById(id)
+        .select(
+            [
+                "name",
+                "email",
+                "phone",
+                "role",
+                "bio",
+                "company",
+                "address",
+                "city",
+                "favorites",
+                "plan",
+                "createdAt",
+                "updatedAt",
+            ].join(" "),
+        )
+        .lean();
 
     if (!user) {
         return NextResponse.json(
-            {
-                error:
-                    "User not found.",
-            },
-            {
-                status: 404,
-            },
+            { error: "User not found." },
+            { status: 404 },
         );
     }
 
     const leadFilter = {
         $or: [
-            {
-                ownerId: id,
-            },
-            {
-                viewerId: id,
-            },
+            { ownerId: id },
+            { viewerId: id },
         ],
     };
 
-    const [
-        properties,
-        propertyTotal,
-        leads,
-        leadTotal,
-    ] = await Promise.all([
-        Property.find({
-            userId: id,
-        })
-            .sort({
-                createdAt: -1,
-            })
-            .skip(
-                (propertyPage - 1) *
-                limit,
+    const [properties, leads, auditLogs] = await Promise.all([
+        Property.find({ userId: id })
+            .select(
+                [
+                    "purpose",
+                    "propertyType",
+                    "commercialType",
+                    "address",
+                    "locality",
+                    "city",
+                    "state",
+                    "size",
+                    "sizeUnit",
+                    "bedrooms",
+                    "bathrooms",
+                    "price",
+                    "priceType",
+                    "negotiable",
+                    "status",
+                    "featured",
+                    "images",
+                    "listingExpiresAt",
+                    "promotedUntil",
+                    "analytics",
+                    "createdAt",
+                    "updatedAt",
+                ].join(" "),
             )
-            .limit(limit)
+            .sort({ createdAt: -1 })
+            .limit(100)
             .lean(),
 
-        Property.countDocuments({
-            userId: id,
-        }),
-
-        Lead.find(
-            leadFilter,
-        )
+        Lead.find(leadFilter)
             .select(
                 [
                     "propertyId",
@@ -177,60 +122,55 @@ export async function GET(
                     "updatedAt",
                 ].join(" "),
             )
-            .sort({
-                createdAt: -1,
-            })
-            .skip(
-                (leadPage - 1) *
-                limit,
-            )
-            .limit(limit)
+            .sort({ createdAt: -1 })
+            .limit(100)
             .lean(),
 
-        Lead.countDocuments(
-            leadFilter,
-        ),
+        AdminAuditLog.find({ targetUserId: id })
+            .select(
+                [
+                    "actorUserId",
+                    "actorRole",
+                    "action",
+                    "metadata",
+                    "createdAt",
+                ].join(" "),
+            )
+            .populate("actorUserId", "name email")
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .lean(),
     ]);
 
     await writeAdminAudit({
         request,
-        actorUserId:
-        admin.userId,
-        actorRole:
-        admin.role,
-        action:
-            "user.view",
+        actorUserId: admin.userId,
+        actorRole: admin.role,
+        action: "user.view",
         targetUserId: id,
     });
 
     return NextResponse.json(
         {
-            user,
-
+            user: {
+                ...user,
+                favoritesCount: Array.isArray(user.favorites)
+                    ? user.favorites.length
+                    : 0,
+            },
             properties: {
-                items:
-                properties,
-                total:
-                propertyTotal,
-                page:
-                propertyPage,
-                limit,
+                items: properties,
+                total: properties.length,
             },
-
             leads: {
-                items:
-                leads,
-                total:
-                leadTotal,
-                page:
-                leadPage,
-                limit,
+                items: leads,
+                total: leads.length,
             },
+            auditLogs,
         },
         {
             headers: {
-                "Cache-Control":
-                    "no-store",
+                "Cache-Control": "no-store",
             },
         },
     );

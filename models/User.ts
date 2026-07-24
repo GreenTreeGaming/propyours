@@ -165,15 +165,11 @@ UserSchema.index(
     },
 );
 
-// Force fresh model in development to reflect schema changes immediately
-if (process.env.NODE_ENV === "development") {
-    try {
-        mongoose.deleteModel("User");
-    } catch (e) {
-        // Model might not have been registered yet
-    }
-}
-
-const User = models.User || mongoose.model("User", UserSchema);
+const User =
+    models.User ||
+    mongoose.model(
+        "User",
+        UserSchema,
+    );
 
 export default User;
