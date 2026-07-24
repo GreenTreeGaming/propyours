@@ -12,12 +12,14 @@ export default async function AdminUserPage({
                                                 params,
                                             }: Props) {
     const {
+        gateway,
         id,
     } = await params;
 
     return (
         <AdminUserDetailClient
             userId={id}
+            gateway={gateway}
         />
     );
 }

@@ -27,9 +27,12 @@ import {
     useMemo,
     useState,
 } from "react";
+import DeleteUserAccount from
+        "@/components/admin/DeleteUserAccount";
 
 type Props = {
     userId: string;
+    gateway: string;
 };
 
 type Plan = {
@@ -193,6 +196,7 @@ function StatusBadge({ value }: { value?: string }) {
 
 export default function AdminUserDetailClient({
                                                   userId,
+    gateway,
                                               }: Props) {
     const [data, setData] = useState<UserDetail | null>(null);
     const [error, setError] = useState("");
@@ -546,6 +550,21 @@ export default function AdminUserDetailClient({
             {activeTab === "audit" && (
                 <AuditTab items={data.auditLogs} />
             )}
+
+            <DeleteUserAccount
+                userId={
+                    user._id
+                }
+                userName={
+                    user.name
+                }
+                userEmail={
+                    user.email
+                }
+                returnUrl={
+                    `/control/${gateway}/dashboard#accounts`
+                }
+            />
         </div>
     );
 }
