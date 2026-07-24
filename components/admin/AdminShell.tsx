@@ -9,6 +9,7 @@ import {
     Users,
     X,
 } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -59,25 +60,16 @@ export default function AdminShell({
 
     const sidebar = (
         <div className="flex h-full flex-col bg-slate-950 text-white">
-            <div className="flex h-20 items-center border-b border-white/10 px-5">
-                <Link
+            <div
+                onClick={() => setMobileOpen(false)}
+                className="flex h-24 items-center border-b border-white/10 px-5"
+            >
+                <BrandLogo
                     href={dashboardUrl}
-                    className="flex items-center gap-3"
-                    onClick={() => setMobileOpen(false)}
-                >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20">
-                        <ShieldCheck size={23} aria-hidden="true" />
-                    </span>
-
-                    <span>
-                        <span className="block text-base font-black tracking-tight">
-                            PropYours
-                        </span>
-                        <span className="block text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">
-                            Control centre
-                        </span>
-                    </span>
-                </Link>
+                    priority
+                    className="h-16 w-[210px]"
+                    imageClassName="object-left"
+                />
             </div>
 
             <nav className="flex-1 space-y-2 px-3 py-5">

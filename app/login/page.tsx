@@ -34,6 +34,7 @@ import {
     setStoredUser,
     type StoredUser,
 } from "@/lib/browser-user";
+import BrandLogo from "@/components/BrandLogo";
 
 interface LoginResponse {
     message?: string;
@@ -247,27 +248,11 @@ function LoginForm() {
                     />
 
                     <div className="relative">
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-3"
-                        >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-300 text-slate-950">
-                <Home
-                    size={20}
-                    strokeWidth={2.4}
-                    aria-hidden={true}
-                />
-              </span>
-
-                            <span>
-                <span className="block font-heading text-xl font-black tracking-[-0.035em]">
-                  PROPYOURS
-                </span>
-                <span className="mt-1 block text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">
-                  Property marketplace
-                </span>
-              </span>
-                        </Link>
+                        <BrandLogo
+                            priority
+                            className="h-20 w-[300px]"
+                            imageClassName="object-left"
+                            />
 
                         <div className="mt-16 max-w-xl">
              <h1 className="mt-6 font-heading text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl">
@@ -334,21 +319,12 @@ function LoginForm() {
 
                 <section className="flex items-center p-5 sm:p-8 lg:p-10 xl:p-14">
                     <div className="mx-auto w-full max-w-lg">
-                        <div className="lg:hidden">
-                            <Link
-                                href="/"
-                                className="inline-flex items-center gap-2.5"
-                            >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                  <Home
-                      size={19}
-                      aria-hidden={true}
-                  />
-                </span>
-                                <span className="font-heading text-xl font-black tracking-[-0.035em] text-primary-dark">
-                  PROPYOURS
-                </span>
-                            </Link>
+                        <div className="flex justify-center lg:hidden">
+                            <BrandLogo
+                                priority
+                                className="h-20 w-full max-w-[300px]"
+                                imageClassName="object-center"
+                            />
                         </div>
 
                         <div className="mt-10 lg:mt-0">

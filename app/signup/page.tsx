@@ -37,6 +37,7 @@ import Link from "next/link";
 import {
     useSearchParams,
 } from "next/navigation";
+import BrandLogo from "@/components/BrandLogo";
 
 type AccountRole =
     | "User"
@@ -735,27 +736,11 @@ function SignupFormContent() {
                     />
 
                     <div className="relative">
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-3"
-                        >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-300 text-slate-950">
-                <Home
-                    size={20}
-                    strokeWidth={2.4}
-                    aria-hidden="true"
-                />
-              </span>
-
-                            <span>
-                <span className="block font-heading text-xl font-black tracking-[-0.035em]">
-                  PROPYOURS
-                </span>
-                <span className="mt-1 block text-[8px] font-black uppercase tracking-[0.2em] text-slate-500">
-                  Property marketplace
-                </span>
-              </span>
-                        </Link>
+                        <BrandLogo
+                            priority
+                            className="h-20 w-[300px]"
+                            imageClassName="object-left"
+                        />
 
                         <div className="mt-16">
           <h1 className="mt-6 font-heading text-5xl font-black leading-[1.03] tracking-[-0.05em] xl:text-6xl">
@@ -840,21 +825,12 @@ function SignupFormContent() {
 
                 <section className="p-5 sm:p-8 lg:p-10 xl:p-12">
                     <div className="mx-auto w-full max-w-2xl">
-                        <div className="lg:hidden">
-                            <Link
-                                href="/"
-                                className="inline-flex items-center gap-2.5"
-                            >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                  <Home
-                      size={19}
-                      aria-hidden="true"
-                  />
-                </span>
-                                <span className="font-heading text-xl font-black tracking-[-0.035em] text-primary-dark">
-                  PROPYOURS
-                </span>
-                            </Link>
+                        <div className="flex justify-center lg:hidden">
+                            <BrandLogo
+                                priority
+                                className="h-20 w-full max-w-[300px]"
+                                imageClassName="object-center"
+                            />
                         </div>
 
                         <div className="mt-9 lg:mt-0">
@@ -2011,6 +1987,14 @@ function SignupSuccess({
                   aria-hidden="true"
               />
             </span>
+
+                        <div className="mb-6 flex justify-center">
+                            <BrandLogo
+                                href={undefined}
+                                className="h-20 w-full max-w-[320px]"
+                                imageClassName="object-center"
+                            />
+                        </div>
 
                         <p className="mt-7 text-[10px] font-black uppercase tracking-[0.16em] text-teal-300">
                             Account created

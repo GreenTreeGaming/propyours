@@ -40,6 +40,7 @@ import {
   type PlanTier,
   type StoredUser,
 } from "@/lib/browser-user";
+import BrandLogo from "@/components/BrandLogo";
 
 interface NavigationItem {
   label: string;
@@ -306,21 +307,17 @@ export default function Navbar() {
                   className="group flex shrink-0 items-center gap-2.5 rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
                   aria-label="PropYours home"
               >
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20 transition-transform group-hover:-rotate-3 group-hover:scale-[1.03]">
-                <HomeIcon
-                    size={20}
-                    strokeWidth={2.4}
-                    aria-hidden="true"
-                />
-              </span>
 
                 <span className="hidden leading-none sm:block">
-                <span className="block font-heading text-lg font-black tracking-[-0.03em] text-primary-dark sm:text-xl">
-                  PROPYOURS
-                </span>
-                <span className="mt-1 hidden text-[7px] font-black uppercase tracking-[0.22em] text-slate-400 sm:block">
-                  Property marketplace
-                </span>
+                <div
+                    onClick={closeMenus}
+                    className="flex shrink-0 items-center"
+                >
+    <BrandLogo
+        priority
+        className="h-14 w-[235px] sm:h-16 sm:w-[285px]"
+    />
+</div>
               </span>
               </Link>
 

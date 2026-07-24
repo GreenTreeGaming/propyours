@@ -7,6 +7,7 @@ import {
 import {
     useRouter,
 } from "next/navigation";
+import BrandLogo from "@/components/BrandLogo";
 
 type Props = {
     gateway: string;
@@ -98,13 +99,20 @@ export default function AdminLoginForm({
                 }
                 className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl"
             >
-                <h1 className="text-2xl font-black text-white">
-                    PropYours Control
-                </h1>
+                <div className="mb-6 flex justify-center">
+                    <BrandLogo
+                        href={undefined}
+                        priority
+                        className="h-24 w-full max-w-[330px]"
+                        imageClassName="object-center"
+                    />
+                </div>
 
-                <p className="mt-2 text-sm text-slate-400">
-                    Authorised personnel
-                    only.
+                <h1 className="text-center text-2xl font-black text-white">
+                    Administration sign in
+                </h1>
+                <p className="mt-2 text-center text-sm text-slate-400">
+                    Authorised personnel only.
                 </p>
 
                 <label className="mt-8 block text-sm font-bold text-slate-200">

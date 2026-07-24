@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import BrandLogo from "@/components/BrandLogo";
 import { Home as HomeIcon } from "lucide-react";
 import {
   FaFacebook,
@@ -80,19 +80,18 @@ export default function Footer() {
       <footer className="border-t border-gray-100 bg-white pb-10 pt-20">
         <div className="container-wide px-6">
           <div className="mb-16 flex flex-col items-start justify-between gap-12 lg:flex-row">
-            <div className="max-w-xs">
+            <div className="w-full max-w-sm">
               <Link
                   href="/"
                   aria-label="PropYours home"
                   className="mb-6 flex items-center gap-2"
               >
-              <span className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white">
-                <HomeIcon size={18} strokeWidth={2.5} />
-              </span>
-
-                <span className="text-xl font-bold tracking-tight text-primary-dark">
-                PROPYOURS
-              </span>
+                <div className="mb-6">
+                  <BrandLogo
+                      className="h-20 w-[300px]"
+                      imageClassName="object-left"
+                  />
+                </div>
               </Link>
 
               <p className="text-sm text-gray-500">

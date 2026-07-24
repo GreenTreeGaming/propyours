@@ -7,6 +7,7 @@ import {
     Mail,
     ShieldCheck,
 } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import {
     type FormEvent,
     useState,
@@ -102,10 +103,13 @@ export default function OwnerAccessLoginForm() {
             <div className="w-full max-w-md">
                 <div className="mb-6 text-center">
                     <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-400 text-slate-950 shadow-xl shadow-emerald-500/20">
-                        <ShieldCheck
-                            size={30}
-                            aria-hidden="true"
-                        />
+                        <div className="flex justify-center">
+    <BrandLogo
+        href={undefined}
+        priority
+        className="h-28 w-full max-w-[380px]"
+    />
+</div>
                     </span>
 
                     <h1 className="mt-5 text-3xl font-black tracking-tight text-white">
