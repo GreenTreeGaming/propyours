@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongoose";
 import Property from "@/models/Property";
 import User from "@/models/User";
 import { getPublicPropertyFilter } from "@/lib/property-filters";
+import { toPublicUserProfile } from "@/lib/public-user";
 import {
     getAuthenticatedUser,
     isAuthError,
@@ -209,7 +210,7 @@ export async function GET(
                 }),
             ).populate(
                 "userId",
-                "name email role bio company city phone",
+                "name role bio company city plan",
             );
 
         if (!property) {
@@ -224,9 +225,17 @@ export async function GET(
             );
         }
 
-        return NextResponse.json(
-            property,
-        );
+        const responseProperty = property.toObject();
+
+        if (
+            responseProperty.userId &&
+            typeof responseProperty.userId === "object"
+        ) {
+            responseProperty.userId =
+                toPublicUserProfile(responseProperty.userId);
+        }
+
+        return NextResponse.json(responseProperty);
     } catch (error) {
         console.error(
             "Failed to fetch property:",
