@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongoose";
-import Property from "@/models/Property";
 import User from "@/models/User";
 import {
     getAuthenticatedUser,
     isAuthError,
 } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
+import {
+    createActiveListing,
+    ListingCapacityError,
+} from "@/lib/listing-capacity";
 import {
     findInappropriateField,
 } from "@/lib/content-moderation";
@@ -380,26 +383,6 @@ export async function POST(
         const limits =
             getPlanLimits(user);
 
-        const activeCount =
-            await Property.countDocuments({
-                userId: auth.userId,
-                status: "active",
-            });
-
-        if (
-            activeCount >=
-            limits.activeProperties
-        ) {
-            return NextResponse.json(
-                {
-                    error: `Your ${limits.tier} plan allows up to ${limits.activeProperties} active listing(s).`,
-                },
-                {
-                    status: 403,
-                },
-            );
-        }
-
         const images =
             cleanStringArray(body.images);
 
@@ -552,7 +535,9 @@ export async function POST(
         );
 
         const property =
-            await Property.create({
+            await createActiveListing(
+                auth.userId,
+                {
                 userId: auth.userId,
                 purpose: body.purpose,
                 propertyType:
@@ -623,13 +608,21 @@ export async function POST(
                     analyticsLevel:
                     limits.analyticsLevel,
                 },
-            });
+            },
+        );
 
         return NextResponse.json({
             success: true,
             property,
         });
     } catch (error) {
+        if (error instanceof ListingCapacityError) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: error.status },
+            );
+        }
+
         console.error(
             "Failed to create property:",
             error,
