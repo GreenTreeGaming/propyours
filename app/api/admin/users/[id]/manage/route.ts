@@ -9,7 +9,6 @@ import { hasTrustedOrigin } from "@/lib/security/trusted-origin";
 import { parseJsonBody } from "@/lib/validation/api";
 import {
     setListingStatus,
-    ListingCapacityError,
 } from "@/lib/listing-capacity";
 
 import Lead from "@/models/Lead";
