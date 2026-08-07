@@ -10,6 +10,10 @@ import {
 } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
 import {
+    deleteListing,
+    ListingCapacityError,
+} from "@/lib/listing-capacity";
+import {
     deleteUploadThingFilesByUrls,
 } from "@/lib/uploadthing-storage";
 import {
@@ -866,7 +870,8 @@ export async function DELETE(
                 : null,
         ];
 
-        await Property.findByIdAndDelete(
+        await deleteListing(
+            auth.userId,
             id,
         );
 
@@ -912,6 +917,13 @@ export async function DELETE(
             mediaCleanup,
         });
     } catch (error) {
+        if (error instanceof ListingCapacityError) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: error.status },
+            );
+        }
+
         console.error(
             "Failed to delete property:",
             error,
