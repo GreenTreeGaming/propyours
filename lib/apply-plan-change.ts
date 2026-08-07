@@ -15,6 +15,7 @@ import { addCalendarMonth } from "@/lib/boost-dates";
 import User from "@/models/User";
 import Property from "@/models/Property";
 import BoostTransaction from "@/models/BoostTransaction";
+import { setListingCapacity } from "@/lib/listing-capacity";
 
 type ApplyPlanChangeArgs = {
     userId: string;
@@ -253,20 +254,18 @@ export async function applyPlanChange({
              * Expired/cancelled plans:
              * deactivate all properties and remove promotions.
              */
-            if (status !== "active") {
-                await Property.updateMany(
-                    { userId: user._id },
-                    {
-                        $set: {
-                            status: "inactive",
-                        },
-                        $unset: {
-                            promotedUntil: "",
-                        },
-                    },
-                    { session }
-                );
+            const {
+                kept: propertiesToKeepActive,
+                deactivated: propertiesToDeactivate,
+            } = await setListingCapacity(
+                user,
+                status === "active"
+                    ? limits.activeProperties
+                    : 0,
+                session,
+            );
 
+            if (status !== "active") {
                 result = {
                     user: user.toObject(),
                     plan: limits,
@@ -277,68 +276,6 @@ export async function applyPlanChange({
                 };
 
                 return;
-            }
-
-            const activeProperties = await Property.find({
-                userId: user._id,
-                status: "active",
-                $or: [
-                    {
-                        listingExpiresAt: {
-                            $exists: false,
-                        },
-                    },
-                    {
-                        listingExpiresAt: {
-                            $gt: now,
-                        },
-                    },
-                ],
-            })
-                .sort({ createdAt: -1 })
-                .session(session);
-
-            const allowedActiveCount =
-                limits.activeProperties;
-
-            const propertiesToKeepActive =
-                activeProperties.slice(
-                    0,
-                    allowedActiveCount
-                );
-
-            const propertiesToDeactivate =
-                activeProperties.slice(
-                    allowedActiveCount
-                );
-
-            const keepActiveIds =
-                propertiesToKeepActive.map(
-                    (property) => property._id
-                );
-
-            const deactivateIds =
-                propertiesToDeactivate.map(
-                    (property) => property._id
-                );
-
-            if (deactivateIds.length > 0) {
-                await Property.updateMany(
-                    {
-                        _id: {
-                            $in: deactivateIds,
-                        },
-                    },
-                    {
-                        $set: {
-                            status: "inactive",
-                        },
-                        $unset: {
-                            promotedUntil: "",
-                        },
-                    },
-                    { session }
-                );
             }
 
             const cappedExpiry = new Date(
@@ -440,9 +377,9 @@ export async function applyPlanChange({
             result = {
                 user: user.toObject(),
                 plan: limits,
-                keptActive: keepActiveIds.length,
+                keptActive: propertiesToKeepActive.length,
                 deactivated:
-                deactivateIds.length,
+                propertiesToDeactivate.length,
                 boostsRemaining:
                     user.plan.boostsRemaining ?? 0,
                 boostsResetAt:
