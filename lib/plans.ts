@@ -16,27 +16,37 @@ export type {
     RankingLevel,
 } from "@/lib/plan-catalog";
 
-export function getPlanTier(user: any): PlanTier {
+export function getPlanTier(
+    user: any,
+    now = new Date(),
+): PlanTier {
     const tier = user?.plan?.tier;
     const status = user?.plan?.status as PlanStatus | undefined;
+    const expiresAt = user?.plan?.expiresAt
+        ? new Date(user.plan.expiresAt)
+        : null;
 
-    if (!isPlanTier(tier)) {
+    if (!isPlanTier(tier) || tier === "silver") {
         return "silver";
     }
 
-    if (tier === "silver") {
-        return "silver";
-    }
-
-    if (status !== "active") {
+    if (
+        status !== "active" ||
+        (expiresAt &&
+            (!Number.isFinite(expiresAt.getTime()) ||
+                expiresAt.getTime() <= now.getTime()))
+    ) {
         return "silver";
     }
 
     return tier;
 }
 
-export function getPlanLimits(user: any) {
-    const tier = getPlanTier(user);
+export function getPlanLimits(
+    user: any,
+    now = new Date(),
+) {
+    const tier = getPlanTier(user, now);
     const plan = PLAN_CATALOG[tier];
 
     return {
