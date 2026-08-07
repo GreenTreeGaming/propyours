@@ -75,6 +75,18 @@ const UserSchema = new Schema(
             default: [],
         },
 
+        listingUsage: {
+            activeListingIds: {
+                type: [
+                    {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "Property",
+                    },
+                ],
+                default: [],
+            },
+        },
+
         plan: {
             audience: {
                 type: String,
