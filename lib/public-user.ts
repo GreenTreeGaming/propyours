@@ -46,6 +46,7 @@ export function toPublicUserProfile(user: PublicUserInput) {
     const activeBuilderPlan = isActiveBuilderPlan(user.plan);
 
     return {
+        _id: getId(user),
         id: getId(user),
         name: stringOrEmpty(user.name),
         role: user.role === "Builder" ? "Builder" : "User",
