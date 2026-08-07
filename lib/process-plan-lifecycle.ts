@@ -1,9 +1,9 @@
 import User from "@/models/User";
-import Property from "@/models/Property";
-import BoostTransaction from "@/models/BoostTransaction";
 import {
     refreshBoostAllowanceIfNeeded,
 } from "@/lib/refresh-boost-allowance";
+import { applyPlanChange } from "@/lib/apply-plan-change";
+import { isPlanTier } from "@/lib/plan-catalog";
 
 export async function processPlanLifecycle(
     now = new Date()
@@ -20,36 +20,17 @@ export async function processPlanLifecycle(
         });
 
     for (const user of expiredUsers) {
-        const balanceBefore =
-            user.plan?.boostsRemaining ?? 0;
+        const tier = isPlanTier(user.plan?.tier)
+            ? user.plan.tier
+            : "silver";
 
-        user.plan.status = "expired";
-        user.plan.boostsRemaining = 0;
-        user.plan.boostsResetAt = undefined;
-        user.plan.lastBoostResetAt = undefined;
-
-        await user.save();
-
-        await Property.updateMany(
-            {
-                userId: user._id,
-                status: "active",
-            },
-            {
-                $set: {
-                    status: "inactive",
-                },
-            }
-        );
-
-        await BoostTransaction.create({
-            userId: user._id,
-            type: "plan_expired",
-            amount: -balanceBefore,
-            balanceBefore,
-            balanceAfter: 0,
-            planTier:
-            user.plan.tier,
+        await applyPlanChange({
+            userId: user._id.toString(),
+            tier,
+            status: "expired",
+            audience: user.plan?.audience,
+            source: "manual",
+            expiresAt: user.plan?.expiresAt ?? null,
         });
 
         expiredPlans += 1;
