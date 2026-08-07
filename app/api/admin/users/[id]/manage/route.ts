@@ -7,6 +7,7 @@ import { writeAdminAudit } from "@/lib/admin/audit";
 import { connectDB } from "@/lib/mongoose";
 import { hasTrustedOrigin } from "@/lib/security/trusted-origin";
 import { parseJsonBody } from "@/lib/validation/api";
+import { applyPlanChange } from "@/lib/apply-plan-change";
 import {
     setListingStatus,
 } from "@/lib/listing-capacity";
@@ -183,18 +184,19 @@ export async function PATCH(
         const previousPlan =
             target.plan?.toObject?.() ?? target.plan ?? null;
 
-        target.plan = {
-            ...(target.plan?.toObject?.() ?? target.plan ?? {}),
+        const planChange = await applyPlanChange({
+            userId: target._id.toString(),
             audience: action.audience,
             tier: action.tier,
             status: action.status,
             expiresAt: action.expiresAt
                 ? new Date(action.expiresAt)
-                : undefined,
-            boostsRemaining: action.boostsRemaining,
+                : null,
             source: "manual",
-        };
+        });
 
+        target.plan = planChange.user.plan;
+        target.plan.boostsRemaining = action.boostsRemaining;
         await target.save();
 
         await writeAdminAudit({
