@@ -7,6 +7,10 @@ import { writeAdminAudit } from "@/lib/admin/audit";
 import { connectDB } from "@/lib/mongoose";
 import { hasTrustedOrigin } from "@/lib/security/trusted-origin";
 import { parseJsonBody } from "@/lib/validation/api";
+import {
+    setListingStatus,
+    ListingCapacityError,
+} from "@/lib/listing-capacity";
 
 import Lead from "@/models/Lead";
 import Property from "@/models/Property";
@@ -247,13 +251,20 @@ export async function PATCH(
             promotedUntil: property.promotedUntil ?? null,
         };
 
-        property.status = action.status;
-        property.featured = action.featured;
-        property.promotedUntil = action.promotedUntil
-            ? new Date(action.promotedUntil)
-            : undefined;
+        const updatedProperty = await setListingStatus(
+            id,
+            property._id.toString(),
+            action.status,
+        );
 
-        await property.save();
+        updatedProperty.featured = action.featured;
+        updatedProperty.promotedUntil =
+            action.status === "active" &&
+            action.promotedUntil
+                ? new Date(action.promotedUntil)
+                : undefined;
+
+        await updatedProperty.save();
 
         await writeAdminAudit({
             request,
