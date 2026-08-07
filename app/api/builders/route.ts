@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import Property from "@/models/Property";
+import { toPublicUserProfile } from "@/lib/public-user";
 
 const BUILDER_PLAN_RANK: Record<string, number> = {
     "builder-elite": 3,
@@ -26,7 +27,7 @@ export async function GET() {
         await connectDB();
 
         const builders = await User.find({ role: "Builder" })
-            .select("-password")
+            .select("name role bio company city plan")
             .lean();
 
         const builderIds = builders.map((builder: any) => builder._id);
@@ -69,7 +70,7 @@ export async function GET() {
                 const planTier = hasActiveBuilderPlan ? builder.plan.tier : null;
 
                 return {
-                    ...builder,
+                    ...toPublicUserProfile(builder),
                     projects: stats?.projects ?? 0,
                     activeProjects: stats?.activeProjects ?? 0,
                     featuredProjects: stats?.featuredProjects ?? 0,
