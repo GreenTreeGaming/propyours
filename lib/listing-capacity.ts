@@ -183,3 +183,108 @@ export async function setListingCapacity(
         deactivated,
     };
 }
+
+
+export async function setListingStatus(
+    userId: string,
+    propertyId: string,
+    status: "active" | "sold" | "inactive",
+) {
+    await connectDB();
+
+    const session = await mongoose.startSession();
+
+    try {
+        let property: any;
+
+        await session.withTransaction(async () => {
+            property = await Property.findOne({
+                _id: propertyId,
+                userId,
+            }).session(session);
+
+            if (!property) {
+                throw new ListingCapacityError(
+                    "Property not found.",
+                    404,
+                );
+            }
+
+            if (
+                property.status !== "active" &&
+                status === "active"
+            ) {
+                const user = await User.findById(userId)
+                    .session(session);
+
+                if (!user) {
+                    throw new ListingCapacityError(
+                        "User not found.",
+                        404,
+                    );
+                }
+
+                const limits = getPlanLimits(user);
+                const reserved = await User.findOneAndUpdate(
+                    {
+                        _id: user._id,
+                        $expr: {
+                            $lt: [
+                                {
+                                    $size: {
+                                        $ifNull: [
+                                            "$listingUsage.activeListingIds",
+                                            [],
+                                        ],
+                                    },
+                                },
+                                limits.activeProperties,
+                            ],
+                        },
+                    },
+                    {
+                        $addToSet: {
+                            "listingUsage.activeListingIds":
+                                property._id,
+                        },
+                    },
+                    { new: true, session },
+                );
+
+                if (!reserved) {
+                    throw new ListingCapacityError(
+                        `Your ${limits.tier} plan allows up to ${limits.activeProperties} active listing(s).`,
+                    );
+                }
+            }
+
+            if (
+                property.status === "active" &&
+                status !== "active"
+            ) {
+                await User.updateOne(
+                    { _id: userId },
+                    {
+                        $pull: {
+                            "listingUsage.activeListingIds":
+                                property._id,
+                        },
+                    },
+                    { session },
+                );
+            }
+
+            property.status = status;
+
+            if (status !== "active") {
+                property.promotedUntil = undefined;
+            }
+
+            await property.save({ session });
+        });
+
+        return property;
+    } finally {
+        await session.endSession();
+    }
+}
