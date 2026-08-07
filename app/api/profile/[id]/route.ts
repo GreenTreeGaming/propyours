@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import Property from "@/models/Property";
 import { getPublicPropertyFilter } from "@/lib/property-filters";
+import { toPublicUserProfile } from "@/lib/public-user";
 
 const BUILDER_PLAN_RANK: Record<string, number> = {
     "builder-elite": 3,
@@ -40,7 +41,7 @@ export async function GET(
         }
 
         const user = await User.findById(id)
-            .select("-password -favorites")
+            .select("name role bio company city plan")
             .lean();
 
         if (!user) {
@@ -105,7 +106,7 @@ export async function GET(
 
         return NextResponse.json({
             user: {
-                ...user,
+                ...toPublicUserProfile(user),
                 builderPlan: {
                     tier: planTier,
                     isActive: hasActiveBuilderPlan,
