@@ -1810,7 +1810,7 @@ function ProfileContactCard({
                     {[
                         "Confirm availability before visiting",
                         "Inspect the property in person",
-                        "Verify documents before payment",
+                        "Verify documents before payments",
                     ].map((item) => (
                         <div
                             key={item}

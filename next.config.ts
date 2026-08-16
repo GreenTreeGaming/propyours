@@ -31,7 +31,7 @@ const securityHeaders = [
       "camera=()",
       "microphone=()",
       "geolocation=()",
-      "payment=()",
+      "payments=()",
       "usb=()",
     ].join(", "),
   },

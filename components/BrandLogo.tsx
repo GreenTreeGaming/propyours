@@ -9,7 +9,7 @@ type BrandLogoProps = {
 };
 
 export default function BrandLogo({
-                                      href = "/",
+                                      href,
                                       priority = false,
                                       className = "",
                                       imageClassName = "",

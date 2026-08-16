@@ -62,6 +62,7 @@ import {
 import type {
     ComparisonRow,
 } from "@/types/pricing";
+import RazorpayCheckoutButton from "@/components/payments/RazorpayCheckoutButton";
 
 type FinderAnswers = Record<string, string>;
 
@@ -989,17 +990,34 @@ function PlanCard({
                 </ul>
 
                 <div className="mt-auto pt-8">
-                    <Link
-                        href={cta.href}
-                        className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 ${theme.primaryCtaClass}`}
-                    >
-                        {cta.label}
-                        <ArrowRight
-                            size={16}
-                            className="transition-transform group-hover:translate-x-1"
-                            aria-hidden="true"
-                        />
-                    </Link>
+                    {plan.tier === "silver" ? (
+                        <Link
+                            href={cta.href}
+                            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 ${theme.primaryCtaClass}`}
+                        >
+                            {cta.label}
+
+                            <ArrowRight
+                                size={16}
+                                className="transition-transform group-hover:translate-x-1"
+                                aria-hidden="true"
+                            />
+                        </Link>
+                    ) : (
+                        <RazorpayCheckoutButton
+                            plan={plan.tier}
+                            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${theme.primaryCtaClass}`}
+                        >
+                            <>
+                                {cta.label}
+
+                                <ArrowRight
+                                    size={16}
+                                    aria-hidden="true"
+                                />
+                            </>
+                        </RazorpayCheckoutButton>
+                    )}
 
                     <Link
                         href="#compare-plans"

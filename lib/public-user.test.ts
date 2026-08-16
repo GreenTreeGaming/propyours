@@ -18,7 +18,7 @@ describe("public user DTO", () => {
                 tier: "builder-elite",
                 status: "active",
                 expiresAt: new Date("2027-01-01"),
-                paymentId: "payment-private",
+                paymentId: "payments-private",
             },
         } as any);
 

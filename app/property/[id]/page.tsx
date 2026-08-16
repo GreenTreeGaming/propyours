@@ -3300,7 +3300,7 @@ function ContactCard({
                     {[
                         "Inspect before paying",
                         "Verify ownership documents",
-                        "Use traceable payment methods",
+                        "Use traceable payments methods",
                     ].map((item) => (
                         <div
                             key={item}

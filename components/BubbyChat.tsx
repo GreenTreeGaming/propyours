@@ -64,7 +64,7 @@ const HIDDEN_ROUTE_PREFIXES = [
     "/manage-properties",
     "/admin",
     "/checkout",
-    "/payment",
+    "/payments",
 ];
 
 const WELCOME_MESSAGE: UiMessage = {

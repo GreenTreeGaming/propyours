@@ -304,21 +304,14 @@ export default function Navbar() {
               <Link
                   href="/"
                   onClick={closeMenus}
-                  className="group flex shrink-0 items-center gap-2.5 rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                  className="group hidden shrink-0 items-center rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-primary/15 sm:flex"
                   aria-label="PropYours home"
               >
-
-                <span className="hidden leading-none sm:block">
-                <div
-                    onClick={closeMenus}
-                    className="flex shrink-0 items-center"
-                >
-    <BrandLogo
-        priority
-        className="h-14 w-[235px] sm:h-16 sm:w-[285px]"
-    />
-</div>
-              </span>
+                <BrandLogo
+                    href=""
+                    priority
+                    className="h-14 w-[235px] sm:h-16 sm:w-[285px]"
+                />
               </Link>
 
               <div className="ml-auto hidden items-center lg:flex">

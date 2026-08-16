@@ -41,7 +41,7 @@ export default function robots():
                 "/dashboard/",
                 "/manage-properties/",
                 "/checkout/",
-                "/payment/",
+                "/payments/",
                 "/login",
                 "/signup",
                 "/post-property",

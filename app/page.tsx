@@ -513,7 +513,7 @@ export default function HomePage() {
           />
 
           <div className="relative mx-auto max-w-7xl px-5 pb-14 pt-12 sm:px-6 lg:px-8 lg:pb-20 lg:pt-16">
-            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(440px,0.86fr)] lg:gap-16">
+            <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(380px,0.78fr)] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.82fr)] xl:gap-16">
               {/* Hero copy */}
               <motion.div
                   initial={{ opacity: 0, y: 18 }}
@@ -579,7 +579,7 @@ export default function HomePage() {
                   initial={{ opacity: 0, x: 24 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.08 }}
-                  className="mx-auto w-full max-w-[570px] lg:mx-0 lg:justify-self-end"
+                  className="mx-auto w-full max-w-[500px] lg:mx-0 lg:justify-self-end xl:max-w-[520px]"
               >
                 <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.15)]">
                   {/* Decorative glow */}
@@ -589,10 +589,10 @@ export default function HomePage() {
                   />
 
                   {/* Header */}
-                  <div className="relative flex items-center justify-between border-b border-slate-100 bg-white/90 px-5 py-4 backdrop-blur sm:px-6">
+                  <div className="relative flex items-center justify-between border-b border-slate-100 bg-white/90 px-5 py-3.5 backdrop-blur sm:px-5">
                     <div className="flex items-center gap-3">
-        <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/25">
-          <Bot size={22} aria-hidden="true" />
+        <span className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
+    <Bot size={19} aria-hidden="true" />
 
           <span className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500" />
         </span>
@@ -618,7 +618,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Conversation area */}
-                  <div className="relative h-[430px] bg-[linear-gradient(180deg,#f8fafc_0%,#f0fdfa_100%)]">
+                  <div className="relative h-[330px] sm:h-[350px] xl:h-[370px] bg-[linear-gradient(180deg,#f8fafc_0%,#f0fdfa_100%)]">
                     <div
                         className="pointer-events-none absolute left-1/2 top-10 h-48 w-48 -translate-x-1/2 rounded-full bg-white/70 blur-3xl"
                         aria-hidden="true"
@@ -879,7 +879,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Fake input */}
-                  <div className="relative border-t border-slate-100 bg-white p-4 sm:p-5">
+                  <div className="relative border-t border-slate-100 bg-white p-3.5 sm:p-4">
                     <button
                         type="button"
                         onClick={() =>
@@ -887,7 +887,7 @@ export default function HomePage() {
                                 new CustomEvent("open-bubby-chat"),
                             )
                         }
-                        className="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-left transition hover:border-primary hover:bg-white hover:ring-4 hover:ring-primary/10"
+                        className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-left transition hover:border-primary hover:bg-white hover:ring-4 hover:ring-primary/10"
                     >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
           <Sparkles size={15} aria-hidden="true" />
