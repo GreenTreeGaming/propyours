@@ -5,30 +5,36 @@ import {
     NextResponse,
 } from "next/server";
 
-import { connectDB } from "@/lib/mongoose";
+import {
+    connectDB,
+} from "@/lib/mongoose";
+
 import {
     applyPlanChange,
 } from "@/lib/apply-plan-change";
 
-import RazorpaySubscription from "@/models/RazorpaySubscription";
+import {
+    PLAN_CATALOG,
+} from "@/lib/plan-catalog";
+
+import RazorpayOrder from "@/models/RazorpayOrder";
 
 type RazorpayWebhookPayload = {
     event?: string;
 
     payload?: {
-        subscription?: {
-            entity?: {
-                id?: string;
-                status?: string;
-                current_start?: number | null;
-                current_end?: number | null;
-                customer_id?: string | null;
-            };
-        };
-
         payment?: {
             entity?: {
                 id?: string;
+                order_id?: string;
+                status?: string;
+            };
+        };
+
+        order?: {
+            entity?: {
+                id?: string;
+                status?: string;
             };
         };
     };
@@ -36,7 +42,8 @@ type RazorpayWebhookPayload = {
 
 function getWebhookSecret(): string {
     const secret =
-        process.env.RAZORPAY_WEBHOOK_SECRET;
+        process.env
+            .RAZORPAY_WEBHOOK_SECRET;
 
     if (!secret) {
         throw new Error(
@@ -61,10 +68,14 @@ function verifyWebhookSignature(
             .digest("hex");
 
     const expectedBuffer =
-        Buffer.from(expectedSignature);
+        Buffer.from(
+            expectedSignature,
+        );
 
     const receivedBuffer =
-        Buffer.from(receivedSignature);
+        Buffer.from(
+            receivedSignature,
+        );
 
     if (
         expectedBuffer.length !==
@@ -79,27 +90,13 @@ function verifyWebhookSignature(
     );
 }
 
-function unixToDate(
-    value: number | null | undefined,
-): Date | undefined {
-    if (
-        typeof value !== "number" ||
-        !Number.isFinite(value)
-    ) {
-        return undefined;
-    }
-
-    return new Date(value * 1000);
-}
-
 export async function POST(
     request: NextRequest,
 ) {
     try {
         /*
-         * IMPORTANT:
-         * Razorpay webhook verification must use the raw
-         * request body. Do not call request.json() first.
+         * Razorpay webhook verification
+         * must use the raw request body.
          */
         const rawBody =
             await request.text();
@@ -143,15 +140,25 @@ export async function POST(
                 rawBody,
             ) as RazorpayWebhookPayload;
 
-        const subscriptionEntity =
+        const payment =
             event.payload
-                ?.subscription
+                ?.payment
                 ?.entity;
 
-        const subscriptionId =
-            subscriptionEntity?.id;
+        const paymentId =
+            payment?.id;
 
-        if (!subscriptionId) {
+        const orderId =
+            payment?.order_id ??
+            event.payload
+                ?.order
+                ?.entity
+                ?.id;
+
+        if (
+            typeof orderId !==
+            "string"
+        ) {
             return NextResponse.json({
                 received: true,
             });
@@ -159,23 +166,20 @@ export async function POST(
 
         await connectDB();
 
-        const subscription =
-            await RazorpaySubscription.findOne({
-                razorpaySubscriptionId:
-                subscriptionId,
+        const order =
+            await RazorpayOrder.findOne({
+                razorpayOrderId:
+                orderId,
             });
 
         /*
-         * Razorpay may send a webhook before our local
-         * record exists, or for an unrelated subscription.
-         *
-         * Return 200 so Razorpay does not endlessly retry
-         * something we cannot process.
+         * Webhooks can arrive for orders
+         * unrelated to this application.
          */
-        if (!subscription) {
+        if (!order) {
             console.warn(
-                "Received Razorpay webhook for unknown subscription:",
-                subscriptionId,
+                "Received Razorpay webhook for unknown order:",
+                orderId,
             );
 
             return NextResponse.json({
@@ -183,174 +187,145 @@ export async function POST(
             });
         }
 
-        const currentStart =
-            unixToDate(
-                subscriptionEntity
-                    ?.current_start,
-            );
-
-        const currentEnd =
-            unixToDate(
-                subscriptionEntity
-                    ?.current_end,
-            );
-
-        const customerId =
-            subscriptionEntity
-                ?.customer_id;
-
-        const paymentId =
-            event.payload
-                ?.payment
-                ?.entity
-                ?.id;
-
-        if (currentStart) {
-            subscription.currentStart =
-                currentStart;
-        }
-
-        if (currentEnd) {
-            subscription.currentEnd =
-                currentEnd;
-        }
-
+        /*
+         * payment.captured is the key
+         * successful one-time payment event.
+         */
         if (
-            typeof customerId ===
-            "string"
+            event.event ===
+            "payment.captured"
         ) {
-            subscription.razorpayCustomerId =
-                customerId;
-        }
+            /*
+             * Idempotency:
+             * Razorpay may send the same
+             * webhook more than once.
+             */
+            if (
+                order.status ===
+                "paid"
+            ) {
+                return NextResponse.json({
+                    received: true,
+                    alreadyProcessed: true,
+                });
+            }
 
-        if (
-            typeof paymentId ===
-            "string"
-        ) {
-            subscription.latestPaymentId =
+            if (
+                typeof paymentId !==
+                "string"
+            ) {
+                return NextResponse.json({
+                    received: true,
+                });
+            }
+
+            const plan =
+                PLAN_CATALOG[
+                    order.planTier
+                    ];
+
+            if (!plan) {
+                console.error(
+                    "Razorpay order references unknown plan:",
+                    order.planTier,
+                );
+
+                return NextResponse.json({
+                    received: true,
+                });
+            }
+
+            const now =
+                new Date();
+
+            const expiresAt =
+                new Date(
+                    now.getTime() +
+                    plan.entitlements
+                        .listingDays *
+                    24 *
+                    60 *
+                    60 *
+                    1000,
+                );
+
+            /*
+             * Activate first.
+             * Mark paid only after the
+             * account update succeeds.
+             */
+            await applyPlanChange({
+                userId:
+                    order.userId.toString(),
+
+                tier:
+                order.planTier,
+
+                audience:
+                plan.audience,
+
+                status:
+                    "active",
+
+                source:
+                    "payment",
+
+                paymentId,
+
+                expiresAt,
+            });
+
+            order.razorpayPaymentId =
                 paymentId;
+
+            order.status =
+                "paid";
+
+            order.paidAt =
+                now;
+
+            await order.save();
+
+            return NextResponse.json({
+                received: true,
+            });
         }
 
-        switch (event.event) {
-            case "subscription.authenticated":
-                subscription.status =
-                    "authenticated";
-                break;
+        /*
+         * A failed payment attempt should
+         * not activate anything.
+         */
+        if (
+            event.event ===
+            "payment.failed"
+        ) {
+            if (
+                order.status !==
+                "paid"
+            ) {
+                order.status =
+                    "failed";
 
-            case "subscription.activated":
-            case "subscription.charged":
-            case "subscription.resumed": {
-                subscription.status =
-                    "active";
+                if (
+                    typeof paymentId ===
+                    "string"
+                ) {
+                    order.razorpayPaymentId =
+                        paymentId;
+                }
 
-                await subscription.save();
-
-                await applyPlanChange({
-                    userId:
-                        subscription.userId.toString(),
-
-                    tier:
-                    subscription.planTier,
-
-                    status:
-                        "active",
-
-                    source:
-                        "payment",
-
-                    paymentId:
-                        paymentId ??
-                        subscription.latestPaymentId,
-
-                    expiresAt:
-                    currentEnd,
-                });
-
-                return NextResponse.json({
-                    received: true,
-                });
+                await order.save();
             }
 
-            case "subscription.pending":
-                subscription.status =
-                    "pending";
-                break;
-
-            case "subscription.halted":
-                subscription.status =
-                    "halted";
-                break;
-
-            case "subscription.cancelled": {
-                subscription.status =
-                    "cancelled";
-
-                await subscription.save();
-
-                await applyPlanChange({
-                    userId:
-                        subscription.userId.toString(),
-
-                    tier:
-                    subscription.planTier,
-
-                    status:
-                        "cancelled",
-
-                    source:
-                        "payment",
-
-                    paymentId:
-                    subscription.latestPaymentId,
-                });
-
-                return NextResponse.json({
-                    received: true,
-                });
-            }
-
-            case "subscription.completed": {
-                subscription.status =
-                    "completed";
-
-                await subscription.save();
-
-                await applyPlanChange({
-                    userId:
-                        subscription.userId.toString(),
-
-                    tier:
-                    subscription.planTier,
-
-                    status:
-                        "expired",
-
-                    source:
-                        "payment",
-
-                    paymentId:
-                    subscription.latestPaymentId,
-                });
-
-                return NextResponse.json({
-                    received: true,
-                });
-            }
-
-            case "subscription.paused":
-                subscription.status =
-                    "paused";
-                break;
-
-            case "subscription.updated":
-                break;
-
-            default:
-                break;
+            return NextResponse.json({
+                received: true,
+            });
         }
 
-        await subscription.save();
-
+        /*
+         * Other Razorpay events don't
+         * require action here.
+         */
         return NextResponse.json({
             received: true,
         });
