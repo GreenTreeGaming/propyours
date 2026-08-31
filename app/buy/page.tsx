@@ -67,6 +67,7 @@ interface Property {
   images?: string[];
   purpose: string;
   featured?: boolean;
+  zeroCommission?: boolean;
   promotedUntil?: string;
   createdAt?: string;
   planSnapshot?: {

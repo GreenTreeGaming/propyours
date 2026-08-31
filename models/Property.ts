@@ -161,6 +161,11 @@ const PropertySchema =
                 default: false,
             },
 
+            zeroCommission: {
+                type: Boolean,
+                default: false,
+            },
+
             images: {
                 type: [String],
                 default: [],

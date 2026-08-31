@@ -583,12 +583,16 @@ export async function POST(
                 amenities: cleanStringArray(
                     body.amenities,
                 ),
-                images,
-                videoLinks,
-                brochure,
-                featured: limits.featured,
-                listingExpiresAt,
-                planSnapshot: {
+                    images,
+                    videoLinks,
+                    brochure,
+
+                    featured: limits.featured,
+                    zeroCommission: isDeveloper,
+
+                    listingExpiresAt,
+
+                    planSnapshot: {
                     tier: limits.tier,
                     listingDays:
                     limits.listingDays,

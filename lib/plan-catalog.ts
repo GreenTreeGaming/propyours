@@ -39,8 +39,7 @@ export type BadgeLevel =
 
 export type BillingType =
     | "free"
-    | "monthly"
-    | "yearly";
+    | "one-time";
 
 export type PlanEntitlements = {
     activeProperties: number;
@@ -146,10 +145,12 @@ export const PLAN_CATALOG = {
 
         presentation: {
             displayName: "Gold",
-            priceInPaise: 249900,
+
+            priceInPaise: 199900,
             originalPriceInPaise: 299900,
-            billingType: "monthly",
-            billingLabel: "per month",
+
+            billingType: "one-time",
+            billingLabel: "90-day pack",
 
             description:
                 "Boost your property's visibility and receive more qualified enquiries.",
@@ -197,10 +198,12 @@ export const PLAN_CATALOG = {
 
         presentation: {
             displayName: "Platinum",
-            priceInPaise: 599900,
+
+            priceInPaise: 399900,
             originalPriceInPaise: 699900,
-            billingType: "monthly",
-            billingLabel: "per month",
+
+            billingType: "one-time",
+            billingLabel: "180-day pack",
 
             description:
                 "Maximum exposure with premium placement, unlimited leads and advanced insights.",
@@ -248,9 +251,12 @@ export const PLAN_CATALOG = {
 
         presentation: {
             displayName: "Builder Starter",
+
             priceInPaise: 999900,
-            billingType: "yearly",
-            billingLabel: "per year",
+            originalPriceInPaise: 1500000,
+
+            billingType: "one-time",
+            billingLabel: "1-year pack",
 
             description:
                 "For small builders who want a professional profile and basic project visibility.",
@@ -265,7 +271,7 @@ export const PLAN_CATALOG = {
         },
 
         entitlements: {
-            activeProperties: 3,
+            activeProperties: 1,
             listingDays: 365,
 
             maxImages: 10,
@@ -292,10 +298,12 @@ export const PLAN_CATALOG = {
 
         presentation: {
             displayName: "Builder Growth",
+
             priceInPaise: 2499900,
-            originalPriceInPaise: 2999900,
-            billingType: "yearly",
-            billingLabel: "per year",
+            originalPriceInPaise: 4500000,
+
+            billingType: "one-time",
+            billingLabel: "1-year pack",
 
             description:
                 "For growing builders who want better visibility, stronger trust signals, and more project exposure.",
@@ -312,7 +320,7 @@ export const PLAN_CATALOG = {
         },
 
         entitlements: {
-            activeProperties: 10,
+            activeProperties: 3,
             listingDays: 365,
 
             maxImages: 25,
@@ -339,10 +347,12 @@ export const PLAN_CATALOG = {
 
         presentation: {
             displayName: "Builder Elite",
-            priceInPaise: 4999900,
-            originalPriceInPaise: 5999900,
-            billingType: "yearly",
-            billingLabel: "per year",
+
+            priceInPaise: 3999900,
+            originalPriceInPaise: 7500000,
+
+            billingType: "one-time",
+            billingLabel: "1-year pack",
 
             description:
                 "For established builders who want the strongest visibility across builder listings and property discovery.",
@@ -350,7 +360,7 @@ export const PLAN_CATALOG = {
             ctaText: "Choose Builder Elite",
             ctaLink: "/builders/register?plan=elite",
 
-            badge: "Enterprise",
+            badge: "Best Value",
             badgeType: "premium",
             iconKey: "crown",
 
@@ -359,12 +369,10 @@ export const PLAN_CATALOG = {
         },
 
         entitlements: {
-            activeProperties: 25,
+            activeProperties: 5,
             listingDays: 365,
 
             maxImages: 40,
-
-            // This is now the authoritative value.
             maxVideoLinks: 3,
 
             verifiedLeadLimit: null,
@@ -378,6 +386,7 @@ export const PLAN_CATALOG = {
             analyticsLevel: "portfolio",
 
             promoteBoostsPerMonth: 15,
+
             leadNotifications: true,
         },
     },

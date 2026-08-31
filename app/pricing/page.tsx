@@ -125,16 +125,19 @@ const AUDIENCE_CONTENT = {
         eyebrow: "Pricing for property owners",
         title: "Choose how much visibility your property needs.",
         description:
-            "Start with a free listing or choose a monthly plan for longer duration, stronger placement and clearer performance insights.",
-        billingSummary: "Gold and Platinum are billed monthly.",
+            "Start with a free listing or choose a paid pack for longer duration, stronger placement and clearer performance insights.",
+        billingSummary:
+            "Pay once for the full validity of your selected pack. GST applies to paid plans.",
         icon: UserRound,
     },
+
     builder: {
         eyebrow: "Pricing for builders and developers",
         title: "Choose the portfolio tools that match your scale.",
         description:
-            "Annual builder plans combine active project limits, listing visibility, profile treatment, promotion boosts and project analytics.",
-        billingSummary: "Builder plans are billed yearly.",
+            "Builder packs combine active project limits, listing visibility, profile treatment, promotion boosts and project analytics.",
+        billingSummary:
+            "Pay once for the full one-year builder pack. GST applies to paid plans.",
         icon: Building2,
     },
 } satisfies Record<
@@ -188,9 +191,10 @@ const BUILDER_FAQS = [
             "Builder Starter, Builder Growth and Builder Elite are annual plans in the current catalog.",
     },
     {
-        question: "How many active projects can each plan support?",
+        question:
+            "How many active projects can each plan support?",
         answer:
-            "Builder Starter supports up to three active projects, Growth supports up to ten and Elite supports up to twenty-five.",
+            "Builder Starter supports 1 active project, Growth supports up to 3 and Elite supports up to 5.",
     },
     {
         question: "What are promote boosts?",
@@ -258,33 +262,24 @@ function getBillingLabel(
     plan: PlanDefinition,
 ): string {
     if (plan.presentation.priceInPaise === 0) {
-        return "No monthly charge";
+        return "";
     }
 
-    /*
-     * Gold and Platinum are monthly owner subscriptions.
-     * This normalization keeps the pricing UI correct even if an older
-     * plan-catalog branch still carries the previous per-listing label.
-     */
-    if (plan.audience === "owner") {
-        return "/ month";
-    }
-
-    return "/ year";
+    return plan.tier === "gold"
+        ? "for 90 days"
+        : plan.tier === "platinum"
+            ? "for 180 days"
+            : "for 1 year";
 }
 
 function getBillingNote(
     plan: PlanDefinition,
 ): string {
     if (plan.presentation.priceInPaise === 0) {
-        return "Start without a paid subscription";
+        return "Start without a paid pack";
     }
 
-    if (plan.audience === "owner") {
-        return "Monthly owner subscription";
-    }
-
-    return "Annual builder subscription";
+    return "One-time pack price · + 18% GST";
 }
 
 function getPlanSavings(
@@ -301,6 +296,29 @@ function getPlanSavings(
     }
 
     return original - plan.presentation.priceInPaise;
+}
+
+function getPlanDiscountPercentage(
+    plan: PlanDefinition,
+): number | null {
+    const original =
+        plan.presentation.originalPriceInPaise;
+
+    const current =
+        plan.presentation.priceInPaise;
+
+    if (
+        original === undefined ||
+        original <= current ||
+        original <= 0
+    ) {
+        return null;
+    }
+
+    return Math.round(
+        ((original - current) / original) *
+        100,
+    );
 }
 
 function toTitle(value: string): string {
@@ -534,13 +552,18 @@ function getFinderQuestions(
                 options: [
                     {
                         value: "1",
-                        label: "One property",
-                        hint: "Silver or Gold may fit",
+                        label: "1 project",
+                        hint: "Builder Starter",
                     },
                     {
-                        value: "2",
-                        label: "Two properties",
-                        hint: "Platinum capacity",
+                        value: "3",
+                        label: "Up to 3",
+                        hint: "Builder Growth",
+                    },
+                    {
+                        value: "5",
+                        label: "Up to 5",
+                        hint: "Builder Elite",
                     },
                 ],
             },
@@ -824,6 +847,9 @@ function PlanCard({
         plan.tier === "gold" ||
         plan.tier === "builder-growth";
 
+    const discountPercentage =
+        getPlanDiscountPercentage(plan);
+
     return (
         <motion.article
             initial={{ opacity: 0, y: 24 }}
@@ -912,7 +938,7 @@ function PlanCard({
                             Plan price
                         </p>
 
-                        {savings ? (
+                        {discountPercentage ? (
                             <span
                                 className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
                                     isPremium
@@ -920,8 +946,8 @@ function PlanCard({
                                         : "bg-emerald-100 text-emerald-700"
                                 }`}
                             >
-                Save {formatPrice(savings)}
-              </span>
+        {discountPercentage}% OFF
+    </span>
                         ) : null}
                     </div>
 
@@ -941,25 +967,32 @@ function PlanCard({
                         ) : null}
                     </div>
 
+                    {plan.presentation.priceInPaise > 0 ? (
+                        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {plan.presentation.originalPriceInPaise ? (
+                                <span
+                                    className={`text-xs line-through ${theme.mutedClass}`}
+                                >
+                {formatPrice(
+                    plan.presentation
+                        .originalPriceInPaise,
+                )}
+            </span>
+                            ) : null}
+
+                            <span
+                                className={`text-xs font-semibold ${theme.mutedClass}`}
+                            >
+            + 18% GST
+        </span>
+                        </div>
+                    ) : null}
+
                     <p
                         className={`mt-2 text-xs ${theme.mutedClass}`}
                     >
                         {getBillingNote(plan)}
                     </p>
-
-                    {plan.presentation.originalPriceInPaise ? (
-                        <p
-                            className={`mt-2 text-xs ${theme.mutedClass}`}
-                        >
-                            Standard price{" "}
-                            <span className="line-through">
-                {formatPrice(
-                    plan.presentation
-                        .originalPriceInPaise,
-                )}
-              </span>
-                        </p>
-                    ) : null}
                 </div>
 
                 <div
@@ -1098,7 +1131,7 @@ function PricingPageContent() {
                 },
                 {
                     label: "Active capacity",
-                    value: "1–2 properties",
+                    value: "1–5 projects",
                     icon: Store,
                 },
             ]
