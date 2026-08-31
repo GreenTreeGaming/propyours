@@ -2851,30 +2851,58 @@ function ListingBadge({
                       }: {
     label: string;
 }) {
-    const promoted =
+    const isPromoted =
         label === "Promoted";
+
+    const isZeroCommission =
+        label === "Zero Commission";
+
+    if (isZeroCommission) {
+        return (
+            <span
+                className="
+                    inline-flex
+                    items-center
+                    gap-1.5
+                    rounded-full
+                    border
+                    border-emerald-200
+                    bg-emerald-50
+                    px-3
+                    py-1.5
+                    text-[9px]
+                    font-black
+                    uppercase
+                    tracking-[0.11em]
+                    text-emerald-700
+                    shadow-sm
+                "
+            >
+                <ShieldCheck
+                    size={12}
+                    aria-hidden="true"
+                />
+
+                {label}
+            </span>
+        );
+    }
 
     return (
         <span
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.11em] ${
-                promoted
-                    ? "border-amber-200 bg-amber-100 text-amber-800"
-                    : "border-teal-100 bg-teal-50 text-primary"
+                isPromoted
+                    ? "border-primary/20 bg-teal-50 text-primary"
+                    : "border-slate-200 bg-slate-50 text-slate-600"
             }`}
         >
-      {promoted ? (
-          <Sparkles
-              size={11}
-              aria-hidden="true"
-          />
-      ) : (
-          <BadgeCheck
-              size={11}
-              aria-hidden="true"
-          />
-      )}
+            <BadgeCheck
+                size={12}
+                aria-hidden="true"
+            />
+
             {label}
-    </span>
+        </span>
     );
 }
 
