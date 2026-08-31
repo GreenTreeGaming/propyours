@@ -432,15 +432,49 @@ function PropertyCard({
 
             <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/40 bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-900 shadow-sm backdrop-blur">
-                {property.propertyType}
-              </span>
+    <span className="rounded-full border border-white/40 bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-900 shadow-sm backdrop-blur">
+        {property.propertyType}
+    </span>
+
+                {property.zeroCommission ? (
+                    <span
+                        className="
+                inline-flex
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-emerald-300/60
+                bg-emerald-500
+                px-3
+                py-1.5
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.1em]
+                text-white
+                shadow-lg
+                shadow-emerald-500/20
+            "
+                    >
+            <ShieldCheck
+                size={12}
+                aria-hidden="true"
+            />
+
+            Zero Commission
+        </span>
+                ) : null}
 
                 {badge ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-white shadow-lg shadow-primary/20">
-                  <BadgeCheck size={12} aria-hidden="true" />
+            <BadgeCheck
+                size={12}
+                aria-hidden="true"
+            />
+
                       {badge}
-                </span>
+        </span>
                 ) : null}
               </div>
 

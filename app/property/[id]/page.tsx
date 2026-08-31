@@ -131,6 +131,7 @@ interface PropertyRecord {
     promotedUntil?: string;
     listingExpiresAt?: string;
     featured?: boolean;
+    zeroCommission?: boolean;
     status?: string;
     createdAt?: string;
     updatedAt?: string;
@@ -548,6 +549,10 @@ function getListingBadges(
     property: PropertyRecord,
 ): string[] {
     const badges: string[] = [];
+
+    if (property.zeroCommission) {
+        badges.push("Zero Commission");
+    }
 
     if (
         property.planSnapshot
