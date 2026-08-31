@@ -215,17 +215,6 @@ export async function POST(
                 1000,
             );
 
-        order.razorpayPaymentId =
-            paymentId;
-
-        order.status =
-            "paid";
-
-        order.paidAt =
-            now;
-
-        await order.save();
-
         await applyPlanChange({
             userId:
             auth.userId,
@@ -246,6 +235,17 @@ export async function POST(
 
             expiresAt,
         });
+
+        order.razorpayPaymentId =
+            paymentId;
+
+        order.status =
+            "paid";
+
+        order.paidAt =
+            now;
+
+        await order.save();
 
         return NextResponse.json({
             success: true,
