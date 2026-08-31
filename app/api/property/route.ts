@@ -4,6 +4,10 @@ import { connectDB } from "@/lib/mongoose";
 import {
     getPublicPropertyFilter,
 } from "@/lib/property-filters";
+
+import {
+    getOptionalAuthenticatedUser,
+} from "@/lib/auth";
 import {
     propertySearchQuerySchema,
     type PropertySearchQuery,
@@ -307,6 +311,12 @@ export async function GET(
 
         await connectDB();
 
+        const viewer =
+            await getOptionalAuthenticatedUser();
+
+        const canViewPrice =
+            viewer !== null;
+
         const now = new Date();
 
         const matchFilter =
@@ -454,10 +464,32 @@ export async function GET(
                     query.limit,
                 );
 
+        const properties =
+            result.properties.map(
+                (property) => {
+                    if (canViewPrice) {
+                        return {
+                            ...property,
+                            priceLocked: false,
+                        };
+                    }
+
+                    const {
+                        price: _price,
+                        ...publicProperty
+                    } = property;
+
+                    return {
+                        ...publicProperty,
+                        price: null,
+                        priceLocked: true,
+                    };
+                },
+            );
+
         const response:
             PropertySearchResponse = {
-            properties:
-            result.properties,
+            properties,
 
             pagination: {
                 page: query.page,

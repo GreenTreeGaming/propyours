@@ -56,7 +56,8 @@ interface Property {
   city: string;
   state?: string;
   description?: string;
-  price: number;
+  price: number | null;
+  priceLocked?: boolean;
   priceType?: "Total" | "Per Sq Ft";
   negotiable?: boolean;
   bedrooms?: number;
@@ -600,18 +601,46 @@ function PropertyCard({
 
             <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100 pt-5">
               <div>
-                <p
-                    className={`font-black tracking-tight text-slate-950 ${
-                        isList ? "text-2xl" : "text-xl"
-                    }`}
-                >
-                  {formatPrice(property.price)}
-                </p>
-                <p className="mt-1 text-xs font-medium text-slate-400">
-                  {property.priceType === "Per Sq Ft"
-                      ? "Price per sq. ft."
-                      : "Total asking price"}
-                </p>
+                {property.priceLocked || property.price === null ? (
+                    <>
+                      <div className="relative inline-flex items-center">
+          <span
+              className={`select-none font-black tracking-tight text-slate-300 blur-[5px] ${
+                  isList ? "text-2xl" : "text-xl"
+              }`}
+              aria-hidden="true"
+          >
+            ₹00,00,000
+          </span>
+
+                        <span className="absolute inset-0 flex items-center">
+            <span className="rounded-lg bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-sm">
+              Login to view price
+            </span>
+          </span>
+                      </div>
+
+                      <p className="mt-2 text-xs font-medium text-slate-400">
+                        Sign in to see the property price
+                      </p>
+                    </>
+                ) : (
+                    <>
+                      <p
+                          className={`font-black tracking-tight text-slate-950 ${
+                              isList ? "text-2xl" : "text-xl"
+                          }`}
+                      >
+                        {formatPrice(property.price)}
+                      </p>
+
+                      <p className="mt-1 text-xs font-medium text-slate-400">
+                        {property.priceType === "Per Sq Ft"
+                            ? "Price per sq. ft."
+                            : "Total asking price"}
+                      </p>
+                    </>
+                )}
               </div>
 
               <span className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-black text-white transition group-hover:bg-primary">

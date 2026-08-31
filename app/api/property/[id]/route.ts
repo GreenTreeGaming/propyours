@@ -7,6 +7,7 @@ import { getPublicPropertyFilter } from "@/lib/property-filters";
 import { toPublicUserProfile } from "@/lib/public-user";
 import {
     getAuthenticatedUser,
+    getOptionalAuthenticatedUser,
     isAuthError,
 } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
@@ -201,6 +202,12 @@ export async function GET(
     try {
         await connectDB();
 
+        const viewer =
+            await getOptionalAuthenticatedUser();
+
+        const canViewPrice =
+            viewer !== null;
+
         const { id } = await params;
 
         const property =
@@ -225,7 +232,29 @@ export async function GET(
             );
         }
 
-        const responseProperty = property.toObject();
+        const responseProperty =
+            property.toObject();
+
+        if (!canViewPrice) {
+            responseProperty.price =
+                null;
+
+            (
+                responseProperty as Record<
+                    string,
+                    unknown
+                >
+            ).priceLocked =
+                true;
+        } else {
+            (
+                responseProperty as Record<
+                    string,
+                    unknown
+                >
+            ).priceLocked =
+                false;
+        }
 
         if (
             responseProperty.userId &&

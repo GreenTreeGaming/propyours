@@ -115,7 +115,8 @@ interface PropertyRecord {
     locality?: string;
     city?: string;
     state?: string;
-    price?: number;
+    price?: number | null;
+    priceLocked?: boolean;
     priceType?: string;
     negotiable?: boolean;
     bathrooms?: number | null;
@@ -2204,19 +2205,50 @@ export default function PropertyDetailsPage() {
                                             : "Asking price"}
                                     </p>
 
-                                    <p className="mt-3 text-4xl font-black tracking-[-0.04em] text-white lg:text-5xl">
-                                        {formatPrice(
-                                            property.price,
-                                        )}
-                                    </p>
+                                    {property.priceLocked ||
+                                    property.price === null ||
+                                    property.price === undefined ? (
+                                        <div className="mt-3">
+                                            <div className="relative inline-flex items-center">
+            <span
+                className="select-none text-4xl font-black tracking-[-0.04em] text-slate-500 blur-[6px] lg:text-5xl"
+                aria-hidden="true"
+            >
+                ₹00,00,000
+            </span>
 
-                                    {property.priceType ? (
-                                        <p className="mt-2 text-xs font-bold text-slate-400">
-                                            {
-                                                property.priceType
-                                            }
-                                        </p>
-                                    ) : null}
+                                                <button
+                                                    type="button"
+                                                    onClick={redirectToLogin}
+                                                    className="absolute inset-0 flex items-center justify-center"
+                                                >
+                <span className="rounded-xl bg-white px-4 py-2 text-xs font-black text-slate-950 shadow-lg transition hover:bg-teal-50 hover:text-primary">
+                    Login to view price
+                </span>
+                                                </button>
+                                            </div>
+
+                                            <p className="mt-3 text-xs font-bold text-slate-400">
+                                                Sign in to reveal the asking price
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <p className="mt-3 text-4xl font-black tracking-[-0.04em] text-white lg:text-5xl">
+                                                {formatPrice(
+                                                    property.price,
+                                                )}
+                                            </p>
+
+                                            {property.priceType ? (
+                                                <p className="mt-2 text-xs font-bold text-slate-400">
+                                                    {
+                                                        property.priceType
+                                                    }
+                                                </p>
+                                            ) : null}
+                                        </>
+                                    )}
 
                                     <PriceNegotiabilityBadge
                                         negotiable={

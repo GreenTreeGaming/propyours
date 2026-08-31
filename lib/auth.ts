@@ -107,6 +107,60 @@ export async function getAuthenticatedUser():
     }
 }
 
+export async function getOptionalAuthenticatedUser():
+    Promise<AuthUser | null> {
+    const cookieStore =
+        await cookies();
+
+    const token =
+        cookieStore.get(
+            "auth-token",
+        )?.value;
+
+    if (!token) {
+        return null;
+    }
+
+    try {
+        const payload =
+            verifySessionToken(
+                token,
+            );
+
+        await connectDB();
+
+        const user =
+            await User.findById(
+                payload.userId,
+            )
+                .select(
+                    "+tokenVersion",
+                )
+                .lean();
+
+        if (!user) {
+            return null;
+        }
+
+        const currentTokenVersion =
+            user.tokenVersion ?? 0;
+
+        if (
+            currentTokenVersion !==
+            payload.tokenVersion
+        ) {
+            return null;
+        }
+
+        return {
+            userId:
+                user._id.toString(),
+        };
+    } catch {
+        return null;
+    }
+}
+
 export function isAuthError(
     value:
         | AuthUser
