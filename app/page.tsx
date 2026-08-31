@@ -1158,22 +1158,22 @@ export default function HomePage() {
               {/* Buy */}
               <Link
                   href="/buy"
-                  className="group relative overflow-hidden rounded-2xl bg-slate-950 p-6 text-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(15,23,42,0.28)] lg:col-span-4"
+                  className="group relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#0d9488_52%,#14b8a6_100%)] p-6 text-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(13,148,136,0.28)] lg:col-span-4"
               >
                 <div
-                    className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-teal-400/20 blur-3xl"
+                    className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/20 blur-3xl"
                     aria-hidden="true"
                 />
 
                 <div className="relative flex h-full min-h-[170px] flex-col justify-between">
                   <div className="flex items-start justify-between gap-5">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300 ring-1 ring-white/10">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20">
               <Home size={22} aria-hidden="true" />
             </span>
 
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary">
-              Most popular
-            </span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white">
+    Most popular
+</span>
                   </div>
 
                   <div className="mt-8">
@@ -1181,12 +1181,12 @@ export default function HomePage() {
                       Buy a property
                     </h3>
 
-                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-300">
+                    <p className="mt-2 max-w-xs text-sm leading-6 text-teal-50">
                       Explore apartments, houses, plots, land and commercial
                       properties for sale.
                     </p>
 
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-teal-300">
+                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white">
               Browse properties
               <ArrowRight
                   size={17}

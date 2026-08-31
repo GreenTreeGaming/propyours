@@ -2275,7 +2275,12 @@ export default function PropertyDetailsPage() {
 
                         <div className="grid border-t border-slate-200 sm:grid-cols-2 lg:grid-cols-5">
                             <AreaDetail
-                                property={property}
+                                property={{
+                                    ...property,
+                                    price:
+                                        property.price ??
+                                        undefined,
+                                }}
                                 displayUnit={
                                     displayUnit
                                 }
@@ -2745,7 +2750,12 @@ export default function PropertyDetailsPage() {
                 onClose={() =>
                     setAnalyticsOpen(false)
                 }
-                property={property}
+                property={{
+                    ...property,
+                    price:
+                        property.price ??
+                        undefined,
+                }}
             />
         </main>
     );
@@ -3461,11 +3471,28 @@ function MobileContactBar({
                     <p className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
                         Asking price
                     </p>
-                    <p className="truncate text-lg font-black text-slate-950">
-                        {formatPrice(
-                            property.price,
-                        )}
-                    </p>
+                    {property.priceLocked ||
+                    property.price === null ||
+                    property.price === undefined ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                window.location.href =
+                                    `/login?redirect=${encodeURIComponent(
+                                        `/property/${property._id}`,
+                                    )}`;
+                            }}
+                            className="truncate text-sm font-black text-primary"
+                        >
+                            Login to view price
+                        </button>
+                    ) : (
+                        <p className="truncate text-lg font-black text-slate-950">
+                            {formatPrice(
+                                property.price,
+                            )}
+                        </p>
+                    )}
                 </div>
 
                 {property.userId?.phone ? (

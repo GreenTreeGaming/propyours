@@ -2,6 +2,7 @@
 
 import {
     Suspense,
+    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -46,13 +47,12 @@ import {
     type LucideIcon,
 } from "lucide-react";
 
-import {
-    PLAN_CATALOG,
-    type AnalyticsLevel,
-    type PlanAudience,
-    type PlanDefinition,
-    type PlanTier,
-    type RankingLevel,
+import type {
+    AnalyticsLevel,
+    PlanAudience,
+    PlanDefinition,
+    PlanTier,
+    RankingLevel,
 } from "@/lib/plan-catalog";
 import {
     ownerComparison,
@@ -92,6 +92,32 @@ type PlanTheme = {
     dividerClass: string;
     primaryCtaClass: string;
     secondaryCtaClass: string;
+};
+
+type PricingPlan =
+    Omit<
+        PlanDefinition,
+        "presentation"
+    > & {
+    presentation:
+        Omit<
+            PlanDefinition["presentation"],
+            | "priceInPaise"
+            | "originalPriceInPaise"
+        > & {
+        priceInPaise:
+            number | null;
+
+        originalPriceInPaise?:
+            number | null;
+    };
+
+    priceLocked: boolean;
+};
+
+type PricingApiResponse = {
+    plans: PricingPlan[];
+    pricesLocked: boolean;
 };
 
 const OWNER_PLAN_TIERS = [
@@ -242,8 +268,9 @@ const BUILDER_FAQS = [
 ];
 
 function getPlansForAudience(
+    allPlans: PricingPlan[],
     audience: PlanAudience,
-): PlanDefinition[] {
+): PricingPlan[] {
     const tiers =
         audience === "owner"
             ? OWNER_PLAN_TIERS
@@ -251,10 +278,20 @@ function getPlansForAudience(
                 ? BUILDER_PLAN_TIERS
                 : AGENT_PLAN_TIERS;
 
-    return tiers.map(
-        (tier) =>
-            PLAN_CATALOG[tier],
-    );
+    return tiers
+        .map(
+            (tier) =>
+                allPlans.find(
+                    (plan) =>
+                        plan.tier === tier,
+                ),
+        )
+        .filter(
+            (
+                plan,
+            ): plan is PricingPlan =>
+                Boolean(plan),
+        );
 }
 
 function formatPrice(
@@ -287,7 +324,7 @@ function formatCompactPrice(
 }
 
 function getBillingLabel(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): string {
     if (
         plan.presentation
@@ -317,7 +354,7 @@ function getBillingLabel(
 }
 
 function getBillingNote(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): string {
     if (plan.presentation.priceInPaise === 0) {
         return "Start without a paid pack";
@@ -327,32 +364,43 @@ function getBillingNote(
 }
 
 function getPlanSavings(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): number | null {
     const original =
-        plan.presentation.originalPriceInPaise;
+        plan.presentation
+            .originalPriceInPaise;
+
+    const current =
+        plan.presentation
+            .priceInPaise;
 
     if (
         original === undefined ||
-        original <= plan.presentation.priceInPaise
+        original === null ||
+        current === null ||
+        original <= current
     ) {
         return null;
     }
 
-    return original - plan.presentation.priceInPaise;
+    return original - current;
 }
 
 function getPlanDiscountPercentage(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): number | null {
     const original =
-        plan.presentation.originalPriceInPaise;
+        plan.presentation
+            .originalPriceInPaise;
 
     const current =
-        plan.presentation.priceInPaise;
+        plan.presentation
+            .priceInPaise;
 
     if (
         original === undefined ||
+        original === null ||
+        current === null ||
         original <= current ||
         original <= 0
     ) {
@@ -360,7 +408,8 @@ function getPlanDiscountPercentage(
     }
 
     return Math.round(
-        ((original - current) / original) *
+        ((original - current) /
+            original) *
         100,
     );
 }
@@ -377,7 +426,7 @@ function toTitle(value: string): string {
 }
 
 function getPlanTheme(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): PlanTheme {
     switch (plan.tier) {
         case "gold":
@@ -468,7 +517,7 @@ function getPlanTheme(
 }
 
 function buildPlanFeatures(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): string[] {
     const limits = plan.entitlements;
     const subject =
@@ -538,7 +587,7 @@ function buildPlanFeatures(
 }
 
 function getPlanPositioning(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): string {
     switch (plan.tier) {
         case "silver":
@@ -574,7 +623,7 @@ function getPlanPositioning(
 }
 
 function getPlanCta(
-    plan: PlanDefinition,
+    plan: PricingPlan,
 ): {
     href: string;
     label: string;
@@ -751,10 +800,19 @@ function getFinderQuestions(
 }
 
 function recommendPlan(
+    allPlans: PricingPlan[],
     audience: PlanAudience,
     answers: FinderAnswers,
-): PlanDefinition {
-    const plans = getPlansForAudience(audience);
+): PricingPlan | null {
+    const plans =
+        getPlansForAudience(
+            allPlans,
+            audience,
+        );
+
+    if (plans.length === 0) {
+        return null;
+    }
     const requiredCapacity =
         Number.parseInt(answers.capacity ?? "0", 10) || 0;
     const requiredAnalytics =
@@ -801,11 +859,15 @@ function recommendPlan(
         );
     });
 
-    return candidates[0] ?? plans[plans.length - 1];
+    return (
+        candidates[0] ??
+        plans[plans.length - 1] ??
+        null
+    );
 }
 
 function getRecommendationReasons(
-    plan: PlanDefinition,
+    plan: PricingPlan,
     audience: PlanAudience,
 ): string[] {
     const reasons = [
@@ -893,7 +955,7 @@ function PlanCard({
                       plan,
                       index,
                   }: {
-    plan: PlanDefinition;
+    plan: PricingPlan;
     index: number;
 }) {
     const theme = getPlanTheme(plan);
@@ -992,68 +1054,88 @@ function PlanCard({
                 <div
                     className={`mt-6 rounded-2xl border p-4 ${theme.priceClass}`}
                 >
-                    <div className="flex items-center justify-between gap-3">
-                        <p
-                            className={`text-[10px] font-black uppercase tracking-[0.12em] ${theme.mutedClass}`}
-                        >
-                            Plan price
-                        </p>
-
-                        {discountPercentage ? (
-                            <span
-                                className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${
-                                    isPremium
-                                        ? "bg-teal-300/15 text-teal-300"
-                                        : "bg-emerald-100 text-emerald-700"
-                                }`}
-                            >
-        {discountPercentage}% OFF
-    </span>
-                        ) : null}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-end gap-x-1.5 gap-y-1">
-                        <p className="text-3xl font-black tracking-tight">
-                            {formatPrice(
-                                plan.presentation.priceInPaise,
-                            )}
-                        </p>
-
-                        {plan.presentation.priceInPaise > 0 ? (
-                            <p
-                                className={`pb-1 text-sm font-bold ${theme.mutedClass}`}
-                            >
-                                {getBillingLabel(plan)}
-                            </p>
-                        ) : null}
-                    </div>
-
-                    {plan.presentation.priceInPaise > 0 ? (
-                        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                            {plan.presentation.originalPriceInPaise ? (
-                                <span
-                                    className={`text-xs line-through ${theme.mutedClass}`}
-                                >
-                {formatPrice(
-                    plan.presentation
-                        .originalPriceInPaise,
-                )}
-            </span>
-                            ) : null}
-
-                            <span
-                                className={`text-xs font-semibold ${theme.mutedClass}`}
-                            >
-            + 18% GST
-        </span>
-                        </div>
-                    ) : null}
-
                     <p
-                        className={`mt-2 text-xs ${theme.mutedClass}`}
+                        className={`text-[10px] font-black uppercase tracking-[0.12em] ${theme.mutedClass}`}
                     >
-                        {getBillingNote(plan)}
+                        Plan price
                     </p>
+
+                    {plan.priceLocked ? (
+                        <div className="mt-3">
+                            <div className="relative inline-flex items-center">
+                <span
+                    className="select-none text-3xl font-black tracking-tight opacity-50 blur-[6px]"
+                    aria-hidden="true"
+                >
+                    ₹00,000
+                </span>
+
+                                <Link
+                                    href={`/login?redirect=${encodeURIComponent(
+                                        `/pricing?audience=${plan.audience}`,
+                                    )}`}
+                                    className="absolute inset-0 flex items-center justify-center"
+                                >
+                    <span className="whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-[10px] font-black text-white shadow-lg">
+                        Login to view price
+                    </span>
+                                </Link>
+                            </div>
+
+                            <p
+                                className={`mt-3 text-xs ${theme.mutedClass}`}
+                            >
+                                Sign in to reveal plan pricing
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="mt-2 flex flex-wrap items-end gap-x-1.5 gap-y-1">
+                                <p className="text-3xl font-black tracking-tight">
+                                    {formatPrice(
+                                        plan.presentation
+                                            .priceInPaise ?? 0,
+                                    )}
+                                </p>
+
+                                {(plan.presentation
+                                    .priceInPaise ?? 0) >
+                                0 ? (
+                                    <p
+                                        className={`pb-1 text-sm font-bold ${theme.mutedClass}`}
+                                    >
+                                        {getBillingLabel(
+                                            plan,
+                                        )}
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            {(plan.presentation
+                                .priceInPaise ?? 0) >
+                            0 ? (
+                                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    {plan.presentation
+                                        .originalPriceInPaise ? (
+                                        <span
+                                            className={`text-xs line-through ${theme.mutedClass}`}
+                                        >
+                            {formatPrice(
+                                plan.presentation
+                                    .originalPriceInPaise,
+                            )}
+                        </span>
+                                    ) : null}
+
+                                    <span
+                                        className={`text-xs font-semibold ${theme.mutedClass}`}
+                                    >
+                        + 18% GST
+                    </span>
+                                </div>
+                            ) : null}
+                        </>
+                    )}
                 </div>
 
                 <div
@@ -1141,6 +1223,79 @@ function PricingPageContent() {
                 ? "agent"
                 : "owner";
 
+    const [allPlans, setAllPlans] =
+        useState<PricingPlan[]>([]);
+
+    const [pricingLoading, setPricingLoading] =
+        useState(true);
+
+    useEffect(() => {
+        const controller =
+            new AbortController();
+
+        async function loadPricing() {
+            try {
+                const response =
+                    await fetch(
+                        "/api/pricing",
+                        {
+                            cache:
+                                "no-store",
+
+                            credentials:
+                                "include",
+
+                            signal:
+                            controller.signal,
+                        },
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Unable to load pricing.",
+                    );
+                }
+
+                const data =
+                    (await response.json()) as
+                        PricingApiResponse;
+
+                if (
+                    !controller.signal
+                        .aborted
+                ) {
+                    setAllPlans(
+                        data.plans,
+                    );
+                }
+            } catch (error) {
+                if (
+                    !controller.signal
+                        .aborted
+                ) {
+                    console.error(
+                        "Failed to load pricing:",
+                        error,
+                    );
+                }
+            } finally {
+                if (
+                    !controller.signal
+                        .aborted
+                ) {
+                    setPricingLoading(
+                        false,
+                    );
+                }
+            }
+        }
+
+        void loadPricing();
+
+        return () =>
+            controller.abort();
+    }, []);
+
     const [audience, setAudience] =
         useState<PlanAudience>(queryAudience);
     const [finderAnswers, setFinderAnswers] =
@@ -1149,8 +1304,15 @@ function PricingPageContent() {
         useState<PlanTier | null>(null);
 
     const plans = useMemo(
-        () => getPlansForAudience(audience),
-        [audience],
+        () =>
+            getPlansForAudience(
+                allPlans,
+                audience,
+            ),
+        [
+            allPlans,
+            audience,
+        ],
     );
 
     const comparisonRows: ComparisonRow[] =
@@ -1170,7 +1332,11 @@ function PricingPageContent() {
     const recommendedPlan =
         recommendedTier === null
             ? null
-            : PLAN_CATALOG[recommendedTier];
+            : allPlans.find(
+            (plan) =>
+                plan.tier ===
+                recommendedTier,
+        ) ?? null;
 
     const content = AUDIENCE_CONTENT[audience];
     const ContentIcon = content.icon;
@@ -1375,12 +1541,20 @@ function PricingPageContent() {
             return;
         }
 
-        const plan = recommendPlan(
-            audience,
-            finderAnswers,
-        );
+        const plan =
+            recommendPlan(
+                allPlans,
+                audience,
+                finderAnswers,
+            );
 
-        setRecommendedTier(plan.tier);
+        if (!plan) {
+            return;
+        }
+
+        setRecommendedTier(
+            plan.tier,
+        );
     }
 
     function resetFinder() {
@@ -1775,18 +1949,36 @@ function PricingPageContent() {
                                                     Price
                                                 </p>
 
-                                                <div className="mt-2 flex items-end gap-1.5">
-                                                    <p className="text-3xl font-black">
-                                                        {formatPrice(
-                                                            recommendedPlan.presentation.priceInPaise,
-                                                        )}
-                                                    </p>
-                                                    {recommendedPlan.presentation.priceInPaise > 0 ? (
-                                                        <p className="pb-1 text-sm font-bold text-slate-500">
-                                                            {getBillingLabel(recommendedPlan)}
+                                                {recommendedPlan.priceLocked ? (
+                                                    <Link
+                                                        href={`/login?redirect=${encodeURIComponent(
+                                                            `/pricing?audience=${audience}`,
+                                                        )}`}
+                                                        className="mt-2 inline-flex rounded-lg bg-slate-950 px-3 py-1.5 text-[10px] font-black text-white"
+                                                    >
+                                                        Login to view price
+                                                    </Link>
+                                                ) : (
+                                                    <div className="mt-2 flex items-end gap-1.5">
+                                                        <p className="text-3xl font-black">
+                                                            {formatPrice(
+                                                                recommendedPlan
+                                                                    .presentation
+                                                                    .priceInPaise ?? 0,
+                                                            )}
                                                         </p>
-                                                    ) : null}
-                                                </div>
+
+                                                        {(recommendedPlan
+                                                            .presentation
+                                                            .priceInPaise ?? 0) > 0 ? (
+                                                            <p className="pb-1 text-sm font-bold text-slate-500">
+                                                                {getBillingLabel(
+                                                                    recommendedPlan,
+                                                                )}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="mt-7">
@@ -2055,48 +2247,69 @@ function PricingPageContent() {
                                         Plan detail
                                     </th>
 
-                                    {plans.map((plan, index) => (
-                                        <th
-                                            key={plan.tier}
-                                            scope="col"
-                                            className={`px-5 py-6 text-center ${
-                                                index === 1
-                                                    ? "bg-teal-50"
-                                                    : index === 2
-                                                        ? "bg-slate-950 text-white"
-                                                        : "bg-slate-50"
-                                            }`}
-                                        >
-                                            <p
-                                                className={`text-sm font-black ${
-                                                    index === 2
-                                                        ? "text-white"
-                                                        : "text-slate-950"
+                                    {plans.map(
+                                        (plan, index) => (
+                                            <th
+                                                key={plan.tier}
+                                                scope="col"
+                                                className={`px-5 py-6 text-center ${
+                                                    index === 1
+                                                        ? "bg-teal-50"
+                                                        : index === 2
+                                                            ? "bg-slate-950 text-white"
+                                                            : "bg-slate-50"
                                                 }`}
                                             >
-                                                {plan.presentation.displayName}
-                                            </p>
+                                                <p
+                                                    className={`text-sm font-black ${
+                                                        index === 2
+                                                            ? "text-white"
+                                                            : "text-slate-950"
+                                                    }`}
+                                                >
+                                                    {
+                                                        plan.presentation
+                                                            .displayName
+                                                    }
+                                                </p>
 
-                                            <div className="mt-2 flex items-end justify-center gap-1">
-                          <span className="text-lg font-black">
-                            {formatCompactPrice(
-                                plan.presentation.priceInPaise,
-                            )}
-                          </span>
-                                                {plan.presentation.priceInPaise > 0 ? (
-                                                    <span
-                                                        className={`pb-0.5 text-[10px] font-bold ${
-                                                            index === 2
-                                                                ? "text-slate-400"
-                                                                : "text-slate-500"
-                                                        }`}
+                                                {plan.priceLocked ? (
+                                                    <Link
+                                                        href={`/login?redirect=${encodeURIComponent(
+                                                            `/pricing?audience=${audience}`,
+                                                        )}`}
+                                                        className="mt-2 inline-flex rounded-lg bg-slate-950 px-3 py-1.5 text-[10px] font-black text-white"
                                                     >
-                              {getBillingLabel(plan)}
-                            </span>
-                                                ) : null}
-                                            </div>
-                                        </th>
-                                    ))}
+                                                        Login to view price
+                                                    </Link>
+                                                ) : (
+                                                    <div className="mt-2 flex items-end justify-center gap-1">
+                    <span className="text-lg font-black">
+                        {formatCompactPrice(
+                            plan.presentation
+                                .priceInPaise ?? 0,
+                        )}
+                    </span>
+
+                                                        {(plan.presentation
+                                                            .priceInPaise ?? 0) > 0 ? (
+                                                            <span
+                                                                className={`pb-0.5 text-[10px] font-bold ${
+                                                                    index === 2
+                                                                        ? "text-slate-400"
+                                                                        : "text-slate-500"
+                                                                }`}
+                                                            >
+                            {getBillingLabel(
+                                plan,
+                            )}
+                        </span>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </th>
+                                        ),
+                                    )}
                                 </tr>
                                 </thead>
 
