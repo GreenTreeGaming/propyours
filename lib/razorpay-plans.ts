@@ -58,6 +58,27 @@ export const RAZORPAY_PLANS: Record<
         ),
         totalCount: 100,
     },
+
+    "agent-ruby": {
+        razorpayPlanId: getRequiredEnv(
+            "RAZORPAY_AGENT_RUBY_PLAN_ID",
+        ),
+        totalCount: 1,
+    },
+
+    "agent-emerald": {
+        razorpayPlanId: getRequiredEnv(
+            "RAZORPAY_AGENT_EMERALD_PLAN_ID",
+        ),
+        totalCount: 1,
+    },
+
+    "agent-diamond": {
+        razorpayPlanId: getRequiredEnv(
+            "RAZORPAY_AGENT_DIAMOND_PLAN_ID",
+        ),
+        totalCount: 1,
+    },
 };
 
 export function isPaidPlanTier(

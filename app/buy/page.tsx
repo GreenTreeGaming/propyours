@@ -67,7 +67,13 @@ interface Property {
   images?: string[];
   purpose: string;
   featured?: boolean;
+
   zeroCommission?: boolean;
+
+  commissionType?:
+      | "zero"
+      | "applicable";
+
   promotedUntil?: string;
   createdAt?: string;
   planSnapshot?: {
@@ -436,34 +442,59 @@ function PropertyCard({
         {property.propertyType}
     </span>
 
-                {property.zeroCommission ? (
+                {property.commissionType ===
+                "zero" ||
+                property.zeroCommission ? (
                     <span
                         className="
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-full
-                border
-                border-emerald-300/60
-                bg-emerald-500
-                px-3
-                py-1.5
-                text-[10px]
-                font-black
-                uppercase
-                tracking-[0.1em]
-                text-white
-                shadow-lg
-                shadow-emerald-500/20
-            "
+            inline-flex
+            items-center
+            gap-1.5
+            rounded-full
+            border
+            border-emerald-300/60
+            bg-emerald-500
+            px-3
+            py-1.5
+            text-[10px]
+            font-black
+            uppercase
+            tracking-[0.1em]
+            text-white
+            shadow-lg
+            shadow-emerald-500/20
+        "
                     >
-            <ShieldCheck
-                size={12}
-                aria-hidden="true"
-            />
+        <ShieldCheck
+            size={12}
+            aria-hidden="true"
+        />
 
-            Zero Commission
-        </span>
+        Zero Commission
+    </span>
+                ) : property.commissionType ===
+                "applicable" ? (
+                    <span
+                        className="
+            inline-flex
+            items-center
+            gap-1.5
+            rounded-full
+            border
+            border-amber-200
+            bg-amber-50
+            px-3
+            py-1.5
+            text-[10px]
+            font-black
+            uppercase
+            tracking-[0.1em]
+            text-amber-700
+            shadow-sm
+        "
+                    >
+        Commission Applicable
+    </span>
                 ) : null}
 
                 {badge ? (

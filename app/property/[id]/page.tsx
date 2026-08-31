@@ -25,6 +25,7 @@ import {
     Download,
     Expand,
     ExternalLink,
+    IndianRupee,
     Eye,
     FileText,
     Heart,
@@ -132,6 +133,9 @@ interface PropertyRecord {
     listingExpiresAt?: string;
     featured?: boolean;
     zeroCommission?: boolean;
+    commissionType?:
+        | "zero"
+        | "applicable";
     status?: string;
     createdAt?: string;
     updatedAt?: string;
@@ -550,8 +554,21 @@ function getListingBadges(
 ): string[] {
     const badges: string[] = [];
 
-    if (property.zeroCommission) {
-        badges.push("Zero Commission");
+    if (
+        property.commissionType ===
+        "zero" ||
+        property.zeroCommission
+    ) {
+        badges.push(
+            "Zero Commission",
+        );
+    } else if (
+        property.commissionType ===
+        "applicable"
+    ) {
+        badges.push(
+            "Commission Applicable",
+        );
     }
 
     if (
@@ -2857,6 +2874,10 @@ function ListingBadge({
     const isZeroCommission =
         label === "Zero Commission";
 
+    const isCommissionApplicable =
+        label ===
+        "Commission Applicable";
+
     if (isZeroCommission) {
         return (
             <span
@@ -2885,6 +2906,37 @@ function ListingBadge({
 
                 {label}
             </span>
+        );
+    }
+
+    if (isCommissionApplicable) {
+        return (
+            <span
+                className="
+                inline-flex
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-amber-200
+                bg-amber-50
+                px-3
+                py-1.5
+                text-[9px]
+                font-black
+                uppercase
+                tracking-[0.11em]
+                text-amber-700
+                shadow-sm
+            "
+            >
+            <IndianRupee
+                size={12}
+                aria-hidden="true"
+            />
+
+                {label}
+        </span>
         );
     }
 

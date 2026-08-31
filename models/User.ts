@@ -55,6 +55,13 @@ const UserSchema = new Schema(
             required: false,
         },
 
+        reraNumber: {
+            type: String,
+            required: false,
+            trim: true,
+            maxlength: 100,
+        },
+
         address: {
             type: String,
             required: false,
@@ -90,7 +97,11 @@ const UserSchema = new Schema(
         plan: {
             audience: {
                 type: String,
-                enum: ["owner", "builder"],
+                enum: [
+                    "owner",
+                    "builder",
+                    "agent",
+                ],
                 default: "owner",
             },
 
@@ -100,9 +111,14 @@ const UserSchema = new Schema(
                     "silver",
                     "gold",
                     "platinum",
+
                     "builder-starter",
                     "builder-growth",
                     "builder-elite",
+
+                    "agent-ruby",
+                    "agent-emerald",
+                    "agent-diamond",
                 ],
                 default: "silver",
             },

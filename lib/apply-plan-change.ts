@@ -411,6 +411,10 @@ const PLAN_RANK: Record<
     "builder-starter": 1,
     "builder-growth": 2,
     "builder-elite": 3,
+
+    "agent-ruby": 1,
+    "agent-emerald": 2,
+    "agent-diamond": 3,
 };
 
 function getPlanChangeType({

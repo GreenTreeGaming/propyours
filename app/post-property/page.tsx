@@ -88,8 +88,13 @@ type StepId =
 
 interface StoredUser {
     role?: string;
+
     plan?: {
-        audience?: "owner" | "builder";
+        audience?:
+            | "owner"
+            | "builder"
+            | "agent";
+
         tier?: string;
         status?: string;
     };
@@ -117,6 +122,7 @@ interface PropertyForm {
     dimensions: string;
     ownershipType: string;
     price: string;
+    zeroCommission: boolean;
     priceType: string;
     negotiable: boolean;
     bedrooms: string;
@@ -231,6 +237,7 @@ const DEFAULT_FORM: PropertyForm = {
     price: "",
     priceType: "Total",
     negotiable: true,
+    zeroCommission: true,
     bedrooms: "",
     bathrooms: "",
     floors: "",
@@ -616,7 +623,13 @@ export default function PostPropertyPage() {
 
     const isDeveloper =
         user?.role === "Builder" ||
-        user?.plan?.audience === "builder";
+        user?.plan?.audience ===
+        "builder";
+
+    const isAgent =
+        user?.role === "Agent" ||
+        user?.plan?.audience ===
+        "agent";
     const hasActivePaidPlan =
         user?.plan?.status === "active";
     const storedTier = user?.plan?.tier;
@@ -1109,6 +1122,10 @@ export default function PostPropertyPage() {
                         price: Number(form.price),
                         priceType: form.priceType,
                         negotiable: form.negotiable,
+
+                        zeroCommission:
+                        form.zeroCommission,
+
                         bedrooms:
                             form.category === "residential"
                                 ? optionalNumber(form.bedrooms)
@@ -2255,6 +2272,156 @@ export default function PostPropertyPage() {
                                     <Check size={13} aria-hidden="true" />
                                   </span>
                                                                 </button>
+                                                            </div>
+
+                                                            <div className="sm:col-span-2">
+                                                                {isAgent ? (
+                                                                    <div>
+                                                                        <FieldLabel>
+                                                                            Commission preference
+                                                                        </FieldLabel>
+
+                                                                        <p className="mb-4 text-xs leading-5 text-slate-500">
+                                                                            Choose whether commission
+                                                                            applies to this property.
+                                                                            This will be shown clearly
+                                                                            on the published listing.
+                                                                        </p>
+
+                                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                                            <button
+                                                                                type="button"
+                                                                                aria-pressed={
+                                                                                    form.zeroCommission
+                                                                                }
+                                                                                onClick={() =>
+                                                                                    updateForm({
+                                                                                        zeroCommission:
+                                                                                            true,
+                                                                                    })
+                                                                                }
+                                                                                className={`relative rounded-2xl border p-4 text-left transition ${
+                                                                                    form.zeroCommission
+                                                                                        ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/10"
+                                                                                        : "border-slate-200 bg-white hover:border-emerald-300"
+                                                                                }`}
+                                                                            >
+                                                                                <div className="flex items-start gap-3">
+                        <span
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                form.zeroCommission
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-slate-100 text-slate-400"
+                            }`}
+                        >
+                            <BadgeCheck
+                                size={18}
+                                aria-hidden="true"
+                            />
+                        </span>
+
+                                                                                    <div>
+                                                                                        <p className="text-sm font-black text-slate-950">
+                                                                                            Zero Commission
+                                                                                        </p>
+
+                                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                                            No agent commission
+                                                                                            applies to this
+                                                                                            property.
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {form.zeroCommission ? (
+                                                                                    <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+                            <Check
+                                size={13}
+                                aria-hidden="true"
+                            />
+                        </span>
+                                                                                ) : null}
+                                                                            </button>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                aria-pressed={
+                                                                                    !form.zeroCommission
+                                                                                }
+                                                                                onClick={() =>
+                                                                                    updateForm({
+                                                                                        zeroCommission:
+                                                                                            false,
+                                                                                    })
+                                                                                }
+                                                                                className={`relative rounded-2xl border p-4 text-left transition ${
+                                                                                    !form.zeroCommission
+                                                                                        ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                                        : "border-slate-200 bg-white hover:border-teal-300"
+                                                                                }`}
+                                                                            >
+                                                                                <div className="flex items-start gap-3">
+                        <span
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                !form.zeroCommission
+                                    ? "bg-primary text-white"
+                                    : "bg-slate-100 text-slate-400"
+                            }`}
+                        >
+                            <IndianRupee
+                                size={18}
+                                aria-hidden="true"
+                            />
+                        </span>
+
+                                                                                    <div>
+                                                                                        <p className="text-sm font-black text-slate-950">
+                                                                                            Commission Applicable
+                                                                                        </p>
+
+                                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                                            Agent commission may
+                                                                                            apply to this property.
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {!form.zeroCommission ? (
+                                                                                    <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
+                            <Check
+                                size={13}
+                                aria-hidden="true"
+                            />
+                        </span>
+                                                                                ) : null}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                                                                        <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
+                    <BadgeCheck
+                        size={18}
+                        aria-hidden="true"
+                    />
+                </span>
+
+                                                                            <div>
+                                                                                <p className="text-sm font-black text-emerald-900">
+                                                                                    Zero Commission
+                                                                                </p>
+
+                                                                                <p className="mt-1 text-xs leading-5 text-emerald-700">
+                                                                                    Owner and builder
+                                                                                    properties are listed
+                                                                                    as Zero Commission by
+                                                                                    default.
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

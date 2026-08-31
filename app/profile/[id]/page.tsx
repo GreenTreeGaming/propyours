@@ -144,6 +144,7 @@ interface UserProfile {
     address?: string;
     city?: string;
     phone?: string;
+    reraNumber?: string;
     builderPlan?: BuilderPlan;
 }
 
@@ -1183,6 +1184,37 @@ export default function PublicProfilePage() {
                                     {profile.name}
                                 </h1>
 
+                                {profile.role === "Agent" &&
+                                profile.reraNumber ? (
+                                    <div className="mt-3">
+        <span
+            className="
+                inline-flex
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-emerald-300/25
+                bg-emerald-300/10
+                px-3
+                py-1.5
+                text-[10px]
+                font-black
+                uppercase
+                tracking-[0.11em]
+                text-emerald-300
+            "
+        >
+            <BadgeCheck
+                size={13}
+                aria-hidden="true"
+            />
+
+            RERA: {profile.reraNumber}
+        </span>
+                                    </div>
+                                ) : null}
+
                                 {profile.company ? (
                                     <p className={`mt-3 text-xl font-black ${plan.accentClassName}`}>
                                         {profile.company}
@@ -1696,9 +1728,16 @@ function ProfileContactCard({
                         <ProfileDetail
                             icon={Building2}
                             label="Company"
-                            value={
-                                profile.company
-                            }
+                            value={profile.company}
+                        />
+                    ) : null}
+
+                    {profile.role === "Agent" &&
+                    profile.reraNumber ? (
+                        <ProfileDetail
+                            icon={BadgeCheck}
+                            label="RERA number"
+                            value={profile.reraNumber}
                         />
                     ) : null}
 

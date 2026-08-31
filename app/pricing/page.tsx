@@ -18,6 +18,7 @@ import {
     ArrowRight,
     BadgeCheck,
     BarChart3,
+    Briefcase,
     Building2,
     Check,
     CheckCircle2,
@@ -105,6 +106,12 @@ const BUILDER_PLAN_TIERS = [
     "builder-elite",
 ] as const satisfies readonly PlanTier[];
 
+const AGENT_PLAN_TIERS = [
+    "agent-ruby",
+    "agent-emerald",
+    "agent-diamond",
+] as const satisfies readonly PlanTier[];
+
 const ANALYTICS_RANK: Record<AnalyticsLevel, number> = {
     none: 0,
     basic: 1,
@@ -139,6 +146,22 @@ const AUDIENCE_CONTENT = {
         billingSummary:
             "Pay once for the full one-year builder pack. GST applies to paid plans.",
         icon: Building2,
+    },
+
+    agent: {
+        eyebrow:
+            "Pricing for property agents",
+
+        title:
+            "Choose the plan that matches your listings.",
+
+        description:
+            "Agent packs combine active listing capacity, flexible commission options, longer listing validity and stronger visibility.",
+
+        billingSummary:
+            "Pay once for the full validity of your selected agent pack. GST applies to paid plans.",
+
+        icon: Briefcase,
     },
 } satisfies Record<
     PlanAudience,
@@ -224,9 +247,14 @@ function getPlansForAudience(
     const tiers =
         audience === "owner"
             ? OWNER_PLAN_TIERS
-            : BUILDER_PLAN_TIERS;
+            : audience === "builder"
+                ? BUILDER_PLAN_TIERS
+                : AGENT_PLAN_TIERS;
 
-    return tiers.map((tier) => PLAN_CATALOG[tier]);
+    return tiers.map(
+        (tier) =>
+            PLAN_CATALOG[tier],
+    );
 }
 
 function formatPrice(
@@ -261,15 +289,31 @@ function formatCompactPrice(
 function getBillingLabel(
     plan: PlanDefinition,
 ): string {
-    if (plan.presentation.priceInPaise === 0) {
+    if (
+        plan.presentation
+            .priceInPaise === 0
+    ) {
         return "";
     }
 
-    return plan.tier === "gold"
-        ? "for 90 days"
-        : plan.tier === "platinum"
-            ? "for 180 days"
-            : "for 1 year";
+    switch (plan.tier) {
+        case "gold":
+        case "agent-ruby":
+            return "for 90 days";
+
+        case "platinum":
+        case "agent-emerald":
+        case "agent-diamond":
+            return "for 180 days";
+
+        case "builder-starter":
+        case "builder-growth":
+        case "builder-elite":
+            return "for 1 year";
+
+        default:
+            return "";
+    }
 }
 
 function getBillingNote(
@@ -499,16 +543,33 @@ function getPlanPositioning(
     switch (plan.tier) {
         case "silver":
             return "A simple place to begin";
+
         case "gold":
             return "Recommended for more visibility";
+
         case "platinum":
             return "Maximum visibility and insights";
+
         case "builder-starter":
             return "For smaller project portfolios";
+
         case "builder-growth":
             return "Recommended for growing builders";
+
         case "builder-elite":
             return "For established builder portfolios";
+
+        case "agent-ruby":
+            return "For individual property agents";
+
+        case "agent-emerald":
+            return "Recommended for active agents";
+
+        case "agent-diamond":
+            return "For larger agent portfolios";
+
+        default:
+            return "";
     }
 }
 
@@ -1068,10 +1129,17 @@ function PricingPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
+    const audienceParam =
+        searchParams.get(
+            "audience",
+        );
+
     const queryAudience: PlanAudience =
-        searchParams.get("audience") === "builder"
+        audienceParam === "builder"
             ? "builder"
-            : "owner";
+            : audienceParam === "agent"
+                ? "agent"
+                : "owner";
 
     const [audience, setAudience] =
         useState<PlanAudience>(queryAudience);
@@ -1115,48 +1183,107 @@ function PricingPageContent() {
         audience === "owner"
             ? [
                 {
-                    label: "Free entry plan",
-                    value: "Silver",
-                    icon: UserRound,
+                    label:
+                        "Free entry plan",
+                    value:
+                        "Silver",
+                    icon:
+                    UserRound,
                 },
                 {
-                    label: "Paid billing",
-                    value: "Monthly",
-                    icon: Zap,
+                    label:
+                        "Payment",
+                    value:
+                        "One-time",
+                    icon:
+                    Zap,
                 },
                 {
-                    label: "Listing windows",
-                    value: "30–180 days",
-                    icon: ListChecks,
+                    label:
+                        "Listing windows",
+                    value:
+                        "30–180 days",
+                    icon:
+                    ListChecks,
                 },
                 {
-                    label: "Active capacity",
-                    value: "1–5 projects",
-                    icon: Store,
+                    label:
+                        "Active capacity",
+                    value:
+                        "1–2 properties",
+                    icon:
+                    Store,
                 },
             ]
-            : [
-                {
-                    label: "Billing",
-                    value: "Yearly",
-                    icon: Building2,
-                },
-                {
-                    label: "Active capacity",
-                    value: "3–25 projects",
-                    icon: Store,
-                },
-                {
-                    label: "Promotion boosts",
-                    value: "Up to 15/month",
-                    icon: Rocket,
-                },
-                {
-                    label: "Analytics",
-                    value: "Basic–portfolio",
-                    icon: BarChart3,
-                },
-            ];
+            : audience === "builder"
+                ? [
+                    {
+                        label:
+                            "Payment",
+                        value:
+                            "One-time",
+                        icon:
+                        Building2,
+                    },
+                    {
+                        label:
+                            "Active capacity",
+                        value:
+                            "1–5 projects",
+                        icon:
+                        Store,
+                    },
+                    {
+                        label:
+                            "Validity",
+                        value:
+                            "1 year",
+                        icon:
+                        Rocket,
+                    },
+                    {
+                        label:
+                            "Analytics",
+                        value:
+                            "Basic–portfolio",
+                        icon:
+                        BarChart3,
+                    },
+                ]
+                : [
+                    {
+                        label:
+                            "Plans",
+                        value:
+                            "Ruby–Diamond",
+                        icon:
+                        Briefcase,
+                    },
+                    {
+                        label:
+                            "Active capacity",
+                        value:
+                            "1–10 listings",
+                        icon:
+                        Store,
+                    },
+                    {
+                        label:
+                            "Validity",
+                        value:
+                            "90–180 days",
+                        icon:
+                        ListChecks,
+                    },
+                    {
+                        label:
+                            "Commission",
+                        value:
+                            "Flexible",
+                        icon:
+                        BadgeCheck,
+                    },
+                ];
 
     const processSteps =
         audience === "owner"
@@ -1218,12 +1345,16 @@ function PricingPageContent() {
             searchParams.toString(),
         );
 
-        if (nextAudience === "owner") {
-            params.delete("audience");
+        if (
+            nextAudience === "owner"
+        ) {
+            params.delete(
+                "audience",
+            );
         } else {
             params.set(
                 "audience",
-                "builder",
+                nextAudience,
             );
         }
 
@@ -1323,7 +1454,9 @@ function PricingPageContent() {
                                         <h2 className="mt-2 text-2xl font-black tracking-tight">
                                             {audience === "owner"
                                                 ? "Owner plans"
-                                                : "Builder plans"}
+                                                : audience === "builder"
+                                                    ? "Builder plans"
+                                                    : "Agent plans"}
                                         </h2>
                                         <p className="mt-2 text-sm leading-6 text-slate-400">
                                             {content.billingSummary}
@@ -1373,23 +1506,35 @@ function PricingPageContent() {
                         <div
                             role="tablist"
                             aria-label="Pricing audience"
-                            className="grid gap-3 sm:grid-cols-2"
+                            className="grid gap-3 md:grid-cols-3"
                         >
                             {(
                                 [
                                     {
                                         value: "owner",
-                                        label: "Property owners",
+                                        label:
+                                            "Property owners",
                                         description:
-                                            "Free and monthly plans for selling or renting.",
+                                            "Free and paid packs for selling or renting.",
                                         icon: UserRound,
                                     },
+
                                     {
                                         value: "builder",
-                                        label: "Builders & developers",
+                                        label:
+                                            "Builders & developers",
                                         description:
-                                            "Annual plans for project portfolios and visibility.",
+                                            "Annual packs for project portfolios and visibility.",
                                         icon: Building2,
+                                    },
+
+                                    {
+                                        value: "agent",
+                                        label:
+                                            "Agents",
+                                        description:
+                                            "Listing packs for agents and property brokers.",
+                                        icon: Briefcase,
                                     },
                                 ] as const
                             ).map((option) => {
@@ -1495,8 +1640,10 @@ function PricingPageContent() {
                                 />
                                 <p className="max-w-sm text-sm leading-6 text-slate-600">
                                     {audience === "owner"
-                                        ? "Monthly billing and listing duration are separate product rules."
-                                        : "Builder prices and project limits are configured on an annual basis."}
+                                        ? "Owner packs are priced for their full listing validity. GST applies to paid plans."
+                                        : audience === "builder"
+                                            ? "Builder pricing covers the full one-year pack. GST applies to paid plans."
+                                            : "Agent pricing covers the full validity of each pack. GST applies to paid plans."}
                                 </p>
                             </div>
                         </motion.div>

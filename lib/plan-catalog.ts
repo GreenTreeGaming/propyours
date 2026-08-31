@@ -4,7 +4,10 @@ export type PlanTier =
     | "platinum"
     | "builder-starter"
     | "builder-growth"
-    | "builder-elite";
+    | "builder-elite"
+    | "agent-ruby"
+    | "agent-emerald"
+    | "agent-diamond";
 
 export type PlanStatus =
     | "free"
@@ -12,7 +15,10 @@ export type PlanStatus =
     | "expired"
     | "cancelled";
 
-export type PlanAudience = "owner" | "builder";
+export type PlanAudience =
+    | "owner"
+    | "builder"
+    | "agent";
 
 export type AnalyticsLevel =
     | "none"
@@ -387,6 +393,150 @@ export const PLAN_CATALOG = {
 
             promoteBoostsPerMonth: 15,
 
+            leadNotifications: true,
+        },
+    },
+
+    "agent-ruby": {
+        tier: "agent-ruby",
+        audience: "agent",
+
+        presentation: {
+            displayName: "Ruby",
+
+            priceInPaise: 199900,
+            originalPriceInPaise: 300000,
+
+            billingType: "one-time",
+            billingLabel: "90-day pack",
+
+            description:
+                "For individual agents listing a single property.",
+
+            ctaText: "Choose Ruby",
+            ctaLink: "/post-property?plan=agent-ruby",
+
+            iconKey: "user",
+
+            analyticsHighlight:
+                "Basic listing performance",
+        },
+
+        entitlements: {
+            activeProperties: 1,
+            listingDays: 90,
+
+            maxImages: 20,
+            maxVideoLinks: 1,
+            verifiedLeadLimit: null,
+
+            featured: false,
+            homepageFeatured: false,
+
+            rankingLevel: "standard",
+            compareVisibility: "standard",
+            badgeLevel: "none",
+            analyticsLevel: "basic",
+
+            promoteBoostsPerMonth: 0,
+            leadNotifications: true,
+        },
+    },
+
+    "agent-emerald": {
+        tier: "agent-emerald",
+        audience: "agent",
+
+        presentation: {
+            displayName: "Emerald",
+
+            priceInPaise: 499900,
+            originalPriceInPaise: 999900,
+
+            billingType: "one-time",
+            billingLabel: "180-day pack",
+
+            description:
+                "For active agents managing multiple property listings.",
+
+            ctaText: "Choose Emerald",
+            ctaLink: "/post-property?plan=agent-emerald",
+
+            badge: "Most Popular",
+            badgeType: "popular",
+
+            iconKey: "briefcase",
+
+            analyticsHighlight:
+                "Views, contact clicks and favorites",
+        },
+
+        entitlements: {
+            activeProperties: 3,
+            listingDays: 180,
+
+            maxImages: 30,
+            maxVideoLinks: 2,
+            verifiedLeadLimit: null,
+
+            featured: true,
+            homepageFeatured: false,
+
+            rankingLevel: "featured",
+            compareVisibility: "highlighted",
+            badgeLevel: "verified",
+            analyticsLevel: "advanced",
+
+            promoteBoostsPerMonth: 0,
+            leadNotifications: true,
+        },
+    },
+
+    "agent-diamond": {
+        tier: "agent-diamond",
+        audience: "agent",
+
+        presentation: {
+            displayName: "Diamond",
+
+            priceInPaise: 999900,
+            originalPriceInPaise: 2500000,
+
+            billingType: "one-time",
+            billingLabel: "180-day pack",
+
+            description:
+                "For professional agents managing a larger portfolio.",
+
+            ctaText: "Choose Diamond",
+            ctaLink: "/post-property?plan=agent-diamond",
+
+            badge: "Best Value",
+            badgeType: "premium",
+
+            iconKey: "gem",
+
+            analyticsHighlight:
+                "Advanced portfolio and listing performance",
+        },
+
+        entitlements: {
+            activeProperties: 10,
+            listingDays: 180,
+
+            maxImages: 40,
+            maxVideoLinks: 3,
+            verifiedLeadLimit: null,
+
+            featured: true,
+            homepageFeatured: true,
+
+            rankingLevel: "priority",
+            compareVisibility: "priority",
+            badgeLevel: "premium",
+            analyticsLevel: "advanced",
+
+            promoteBoostsPerMonth: 0,
             leadNotifications: true,
         },
     },

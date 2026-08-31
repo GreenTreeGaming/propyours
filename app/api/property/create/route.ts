@@ -376,10 +376,37 @@ export async function POST(
             );
         }
 
-        const isDeveloper =
+        const isBuilder =
             user.role === "Builder" ||
             user.plan?.audience ===
             "builder";
+
+        const isAgent =
+            user.role === "Agent" ||
+            user.plan?.audience ===
+            "agent";
+
+        if (
+            isAgent &&
+            typeof body.zeroCommission !==
+            "boolean"
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Choose whether commission applies to this listing.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const zeroCommission =
+            isAgent
+                ? body.zeroCommission
+                : true;
+
         const limits =
             getPlanLimits(user);
 
@@ -475,7 +502,7 @@ export async function POST(
             | undefined;
 
         if (body.brochure != null) {
-            if (!isDeveloper) {
+            if (!isBuilder) {
                 return NextResponse.json(
                     {
                         error:
@@ -588,7 +615,13 @@ export async function POST(
                     brochure,
 
                     featured: limits.featured,
-                    zeroCommission: isDeveloper,
+
+                    zeroCommission,
+
+                    commissionType:
+                        zeroCommission
+                            ? "zero"
+                            : "applicable",
 
                     listingExpiresAt,
 

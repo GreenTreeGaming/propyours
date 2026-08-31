@@ -1,10 +1,17 @@
 type PublicUserInput = {
-    _id?: { toString(): string } | string;
+    _id?:
+        | {
+        toString(): string;
+    }
+        | string;
+
     name?: unknown;
     role?: unknown;
     bio?: unknown;
     company?: unknown;
     city?: unknown;
+    reraNumber?: unknown;
+
     plan?: {
         audience?: unknown;
         tier?: unknown;
@@ -42,24 +49,62 @@ function isActiveBuilderPlan(plan: PublicUserInput["plan"]): boolean {
     );
 }
 
-export function toPublicUserProfile(user: PublicUserInput) {
-    const activeBuilderPlan = isActiveBuilderPlan(user.plan);
+export function toPublicUserProfile(
+    user: PublicUserInput,
+) {
+    const activeBuilderPlan =
+        isActiveBuilderPlan(
+            user.plan,
+        );
 
     return {
         _id: getId(user),
+
         id: getId(user),
-        name: stringOrEmpty(user.name),
-        role: user.role === "Builder" ? "Builder" : "User",
-        bio: stringOrEmpty(user.bio),
-        company: stringOrEmpty(user.company),
-        city: stringOrEmpty(user.city),
+
+        name: stringOrEmpty(
+            user.name,
+        ),
+
+        role:
+            user.role === "Builder"
+                ? "Builder"
+                : user.role === "Agent"
+                    ? "Agent"
+                    : user.role ===
+                    "Property Owner"
+                        ? "Property Owner"
+                        : "User",
+
+        bio: stringOrEmpty(
+            user.bio,
+        ),
+
+        company: stringOrEmpty(
+            user.company,
+        ),
+
+        city: stringOrEmpty(
+            user.city,
+        ),
+
+        reraNumber:
+            user.role === "Agent"
+                ? stringOrEmpty(
+                    user.reraNumber,
+                )
+                : "",
+
         builderPlan: {
             tier:
                 activeBuilderPlan &&
-                typeof user.plan?.tier === "string"
+                typeof user.plan?.tier ===
+                "string"
                     ? user.plan.tier
                     : null,
-            isActive: activeBuilderPlan,
+
+            isActive:
+            activeBuilderPlan,
         },
     };
 }

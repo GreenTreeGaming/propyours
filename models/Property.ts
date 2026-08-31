@@ -166,6 +166,15 @@ const PropertySchema =
                 default: false,
             },
 
+            commissionType: {
+                type: String,
+                enum: [
+                    "zero",
+                    "applicable",
+                ],
+                required: false,
+            },
+
             images: {
                 type: [String],
                 default: [],
@@ -195,9 +204,14 @@ const PropertySchema =
                         "silver",
                         "gold",
                         "platinum",
+
                         "builder-starter",
                         "builder-growth",
                         "builder-elite",
+
+                        "agent-ruby",
+                        "agent-emerald",
+                        "agent-diamond",
                     ],
                     default: "silver",
                 },
