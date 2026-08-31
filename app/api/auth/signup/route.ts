@@ -20,6 +20,7 @@ import {
 } from "@/lib/validation/auth";
 
 import PhoneOtp from "@/models/PhoneOtp";
+import EmailOtp from "@/models/EmailOtp";
 import User from "@/models/User";
 import {
     hasInappropriateContent,
@@ -119,11 +120,14 @@ export async function POST(
                         throw new SignupConflictError();
                     }
 
-                    const consumedOtp =
+                    const consumedPhoneOtp =
                         await PhoneOtp.findOneAndDelete(
                             {
                                 phone,
-                                verified: true,
+
+                                verified:
+                                    true,
+
                                 expiresAt: {
                                     $gt:
                                         new Date(),
@@ -134,8 +138,30 @@ export async function POST(
                             },
                         );
 
-                    if (!consumedOtp) {
-                        throw new OtpRequiredError();
+                    if (!consumedPhoneOtp) {
+                        throw new PhoneOtpRequiredError();
+                    }
+
+                    const consumedEmailOtp =
+                        await EmailOtp.findOneAndDelete(
+                            {
+                                email,
+
+                                verified:
+                                    true,
+
+                                expiresAt: {
+                                    $gt:
+                                        new Date(),
+                                },
+                            },
+                            {
+                                session,
+                            },
+                        );
+
+                    if (!consumedEmailOtp) {
+                        throw new EmailOtpRequiredError();
                     }
 
                     await User.create(
@@ -197,12 +223,27 @@ export async function POST(
 
         if (
             error instanceof
-            OtpRequiredError
+            PhoneOtpRequiredError
         ) {
             return NextResponse.json(
                 {
                     error:
                         "Verify your phone number before creating an account.",
+                },
+                {
+                    status: 403,
+                },
+            );
+        }
+
+        if (
+            error instanceof
+            EmailOtpRequiredError
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Verify your email address before creating an account.",
                 },
                 {
                     status: 403,
@@ -246,7 +287,10 @@ export async function POST(
 class SignupConflictError
     extends Error {}
 
-class OtpRequiredError
+class PhoneOtpRequiredError
+    extends Error {}
+
+class EmailOtpRequiredError
     extends Error {}
 
 function isMongoDuplicateError(

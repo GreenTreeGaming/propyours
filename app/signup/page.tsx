@@ -290,6 +290,34 @@ function SignupFormContent() {
     ] = useState<
         "send" | "verify" | null
     >(null);
+
+    const [
+        emailOtp,
+        setEmailOtp,
+    ] = useState("");
+
+    const [
+        emailOtpSent,
+        setEmailOtpSent,
+    ] = useState(false);
+
+    const [
+        emailVerified,
+        setEmailVerified,
+    ] = useState(false);
+
+    const [
+        emailOtpLoading,
+        setEmailOtpLoading,
+    ] = useState<
+        "send" | "verify" | null
+    >(null);
+
+    const [
+        emailResendSeconds,
+        setEmailResendSeconds,
+    ] = useState(0);
+
     const [loading, setLoading] =
         useState(false);
     const [
@@ -393,6 +421,35 @@ function SignupFormContent() {
             window.clearInterval(timer);
     }, [resendSeconds]);
 
+    useEffect(() => {
+        if (
+            emailResendSeconds <=
+            0
+        ) {
+            return;
+        }
+
+        const timer =
+            window.setInterval(
+                () => {
+                    setEmailResendSeconds(
+                        (current) =>
+                            Math.max(
+                                current -
+                                1,
+                                0,
+                            ),
+                    );
+                },
+                1000,
+            );
+
+        return () =>
+            window.clearInterval(
+                timer,
+            );
+    }, [emailResendSeconds]);
+
     function showNotice(
         type: NoticeType,
         text: string,
@@ -401,6 +458,33 @@ function SignupFormContent() {
             type,
             text,
         });
+    }
+
+    function resetEmailVerification(
+        email: string,
+    ) {
+        setForm(
+            (current) => ({
+                ...current,
+                email,
+            }),
+        );
+
+        setEmailOtp("");
+
+        setEmailOtpSent(
+            false,
+        );
+
+        setEmailVerified(
+            false,
+        );
+
+        setEmailResendSeconds(
+            0,
+        );
+
+        setNotice(null);
     }
 
     function resetPhoneVerification(
@@ -464,6 +548,24 @@ function SignupFormContent() {
                 return;
             }
 
+            if (!emailVerified) {
+                showNotice(
+                    "error",
+                    "Verify your email address before continuing.",
+                );
+
+                return;
+            }
+
+            if (!phoneVerified) {
+                showNotice(
+                    "error",
+                    "Verify your phone number before continuing.",
+                );
+
+                return;
+            }
+
             if (!phoneVerified) {
                 showNotice(
                     "error",
@@ -486,6 +588,178 @@ function SignupFormContent() {
 
         if (step === "identity") {
             setStep("role");
+        }
+    }
+
+    async function handleSendEmailOtp() {
+        if (
+            !isValidEmail(
+                form.email,
+            )
+        ) {
+            showNotice(
+                "error",
+                "Enter a valid email address.",
+            );
+
+            return;
+        }
+
+        if (
+            emailOtpLoading ||
+            emailResendSeconds >
+            0 ||
+            emailVerified
+        ) {
+            return;
+        }
+
+        setEmailOtpLoading(
+            "send",
+        );
+
+        setNotice(null);
+
+        try {
+            const response =
+                await fetch(
+                    "/api/auth/send-email-otp",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify(
+                                {
+                                    email:
+                                        form.email
+                                            .trim()
+                                            .toLowerCase(),
+                                },
+                            ),
+                    },
+                );
+
+            const payload =
+                (await response.json()) as
+                    ApiPayload;
+
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "Unable to send the email verification code.",
+                );
+            }
+
+            setEmailOtpSent(
+                true,
+            );
+
+            setEmailOtp("");
+
+            setEmailResendSeconds(
+                60,
+            );
+
+            showNotice(
+                "success",
+                "Verification code sent to your email. It expires in 10 minutes.",
+            );
+        } catch (caughtError) {
+            showNotice(
+                "error",
+
+                caughtError instanceof
+                Error
+                    ? caughtError.message
+                    : "Unable to send the email verification code.",
+            );
+        } finally {
+            setEmailOtpLoading(
+                null,
+            );
+        }
+    }
+
+    async function handleVerifyEmailOtp() {
+        if (
+            emailOtpLoading ||
+            emailOtp.length !== 6
+        ) {
+            return;
+        }
+
+        setEmailOtpLoading(
+            "verify",
+        );
+
+        setNotice(null);
+
+        try {
+            const response =
+                await fetch(
+                    "/api/auth/verify-email-otp",
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                        },
+
+                        body:
+                            JSON.stringify(
+                                {
+                                    email:
+                                        form.email
+                                            .trim()
+                                            .toLowerCase(),
+
+                                    otp:
+                                    emailOtp,
+                                },
+                            ),
+                    },
+                );
+
+            const payload =
+                (await response.json()) as
+                    ApiPayload;
+
+            if (!response.ok) {
+                throw new Error(
+                    payload.error ||
+                    "Unable to verify the email code.",
+                );
+            }
+
+            setEmailVerified(
+                true,
+            );
+
+            showNotice(
+                "success",
+                "Email address verified.",
+            );
+        } catch (caughtError) {
+            showNotice(
+                "error",
+
+                caughtError instanceof
+                Error
+                    ? caughtError.message
+                    : "Unable to verify the email code.",
+            );
+        } finally {
+            setEmailOtpLoading(
+                null,
+            );
         }
     }
 
@@ -650,6 +924,19 @@ function SignupFormContent() {
             return;
         }
 
+        if (!emailVerified) {
+            setStep(
+                "identity",
+            );
+
+            showNotice(
+                "error",
+                "Verify your email address before creating the account.",
+            );
+
+            return;
+        }
+
         if (!phoneVerified) {
             setStep("identity");
             showNotice(
@@ -751,7 +1038,7 @@ function SignupFormContent() {
                             </h1>
 
                             <p className="mt-6 max-w-lg text-base leading-7 text-slate-400">
-                                Verify your phone once, choose
+                                Verify your contact details, choose
                                 how you use PropYours and create
                                 a secure account in three clear
                                 stages.
@@ -785,7 +1072,7 @@ function SignupFormContent() {
                             <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                 <SignupBenefit
                                     icon={BadgeCheck}
-                                    label="Phone verified"
+                                    label="Contact verified"
                                 />
                                 <SignupBenefit
                                     icon={ShieldCheck}
@@ -901,17 +1188,43 @@ function SignupFormContent() {
                             "identity" ? (
                                 <IdentityStep
                                     form={form}
+
+                                    emailOtp={
+                                        emailOtp
+                                    }
+
+                                    emailOtpSent={
+                                        emailOtpSent
+                                    }
+
+                                    emailVerified={
+                                        emailVerified
+                                    }
+
+                                    emailOtpLoading={
+                                        emailOtpLoading
+                                    }
+
+                                    emailResendSeconds={
+                                        emailResendSeconds
+                                    }
+
                                     otp={otp}
+
                                     otpSent={otpSent}
+
                                     phoneVerified={
                                         phoneVerified
                                     }
+
                                     otpLoading={
                                         otpLoading
                                     }
+
                                     resendSeconds={
                                         resendSeconds
                                     }
+
                                     onFormChange={(
                                         patch,
                                     ) =>
@@ -922,13 +1235,35 @@ function SignupFormContent() {
                                             }),
                                         )
                                     }
+
+                                    onEmailChange={
+                                        resetEmailVerification
+                                    }
+
+                                    onEmailOtpChange={
+                                        setEmailOtp
+                                    }
+
+                                    onSendEmailOtp={() =>
+                                        void handleSendEmailOtp()
+                                    }
+
+                                    onVerifyEmailOtp={() =>
+                                        void handleVerifyEmailOtp()
+                                    }
+
                                     onPhoneChange={
                                         resetPhoneVerification
                                     }
-                                    onOtpChange={setOtp}
+
+                                    onOtpChange={
+                                        setOtp
+                                    }
+
                                     onSendOtp={() =>
                                         void handleSendOtp()
                                     }
+
                                     onVerifyOtp={() =>
                                         void handleVerifyOtp()
                                     }
@@ -1147,44 +1482,99 @@ function RoleStep({
 
 function IdentityStep({
                           form,
+
+                          emailOtp,
+                          emailOtpSent,
+                          emailVerified,
+                          emailOtpLoading,
+                          emailResendSeconds,
+
                           otp,
                           otpSent,
                           phoneVerified,
                           otpLoading,
                           resendSeconds,
+
                           onFormChange,
+
+                          onEmailChange,
+                          onEmailOtpChange,
+                          onSendEmailOtp,
+                          onVerifyEmailOtp,
+
                           onPhoneChange,
                           onOtpChange,
                           onSendOtp,
                           onVerifyOtp,
                       }: {
     form: SignupForm;
+
+    emailOtp: string;
+
+    emailOtpSent: boolean;
+
+    emailVerified: boolean;
+
+    emailOtpLoading:
+        | "send"
+        | "verify"
+        | null;
+
+    emailResendSeconds:
+        number;
+
     otp: string;
+
     otpSent: boolean;
+
     phoneVerified: boolean;
+
     otpLoading:
         | "send"
         | "verify"
         | null;
-    resendSeconds: number;
+
+    resendSeconds:
+        number;
+
     onFormChange: (
         patch: Partial<SignupForm>,
     ) => void;
+
+    onEmailChange: (
+        value: string,
+    ) => void;
+
+    onEmailOtpChange: (
+        value: string,
+    ) => void;
+
+    onSendEmailOtp:
+        () => void;
+
+    onVerifyEmailOtp:
+        () => void;
+
     onPhoneChange: (
         value: string,
     ) => void;
+
     onOtpChange: (
         value: string,
     ) => void;
-    onSendOtp: () => void;
-    onVerifyOtp: () => void;
+
+    onSendOtp:
+        () => void;
+
+    onVerifyOtp:
+        () => void;
 }) {
     return (
         <div>
             <SectionIntro
                 eyebrow="Contact verification"
                 title="Tell us who you are"
-                description="Your email is used for login. Your phone is verified once before the account is created."
+                description="Verify your email and phone number before creating your PropYours account."
             />
 
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -1194,56 +1584,257 @@ function IdentityStep({
                     </FieldLabel>
 
                     <span className="relative block">
-            <UserRound
-                size={17}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                aria-hidden="true"
-            />
+                        <UserRound
+                            size={17}
+                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                            aria-hidden="true"
+                        />
 
-            <input
-                type="text"
-                value={form.name}
-                autoComplete="name"
-                onChange={(event) =>
-                    onFormChange({
-                        name:
-                        event.target.value,
-                    })
-                }
-                placeholder="Your full name"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-            />
-          </span>
+                        <input
+                            type="text"
+                            value={
+                                form.name
+                            }
+                            autoComplete="name"
+                            onChange={(
+                                event,
+                            ) =>
+                                onFormChange(
+                                    {
+                                        name:
+                                        event
+                                            .target
+                                            .value,
+                                    },
+                                )
+                            }
+                            placeholder="Your full name"
+                            className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                        />
+                    </span>
                 </label>
 
-                <label className="block sm:col-span-2">
+                {/* EMAIL */}
+
+                <div className="sm:col-span-2">
                     <FieldLabel>
                         Email address
                     </FieldLabel>
 
-                    <span className="relative block">
-            <Mail
-                size={17}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                aria-hidden="true"
-            />
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
+                        <span className="relative block">
+                            <Mail
+                                size={
+                                    17
+                                }
+                                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                aria-hidden="true"
+                            />
 
-            <input
-                type="email"
-                value={form.email}
-                autoComplete="email"
-                inputMode="email"
-                onChange={(event) =>
-                    onFormChange({
-                        email:
-                        event.target.value,
-                    })
-                }
-                placeholder="you@example.com"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-            />
-          </span>
-                </label>
+                            <input
+                                type="email"
+                                value={
+                                    form.email
+                                }
+                                autoComplete="email"
+                                inputMode="email"
+                                disabled={
+                                    emailVerified
+                                }
+                                onChange={(
+                                    event,
+                                ) =>
+                                    onEmailChange(
+                                        event
+                                            .target
+                                            .value,
+                                    )
+                                }
+                                placeholder="you@example.com"
+                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:border-teal-100 disabled:bg-teal-50 disabled:text-slate-700"
+                            />
+
+                            {emailVerified ? (
+                                <CheckCircle2
+                                    size={
+                                        17
+                                    }
+                                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-primary"
+                                    aria-hidden="true"
+                                />
+                            ) : null}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={
+                                onSendEmailOtp
+                            }
+                            disabled={
+                                emailVerified ||
+                                emailOtpLoading !==
+                                null ||
+                                emailResendSeconds >
+                                0
+                            }
+                            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-md shadow-primary/15 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {emailOtpLoading ===
+                            "send" ? (
+                                <Loader2
+                                    size={
+                                        15
+                                    }
+                                    className="animate-spin"
+                                    aria-hidden="true"
+                                />
+                            ) : emailVerified ? (
+                                <Check
+                                    size={
+                                        15
+                                    }
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <Mail
+                                    size={
+                                        15
+                                    }
+                                    aria-hidden="true"
+                                />
+                            )}
+
+                            {emailVerified
+                                ? "Verified"
+                                : emailResendSeconds >
+                                0
+                                    ? `Resend in ${emailResendSeconds}s`
+                                    : emailOtpSent
+                                        ? "Resend code"
+                                        : "Verify email"}
+                        </button>
+                    </div>
+
+                    <p className="mt-2 text-[10px] leading-5 text-slate-400">
+                        We&apos;ll send
+                        a six-digit
+                        verification
+                        code to this
+                        email address.
+                    </p>
+                </div>
+
+                {emailOtpSent &&
+                !emailVerified ? (
+                    <div className="sm:col-span-2">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                                <label className="min-w-0 flex-1">
+                                    <FieldLabel>
+                                        Email
+                                        verification
+                                        code
+                                    </FieldLabel>
+
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        maxLength={
+                                            6
+                                        }
+                                        value={
+                                            emailOtp
+                                        }
+                                        onChange={(
+                                            event,
+                                        ) =>
+                                            onEmailOtpChange(
+                                                event.target.value
+                                                    .replace(
+                                                        /\D/g,
+                                                        "",
+                                                    )
+                                                    .slice(
+                                                        0,
+                                                        6,
+                                                    ),
+                                            )
+                                        }
+                                        placeholder="000000"
+                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-center text-lg font-black tracking-[0.35em] text-slate-950 outline-none transition placeholder:text-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                    />
+                                </label>
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        onVerifyEmailOtp
+                                    }
+                                    disabled={
+                                        emailOtpLoading !==
+                                        null ||
+                                        emailOtp.length !==
+                                        6
+                                    }
+                                    className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-xs font-black text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {emailOtpLoading ===
+                                    "verify" ? (
+                                        <Loader2
+                                            size={
+                                                15
+                                            }
+                                            className="animate-spin"
+                                            aria-hidden="true"
+                                        />
+                                    ) : (
+                                        <BadgeCheck
+                                            size={
+                                                15
+                                            }
+                                            aria-hidden="true"
+                                        />
+                                    )}
+
+                                    Verify
+                                    email
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                {emailVerified ? (
+                    <div className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                            <CheckCircle2
+                                size={
+                                    18
+                                }
+                                aria-hidden="true"
+                            />
+                        </span>
+
+                        <div>
+                            <p className="text-sm font-black text-slate-950">
+                                Email
+                                verified
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                                This email
+                                address is
+                                ready to be
+                                attached to
+                                the new
+                                account.
+                            </p>
+                        </div>
+                    </div>
+                ) : null}
+
+                {/* PHONE */}
 
                 <div className="sm:col-span-2">
                     <FieldLabel>
@@ -1251,38 +1842,48 @@ function IdentityStep({
                     </FieldLabel>
 
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
-            <span className="relative block">
-              <Phone
-                  size={17}
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  aria-hidden="true"
-              />
+                        <span className="relative block">
+                            <Phone
+                                size={
+                                    17
+                                }
+                                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                aria-hidden="true"
+                            />
 
-              <input
-                  type="tel"
-                  value={form.phone}
-                  autoComplete="tel"
-                  inputMode="tel"
-                  disabled={
-                      phoneVerified
-                  }
-                  onChange={(event) =>
-                      onPhoneChange(
-                          event.target.value,
-                      )
-                  }
-                  placeholder="+91 98765 43210"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:border-teal-100 disabled:bg-teal-50 disabled:text-slate-700"
-              />
+                            <input
+                                type="tel"
+                                value={
+                                    form.phone
+                                }
+                                autoComplete="tel"
+                                inputMode="tel"
+                                disabled={
+                                    phoneVerified
+                                }
+                                onChange={(
+                                    event,
+                                ) =>
+                                    onPhoneChange(
+                                        event
+                                            .target
+                                            .value,
+                                    )
+                                }
+                                placeholder="+91 98765 43210"
+                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:border-teal-100 disabled:bg-teal-50 disabled:text-slate-700"
+                            />
 
-                {phoneVerified ? (
-                    <CheckCircle2
-                        size={17}
-                        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-primary"
-                        aria-hidden="true"
-                    />
-                ) : null}
-            </span>
+                            {phoneVerified ? (
+                                <CheckCircle2
+                                    size={
+                                        17
+                                    }
+                                    className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-primary"
+                                    aria-hidden="true"
+                                />
+                            ) : null}
+                        </span>
 
                         <button
                             type="button"
@@ -1291,33 +1892,42 @@ function IdentityStep({
                             }
                             disabled={
                                 phoneVerified ||
-                                otpLoading !== null ||
-                                resendSeconds > 0
+                                otpLoading !==
+                                null ||
+                                resendSeconds >
+                                0
                             }
                             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-md shadow-primary/15 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {otpLoading ===
                             "send" ? (
                                 <Loader2
-                                    size={15}
+                                    size={
+                                        15
+                                    }
                                     className="animate-spin"
                                     aria-hidden="true"
                                 />
                             ) : phoneVerified ? (
                                 <Check
-                                    size={15}
+                                    size={
+                                        15
+                                    }
                                     aria-hidden="true"
                                 />
                             ) : (
                                 <MessageSquareText
-                                    size={15}
+                                    size={
+                                        15
+                                    }
                                     aria-hidden="true"
                                 />
                             )}
 
                             {phoneVerified
                                 ? "Verified"
-                                : resendSeconds > 0
+                                : resendSeconds >
+                                0
                                     ? `Resend in ${resendSeconds}s`
                                     : otpSent
                                         ? "Resend code"
@@ -1326,9 +1936,11 @@ function IdentityStep({
                     </div>
 
                     <p className="mt-2 text-[10px] leading-5 text-slate-400">
-                        Use a number that can receive
-                        SMS. The verification code
-                        expires after 10 minutes.
+                        Use a number that
+                        can receive SMS.
+                        The verification
+                        code expires after
+                        10 minutes.
                     </p>
                 </div>
 
@@ -1339,19 +1951,26 @@ function IdentityStep({
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                                 <label className="min-w-0 flex-1">
                                     <FieldLabel>
-                                        Six-digit code
+                                        Phone
+                                        verification
+                                        code
                                     </FieldLabel>
 
                                     <input
                                         type="text"
                                         inputMode="numeric"
                                         autoComplete="one-time-code"
-                                        maxLength={6}
-                                        value={otp}
-                                        onChange={(event) =>
+                                        maxLength={
+                                            6
+                                        }
+                                        value={
+                                            otp
+                                        }
+                                        onChange={(
+                                            event,
+                                        ) =>
                                             onOtpChange(
-                                                event.target
-                                                    .value
+                                                event.target.value
                                                     .replace(
                                                         /\D/g,
                                                         "",
@@ -1375,24 +1994,31 @@ function IdentityStep({
                                     disabled={
                                         otpLoading !==
                                         null ||
-                                        otp.length !== 6
+                                        otp.length !==
+                                        6
                                     }
                                     className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-xs font-black text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {otpLoading ===
                                     "verify" ? (
                                         <Loader2
-                                            size={15}
+                                            size={
+                                                15
+                                            }
                                             className="animate-spin"
                                             aria-hidden="true"
                                         />
                                     ) : (
                                         <BadgeCheck
-                                            size={15}
+                                            size={
+                                                15
+                                            }
                                             aria-hidden="true"
                                         />
                                     )}
-                                    Verify phone
+
+                                    Verify
+                                    phone
                                 </button>
                             </div>
                         </div>
@@ -1401,20 +2027,27 @@ function IdentityStep({
 
                 {phoneVerified ? (
                     <div className="sm:col-span-2 flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-              <CheckCircle2
-                  size={18}
-                  aria-hidden="true"
-              />
-            </span>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                            <CheckCircle2
+                                size={
+                                    18
+                                }
+                                aria-hidden="true"
+                            />
+                        </span>
 
                         <div>
                             <p className="text-sm font-black text-slate-950">
-                                Phone verified
+                                Phone
+                                verified
                             </p>
+
                             <p className="mt-1 text-xs leading-5 text-slate-600">
-                                This number is ready to be
-                                attached to the new account.
+                                This number
+                                is ready to
+                                be attached
+                                to the new
+                                account.
                             </p>
                         </div>
                     </div>

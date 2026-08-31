@@ -1,10 +1,14 @@
-import { z } from "zod";
+import {
+    z,
+} from "zod";
 
 const emailSchema = z
     .string()
     .trim()
     .toLowerCase()
-    .email("Enter a valid email address.")
+    .email(
+        "Enter a valid email address.",
+    )
     .max(254);
 
 const passwordSchema = z
@@ -26,12 +30,23 @@ const phoneSchema = z
         "Enter a valid phone number including country code.",
     );
 
+const otpSchema = z
+    .string()
+    .trim()
+    .regex(
+        /^\d{6}$/,
+        "OTP must be a 6-digit code.",
+    );
+
 export const loginSchema = z.object({
     email: emailSchema,
 
     password: z
         .string()
-        .min(1, "Password is required.")
+        .min(
+            1,
+            "Password is required.",
+        )
         .max(128),
 });
 
@@ -39,7 +54,10 @@ export const signupSchema = z.object({
     name: z
         .string()
         .trim()
-        .min(2, "Name must contain at least 2 characters.")
+        .min(
+            2,
+            "Name must contain at least 2 characters.",
+        )
         .max(100),
 
     email: emailSchema,
@@ -49,28 +67,39 @@ export const signupSchema = z.object({
     password: passwordSchema,
 });
 
-export const sendPhoneOtpSchema = z.object({
-    phone: phoneSchema,
+export const sendPhoneOtpSchema =
+    z.object({
+        phone: phoneSchema,
 
-    email: emailSchema.optional(),
-});
+        email:
+            emailSchema.optional(),
+    });
 
-export const verifyPhoneOtpSchema = z.object({
-    phone: phoneSchema,
+export const verifyPhoneOtpSchema =
+    z.object({
+        phone: phoneSchema,
 
-    otp: z
-        .string()
-        .trim()
-        .regex(
-            /^\d{6}$/,
-            "OTP must be a 6-digit code.",
-        ),
-});
+        otp: otpSchema,
+    });
 
-export type LoginInput = z.infer<
-    typeof loginSchema
->;
+export const sendEmailOtpSchema =
+    z.object({
+        email: emailSchema,
+    });
 
-export type SignupInput = z.infer<
-    typeof signupSchema
->;
+export const verifyEmailOtpSchema =
+    z.object({
+        email: emailSchema,
+
+        otp: otpSchema,
+    });
+
+export type LoginInput =
+    z.infer<
+        typeof loginSchema
+    >;
+
+export type SignupInput =
+    z.infer<
+        typeof signupSchema
+    >;

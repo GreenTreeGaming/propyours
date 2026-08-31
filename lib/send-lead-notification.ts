@@ -1,6 +1,8 @@
-import { Resend } from "resend";
-
-type LeadSource = "phone" | "email" | "whatsapp" | "favorite";
+type LeadSource =
+    | "phone"
+    | "email"
+    | "whatsapp"
+    | "favorite";
 
 type SendLeadNotificationInput = {
     ownerEmail: string;
@@ -13,15 +15,54 @@ type SendLeadNotificationInput = {
     source: LeadSource;
 };
 
-const resend = process.env.RESEND_API_KEY
-    ? new Resend(process.env.RESEND_API_KEY)
-    : null;
+interface Msg91EmailResponse {
+    type?: string;
+    message?: string;
+    request_id?: string;
+}
 
-function getActionText(source: LeadSource) {
-    if (source === "phone") return "clicked Show Phone Number";
-    if (source === "email") return "clicked Email Seller";
-    if (source === "favorite") return "favorited your property";
-    if (source === "whatsapp") return "clicked WhatsApp";
+function getRequiredEnv(
+    name: string,
+): string {
+    const value =
+        process.env[name]?.trim();
+
+    if (!value) {
+        throw new Error(
+            `${name} is not configured.`,
+        );
+    }
+
+    return value;
+}
+
+function shouldSendRealEmails(): boolean {
+    return (
+        process.env.NODE_ENV ===
+        "production" ||
+        process.env.SEND_REAL_EMAILS ===
+        "true"
+    );
+}
+
+function getActionText(
+    source: LeadSource,
+): string {
+    if (source === "phone") {
+        return "clicked Show Phone Number";
+    }
+
+    if (source === "email") {
+        return "clicked Email Seller";
+    }
+
+    if (source === "favorite") {
+        return "favorited your property";
+    }
+
+    if (source === "whatsapp") {
+        return "clicked WhatsApp";
+    }
 
     return "showed interest in your property";
 }
@@ -35,57 +76,156 @@ export async function sendLeadNotificationEmail({
                                                     propertyId,
                                                     propertyAddress,
                                                     source,
-                                                }: SendLeadNotificationInput) {
-    if (!resend) {
-        console.warn("RESEND_API_KEY is missing. Skipping lead notification email.");
+                                                }: SendLeadNotificationInput): Promise<void> {
+    if (!shouldSendRealEmails()) {
+        console.info(
+            "Development lead notification requested.",
+            {
+                ownerEmailDomain:
+                    ownerEmail.split(
+                        "@",
+                    )[1] ??
+                    "unknown",
+
+                source,
+                propertyId,
+            },
+        );
+
         return;
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const propertyUrl = `${appUrl}/property/${propertyId}`;
-    const actionText = getActionText(source);
+    const authKey =
+        getRequiredEnv(
+            "MSG91_AUTH_KEY",
+        );
 
-    await resend.emails.send({
-        from: process.env.LEAD_EMAIL_FROM || "PropYours <leads@propyours.com>",
-        to: ownerEmail,
-        subject: "New lead for your property on PropYours",
-        html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-                <h2>Someone is interested in your property</h2>
+    const templateId =
+        getRequiredEnv(
+            "MSG91_LEAD_TEMPLATE_ID",
+        );
 
-                <p>Hi ${ownerName || "there"},</p>
+    const fromEmail =
+        getRequiredEnv(
+            "MSG91_EMAIL_FROM",
+        );
 
-                <p><strong>${buyerName}</strong> ${actionText} on PropYours.</p>
+    const domain =
+        getRequiredEnv(
+            "MSG91_EMAIL_DOMAIN",
+        );
 
-                <div style="padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; margin: 20px 0;">
-                    <p><strong>Property:</strong> ${propertyAddress}</p>
-                    <p><strong>Lead name:</strong> ${buyerName}</p>
-                    ${buyerEmail ? `<p><strong>Email:</strong> ${buyerEmail}</p>` : ""}
-                    ${buyerPhone ? `<p><strong>Phone:</strong> ${buyerPhone}</p>` : ""}
-                </div>
+    const appUrl =
+        process.env
+            .NEXT_PUBLIC_APP_URL ||
+        "http://localhost:3000";
 
-                <p>
-                    <a href="${propertyUrl}" style="display: inline-block; background: #0f766e; color: white; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: bold;">
-                        View Property
-                    </a>
-                </p>
+    const propertyUrl =
+        `${appUrl}/property/${propertyId}`;
 
-                <p style="font-size: 12px; color: #6b7280;">
-                    This notification was sent because someone interacted with your property listing on PropYours.
-                </p>
-            </div>
-        `,
-        text: `
-Hi ${ownerName || "there"},
+    const actionText =
+        getActionText(source);
 
-${buyerName} ${actionText} on PropYours.
+    const response = await fetch(
+        "https://control.msg91.com/api/v5/email/send",
+        {
+            method: "POST",
 
-Property: ${propertyAddress}
-Lead name: ${buyerName}
-${buyerEmail ? `Email: ${buyerEmail}` : ""}
-${buyerPhone ? `Phone: ${buyerPhone}` : ""}
+            headers: {
+                accept:
+                    "application/json",
 
-View property: ${propertyUrl}
-        `.trim(),
-    });
+                authkey:
+                authKey,
+
+                "content-type":
+                    "application/json",
+            },
+
+            body: JSON.stringify({
+                recipients: [
+                    {
+                        to: [
+                            {
+                                email:
+                                ownerEmail,
+                            },
+                        ],
+
+                        variables: {
+                            owner_name:
+                                ownerName ||
+                                "there",
+
+                            buyer_name:
+                            buyerName,
+
+                            action_text:
+                            actionText,
+
+                            property_address:
+                            propertyAddress,
+
+                            buyer_email:
+                                buyerEmail ||
+                                "Not provided",
+
+                            buyer_phone:
+                                buyerPhone ||
+                                "Not provided",
+
+                            property_url:
+                            propertyUrl,
+                        },
+                    },
+                ],
+
+                from: {
+                    name:
+                        "PropYours",
+
+                    email:
+                    fromEmail,
+                },
+
+                domain,
+
+                template_id:
+                templateId,
+            }),
+        },
+    );
+
+    let payload:
+        | Msg91EmailResponse
+        | null = null;
+
+    try {
+        payload =
+            (await response.json()) as
+                Msg91EmailResponse;
+    } catch {
+        // Provider may return
+        // a non-JSON error response.
+    }
+
+    if (!response.ok) {
+        console.error(
+            "MSG91 lead email failed.",
+            {
+                status:
+                response.status,
+
+                message:
+                payload?.message,
+
+                propertyId,
+                source,
+            },
+        );
+
+        throw new Error(
+            "Lead notification delivery failed.",
+        );
+    }
 }
