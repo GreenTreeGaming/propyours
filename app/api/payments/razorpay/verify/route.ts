@@ -180,9 +180,12 @@ export async function POST(
             });
         }
 
+        const planTier =
+            order.planTier as keyof typeof PLAN_CATALOG;
+
         const plan =
             PLAN_CATALOG[
-                order.planTier
+                planTier
                 ];
 
         if (!plan) {
@@ -220,7 +223,7 @@ export async function POST(
             auth.userId,
 
             tier:
-            order.planTier,
+            planTier,
 
             audience:
             plan.audience,

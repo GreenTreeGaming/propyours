@@ -718,9 +718,9 @@ export default function SellPage() {
                               {formatPlanPrice(plan)}
                             </p>
 
-                            {plan.presentation.billingType === "monthly" ? (
+                            {plan.presentation.billingType === "one-time" ? (
                                 <p className={`pb-1 text-sm font-bold ${theme.muted}`}>
-                                  / month
+                                  one-time
                                 </p>
                             ) : null}
                           </div>
