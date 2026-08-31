@@ -521,6 +521,31 @@ export default function HomePage() {
                   className="max-w-2xl"
               >
 
+                <Link
+                    href="/sell"
+                    className="group inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-4 py-2 text-xs font-black text-primary shadow-sm backdrop-blur transition hover:border-primary hover:bg-teal-50"
+                >
+    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
+        <Store
+            size={13}
+            aria-hidden="true"
+        />
+    </span>
+
+                  <span>
+        Post your property for{" "}
+                    <span className="text-emerald-600">
+            Free
+        </span>
+    </span>
+
+                  <ArrowRight
+                      size={14}
+                      className="transition-transform group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                  />
+                </Link>
+
                 <h1 className="mt-6 font-heading text-4xl font-black leading-[1.04] tracking-[-0.045em] text-slate-950 sm:text-5xl lg:text-[3.8rem]">
                   Find your next property,
                   <span className="block text-primary">
@@ -1225,7 +1250,7 @@ export default function HomePage() {
                     </p>
 
                     <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
-              Start listing
+              Post for free
               <ArrowRight
                   size={17}
                   className="transition-transform group-hover:translate-x-1"

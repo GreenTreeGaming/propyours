@@ -429,62 +429,265 @@ function getPlanTheme(
     plan: PricingPlan,
 ): PlanTheme {
     switch (plan.tier) {
-        case "gold":
-        case "builder-growth":
+        case "agent-ruby":
             return {
-                icon:
-                    plan.audience === "owner"
-                        ? Sparkles
-                        : Rocket,
+                icon: Gem,
                 cardClass:
-                    "border-2 border-primary/70 bg-white text-slate-950 shadow-[0_34px_95px_rgba(13,148,136,0.18)] ring-4 ring-primary/5 lg:-translate-y-3",
+                    "border-2 border-rose-200 bg-[linear-gradient(180deg,#fff7f8_0%,#ffffff_42%)] text-slate-950 shadow-[0_28px_80px_rgba(225,29,72,0.10)] ring-1 ring-rose-100",
                 topLineClass:
-                    "bg-gradient-to-r from-teal-300 via-primary to-teal-500",
+                    "bg-gradient-to-r from-rose-400 via-red-500 to-rose-400",
                 iconClass:
-                    "bg-primary text-white shadow-xl shadow-primary/25",
+                    "bg-rose-100 text-rose-700 ring-1 ring-rose-200",
                 badgeClass:
-                    "bg-primary text-white shadow-lg shadow-primary/20",
-                eyebrowClass: "text-primary",
-                mutedClass: "text-slate-500",
-                featureClass: "text-slate-600",
+                    "bg-rose-100 text-rose-700 ring-1 ring-rose-200",
+                eyebrowClass:
+                    "text-rose-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
                 checkClass:
-                    "bg-teal-100 text-primary ring-1 ring-teal-200",
+                    "bg-rose-100 text-rose-700 ring-1 ring-rose-200",
                 priceClass:
-                    "border-teal-200 bg-[linear-gradient(135deg,#ecfdf9_0%,#ffffff_100%)]",
-                dividerClass: "bg-teal-100",
+                    "border-rose-200 bg-rose-50/70",
+                dividerClass:
+                    "bg-rose-100",
                 primaryCtaClass:
-                    "bg-primary text-white shadow-lg shadow-primary/25 hover:bg-primary-dark",
+                    "bg-rose-600 text-white shadow-lg shadow-rose-600/20 hover:bg-rose-700",
                 secondaryCtaClass:
-                    "border-teal-200 bg-white text-primary hover:bg-teal-50",
+                    "border-rose-200 bg-white text-rose-700 hover:bg-rose-50",
+            };
+
+        case "agent-emerald":
+            return {
+                icon: Sparkles,
+                cardClass:
+                    "border-2 border-emerald-300 bg-[linear-gradient(180deg,#f0fdf8_0%,#ffffff_42%)] text-slate-950 shadow-[0_32px_90px_rgba(5,150,105,0.14)] ring-4 ring-emerald-500/5 lg:-translate-y-3",
+                topLineClass:
+                    "bg-gradient-to-r from-emerald-400 via-emerald-600 to-teal-400",
+                iconClass:
+                    "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20",
+                badgeClass:
+                    "bg-emerald-600 text-white shadow-sm",
+                eyebrowClass:
+                    "text-emerald-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+                priceClass:
+                    "border-emerald-200 bg-emerald-50/80",
+                dividerClass:
+                    "bg-emerald-100",
+                primaryCtaClass:
+                    "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700",
+                secondaryCtaClass:
+                    "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50",
+            };
+
+        case "agent-diamond":
+            return {
+                icon: Gem,
+                cardClass:
+                    "border-2 border-cyan-300 bg-[linear-gradient(180deg,#ecfeff_0%,#ffffff_42%)] text-slate-950 shadow-[0_32px_90px_rgba(8,145,178,0.13)] ring-1 ring-cyan-100",
+                topLineClass:
+                    "bg-gradient-to-r from-cyan-300 via-sky-500 to-cyan-400",
+                iconClass:
+                    "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200",
+                badgeClass:
+                    "bg-cyan-100 text-cyan-800 ring-1 ring-cyan-200",
+                eyebrowClass:
+                    "text-cyan-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200",
+                priceClass:
+                    "border-cyan-200 bg-cyan-50/80",
+                dividerClass:
+                    "bg-cyan-100",
+                primaryCtaClass:
+                    "bg-cyan-700 text-white shadow-lg shadow-cyan-700/20 hover:bg-cyan-800",
+                secondaryCtaClass:
+                    "border-cyan-200 bg-white text-cyan-700 hover:bg-cyan-50",
+            };
+
+        case "silver":
+            return {
+                icon: UserRound,
+                cardClass:
+                    "border-2 border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_42%)] text-slate-950 shadow-[0_26px_70px_rgba(15,23,42,0.08)] ring-1 ring-slate-100",
+                topLineClass:
+                    "bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300",
+                iconClass:
+                    "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+                badgeClass:
+                    "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+                eyebrowClass:
+                    "text-slate-600",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+                priceClass:
+                    "border-slate-200 bg-slate-50/80",
+                dividerClass:
+                    "bg-slate-100",
+                primaryCtaClass:
+                    "bg-slate-800 text-white shadow-lg shadow-slate-800/15 hover:bg-slate-900",
+                secondaryCtaClass:
+                    "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+            };
+
+        case "gold":
+            return {
+                icon: Sparkles,
+                cardClass:
+                    "border-2 border-amber-300 bg-[linear-gradient(180deg,#fffbeb_0%,#ffffff_42%)] text-slate-950 shadow-[0_32px_90px_rgba(217,119,6,0.13)] ring-4 ring-amber-500/5 lg:-translate-y-3",
+                topLineClass:
+                    "bg-gradient-to-r from-amber-300 via-amber-500 to-yellow-400",
+                iconClass:
+                    "bg-amber-500 text-white shadow-lg shadow-amber-500/20",
+                badgeClass:
+                    "bg-amber-500 text-white shadow-sm",
+                eyebrowClass:
+                    "text-amber-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+                priceClass:
+                    "border-amber-200 bg-amber-50/80",
+                dividerClass:
+                    "bg-amber-100",
+                primaryCtaClass:
+                    "bg-amber-500 text-white shadow-lg shadow-amber-500/20 hover:bg-amber-600",
+                secondaryCtaClass:
+                    "border-amber-200 bg-white text-amber-700 hover:bg-amber-50",
             };
 
         case "platinum":
+            return {
+                icon: Gem,
+                cardClass:
+                    "border-2 border-violet-300 bg-[linear-gradient(180deg,#f5f3ff_0%,#ffffff_42%)] text-slate-950 shadow-[0_34px_95px_rgba(109,40,217,0.14)] ring-1 ring-violet-100",
+                topLineClass:
+                    "bg-gradient-to-r from-violet-400 via-indigo-500 to-fuchsia-400",
+                iconClass:
+                    "bg-violet-100 text-violet-700 ring-1 ring-violet-200",
+                badgeClass:
+                    "bg-violet-100 text-violet-800 ring-1 ring-violet-200",
+                eyebrowClass:
+                    "text-violet-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-violet-100 text-violet-700 ring-1 ring-violet-200",
+                priceClass:
+                    "border-violet-200 bg-violet-50/80",
+                dividerClass:
+                    "bg-violet-100",
+                primaryCtaClass:
+                    "bg-violet-700 text-white shadow-lg shadow-violet-700/20 hover:bg-violet-800",
+                secondaryCtaClass:
+                    "border-violet-200 bg-white text-violet-700 hover:bg-violet-50",
+            };
+
+        case "builder-starter":
+            return {
+                icon: Building2,
+                cardClass:
+                    "border-2 border-teal-200 bg-[linear-gradient(180deg,#f0fdfa_0%,#ffffff_42%)] text-slate-950 shadow-[0_28px_80px_rgba(13,148,136,0.10)] ring-1 ring-teal-100",
+                topLineClass:
+                    "bg-gradient-to-r from-teal-300 via-teal-500 to-cyan-400",
+                iconClass:
+                    "bg-teal-100 text-teal-700 ring-1 ring-teal-200",
+                badgeClass:
+                    "bg-teal-100 text-teal-700 ring-1 ring-teal-200",
+                eyebrowClass:
+                    "text-teal-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-teal-100 text-teal-700 ring-1 ring-teal-200",
+                priceClass:
+                    "border-teal-200 bg-teal-50/80",
+                dividerClass:
+                    "bg-teal-100",
+                primaryCtaClass:
+                    "bg-teal-600 text-white shadow-lg shadow-teal-600/20 hover:bg-teal-700",
+                secondaryCtaClass:
+                    "border-teal-200 bg-white text-teal-700 hover:bg-teal-50",
+            };
+
+        case "builder-growth":
+            return {
+                icon: Rocket,
+                cardClass:
+                    "border-2 border-sky-300 bg-[linear-gradient(180deg,#f0f9ff_0%,#ffffff_42%)] text-slate-950 shadow-[0_32px_90px_rgba(2,132,199,0.13)] ring-4 ring-sky-500/5 lg:-translate-y-3",
+                topLineClass:
+                    "bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-400",
+                iconClass:
+                    "bg-blue-600 text-white shadow-lg shadow-blue-600/20",
+                badgeClass:
+                    "bg-blue-600 text-white shadow-sm",
+                eyebrowClass:
+                    "text-blue-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
+                checkClass:
+                    "bg-blue-100 text-blue-700 ring-1 ring-blue-200",
+                priceClass:
+                    "border-blue-200 bg-blue-50/80",
+                dividerClass:
+                    "bg-blue-100",
+                primaryCtaClass:
+                    "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700",
+                secondaryCtaClass:
+                    "border-blue-200 bg-white text-blue-700 hover:bg-blue-50",
+            };
+
         case "builder-elite":
             return {
-                icon:
-                    plan.audience === "owner"
-                        ? Gem
-                        : Crown,
+                icon: Crown,
                 cardClass:
-                    "border-white/10 bg-slate-950 text-white shadow-[0_38px_110px_rgba(15,23,42,0.34)] ring-1 ring-white/5",
+                    "border-2 border-indigo-300 bg-[linear-gradient(180deg,#eef2ff_0%,#ffffff_42%)] text-slate-950 shadow-[0_34px_95px_rgba(67,56,202,0.15)] ring-1 ring-indigo-100",
                 topLineClass:
-                    "bg-gradient-to-r from-teal-400 via-cyan-200 to-teal-400",
+                    "bg-gradient-to-r from-indigo-400 via-violet-600 to-fuchsia-400",
                 iconClass:
-                    "bg-white/10 text-teal-300 ring-1 ring-white/10 shadow-xl",
+                    "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200",
                 badgeClass:
-                    "bg-teal-300 text-slate-950 shadow-lg shadow-teal-400/20",
-                eyebrowClass: "text-teal-300",
-                mutedClass: "text-slate-400",
-                featureClass: "text-slate-300",
+                    "bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200",
+                eyebrowClass:
+                    "text-indigo-700",
+                mutedClass:
+                    "text-slate-500",
+                featureClass:
+                    "text-slate-600",
                 checkClass:
-                    "bg-teal-300/15 text-teal-300 ring-1 ring-teal-300/20",
+                    "bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200",
                 priceClass:
-                    "border-white/10 bg-white/[0.055]",
-                dividerClass: "bg-white/10",
+                    "border-indigo-200 bg-indigo-50/80",
+                dividerClass:
+                    "bg-indigo-100",
                 primaryCtaClass:
-                    "bg-white text-slate-950 shadow-lg hover:bg-teal-200",
+                    "bg-indigo-700 text-white shadow-lg shadow-indigo-700/20 hover:bg-indigo-800",
                 secondaryCtaClass:
-                    "border-white/15 bg-white/5 text-white hover:bg-white/10",
+                    "border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50",
             };
 
         default:
@@ -965,10 +1168,13 @@ function PlanCard({
     const cta = getPlanCta(plan);
     const isPremium =
         plan.tier === "platinum" ||
-        plan.tier === "builder-elite";
+        plan.tier === "builder-elite" ||
+        plan.tier === "agent-diamond";
+
     const isRecommended =
         plan.tier === "gold" ||
-        plan.tier === "builder-growth";
+        plan.tier === "builder-growth" ||
+        plan.tier === "agent-emerald";
 
     const discountPercentage =
         getPlanDiscountPercentage(plan);

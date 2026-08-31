@@ -1035,7 +1035,7 @@ export default function SellPage() {
                   href="/post-property"
                   className="mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
               >
-                Start listing
+                Post for free
                 <ArrowRight size={16} aria-hidden="true" />
               </Link>
             </div>
