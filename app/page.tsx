@@ -29,6 +29,7 @@ import {
   TAMIL_NADU_LOCATIONS,
 } from "@/lib/locations";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
+import AuthorisedPartners from "@/components/AuthorisedPartners";
 
 interface Property {
   _id: string;
@@ -1162,7 +1163,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="relative z-20 mx-auto -mt-8 max-w-7xl px-5 sm:px-6 lg:px-8">
+        <AuthorisedPartners />
+
+        <section className="relative z-20 mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8">
           <div className="rounded-[2rem] border border-slate-200/80 bg-white/95 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-4">
             <div className="mb-3 flex flex-col gap-2 px-2 py-2 sm:flex-row sm:items-center sm:justify-between">
               <div>

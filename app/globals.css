@@ -115,3 +115,29 @@ h6 {
   border-color: rgb(16 185 129);
   box-shadow: 0 0 0 4px rgb(16 185 129 / 0.1);
 }
+
+
+@keyframes authorised-partners-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.authorised-partners-track {
+  animation:
+          authorised-partners-scroll
+          38s
+          linear
+          infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authorised-partners-track {
+    animation: none;
+  }
+}
