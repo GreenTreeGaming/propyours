@@ -25,18 +25,18 @@ export default function BrandLogo({
             ].join(" ")}
         >
             <Image
-                src="/logonobrand.png"
+                src="/wordlogo3.jpeg"
                 alt="PropYours"
                 fill
                 priority={priority}
-                sizes="(max-width: 640px) 150px, (max-width: 1024px) 160px, 168px"
+                sizes="315px"
                 className={[
                     "object-contain object-left",
-                    "scale-[0.92]",
+                    "origin-left",
+                    "scale-[1.85]",
                     "translate-y-[1px]",
                     "transition-[transform,opacity]",
                     "duration-200",
-                    "opacity-[0.96]",
                     imageClassName,
                 ].join(" ")}
             />

@@ -310,7 +310,7 @@ export default function Navbar() {
                 <BrandLogo
                     href=""
                     priority
-                    className="h-14 w-[235px] sm:h-16 sm:w-[285px]"
+                    className="h-16 w-[265px] sm:h-[72px] sm:w-[315px]"
                 />
               </Link>
 
