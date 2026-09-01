@@ -250,8 +250,8 @@ export default function AuthorisedPartners() {
         group
         mx-3
         flex
-        h-[92px]
-        w-[170px]
+        h-[108px]
+        w-[190px]
         shrink-0
         items-center
         justify-center
@@ -259,36 +259,34 @@ export default function AuthorisedPartners() {
         border
         border-slate-200/80
         bg-white
-        px-6
-        py-4
         shadow-sm
-        transition-all
+        transition
         duration-300
         hover:border-slate-300
-        hover:bg-slate-50/60
         hover:shadow-[0_8px_24px_rgba(15,23,42,0.08)]
         sm:mx-4
-        sm:h-[104px]
-        sm:w-[190px]
+        sm:h-[116px]
+        sm:w-[205px]
     "
                                 >
                                     <div
                                         className="
-            relative
-            h-full
-            w-full
-            transition-transform
-            duration-300
-            ease-out
-            group-hover:scale-[1.035]
-        "
+        relative
+        h-[64px]
+        w-[130px]
+        sm:h-[72px]
+        sm:w-[145px]
+    "
                                     >
                                         <Image
                                             src={logo}
                                             alt="Authorised partner"
                                             fill
-                                            sizes="190px"
-                                            className="object-contain"
+                                            sizes="145px"
+                                            className="
+            object-contain
+            scale-[1.18]
+        "
                                         />
                                     </div>
                                 </div>
