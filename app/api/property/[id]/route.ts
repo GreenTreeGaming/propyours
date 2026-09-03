@@ -537,10 +537,6 @@ export async function PUT(
 
         const limits =
             getPlanLimits(user);
-        const isDeveloper =
-            user.role === "Builder" ||
-            user.plan?.audience ===
-            "builder";
 
         const images =
             "images" in body
@@ -646,17 +642,6 @@ export async function PUT(
             if (body.brochure === null) {
                 brochure = null;
             } else {
-                if (!isDeveloper) {
-                    return NextResponse.json(
-                        {
-                            error:
-                                "Only developers can attach property brochures.",
-                        },
-                        {
-                            status: 403,
-                        },
-                    );
-                }
 
                 if (
                     typeof body.brochure !==
@@ -721,6 +706,14 @@ export async function PUT(
             city: body.city,
             state: body.state,
             landmark: body.landmark,
+
+            developerName:
+                typeof body.developerName === "string"
+                    ? body.developerName
+                        .trim()
+                        .slice(0, 150)
+                    : undefined,
+
             uds: body.uds,
             size: body.size,
             sizeUnit: body.sizeUnit,

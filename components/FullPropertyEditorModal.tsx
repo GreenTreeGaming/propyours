@@ -80,7 +80,6 @@ interface FullPropertyEditorModalProps {
     isOpen: boolean;
     property: PropertyEditorProperty | null;
     plan: PlanDefinition;
-    canUploadBrochure: boolean;
     onClose: () => void;
     onSaved: (
         property: PropertyEditorProperty,
@@ -443,7 +442,6 @@ export default function FullPropertyEditorModal({
                                                     isOpen,
                                                     property,
                                                     plan,
-                                                    canUploadBrochure,
                                                     onClose,
                                                     onSaved,
                                                 }: FullPropertyEditorModalProps) {
@@ -787,13 +785,16 @@ export default function FullPropertyEditorModal({
 
             if (
                 form.uds.trim() &&
-                (!Number.isFinite(
+                (
+                    !Number.isFinite(
                         Number(form.uds),
                     ) ||
-                    Number(form.uds) < 0)
+                    Number(form.uds) < 0 ||
+                    Number(form.uds) > 100
+                )
             ) {
                 nextErrors.uds =
-                    "Enter a valid UDS value.";
+                    "UDS must be between 0% and 100%.";
             }
         }
 
@@ -1004,10 +1005,8 @@ export default function FullPropertyEditorModal({
                         .filter(Boolean),
             };
 
-            if (canUploadBrochure) {
-                payload.brochure =
-                    form.brochure;
-            }
+            payload.brochure =
+                form.brochure;
 
             const response = await fetch(
                 `/api/property/${property._id}`,
@@ -1817,35 +1816,44 @@ export default function FullPropertyEditorModal({
                                                             </label>
 
                                                             <label>
-                                                                <FieldLabel hint="sq ft">
+                                                                <FieldLabel hint="Optional">
                                                                     UDS
                                                                 </FieldLabel>
 
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    step="any"
-                                                                    value={
-                                                                        form.uds
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        updateForm({
-                                                                            uds: event
-                                                                                .target
-                                                                                .value,
-                                                                        })
-                                                                    }
-                                                                    placeholder="Optional"
-                                                                    className="h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                                                                />
+                                                                <div className="relative">
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        max="100"
+                                                                        step="0.01"
+                                                                        value={form.uds}
+                                                                        onChange={(event) => {
+                                                                            const value =
+                                                                                event.target.value;
+
+                                                                            if (
+                                                                                value !== "" &&
+                                                                                Number(value) > 100
+                                                                            ) {
+                                                                                return;
+                                                                            }
+
+                                                                            updateForm({
+                                                                                uds: value,
+                                                                            });
+                                                                        }}
+                                                                        placeholder="Optional"
+                                                                        className="h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                    />
+
+                                                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
+            %
+        </span>
+                                                                </div>
 
                                                                 {errors.uds ? (
                                                                     <ErrorText>
-                                                                        {
-                                                                            errors.uds
-                                                                        }
+                                                                        {errors.uds}
                                                                     </ErrorText>
                                                                 ) : null}
                                                             </label>

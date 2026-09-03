@@ -102,6 +102,7 @@ interface PropertyOwner {
 interface PropertyRecord {
     _id: string;
     address: string;
+    developerName?: string;
     images?: string[];
     videoLinks?: string[];
     brochure?: {
@@ -909,6 +910,13 @@ function getFactRows(
                 ),
         },
     ];
+
+    if (property.developerName) {
+        rows.push({
+            label: "Developer / Builder",
+            value: property.developerName,
+        });
+    }
 
     if (property.priceType) {
         rows.push({
@@ -2183,8 +2191,7 @@ export default function PropertyDetailsPage() {
                                 <p className="mt-3 text-lg font-bold text-slate-500 sm:text-xl">
                                     {category === "residential" &&
                                     property.unitConfigurations &&
-                                    property.unitConfigurations.length >
-                                    0
+                                    property.unitConfigurations.length > 0
                                         ? `${typeLabel} · ${property.unitConfigurations
                                             .map((unit) =>
                                                 unit.bedrooms === 0
@@ -2197,10 +2204,8 @@ export default function PropertyDetailsPage() {
                                             )
                                             .join(" / ")}`
                                         : category === "residential" &&
-                                        property.bedrooms !==
-                                        null &&
-                                        property.bedrooms !==
-                                        undefined
+                                        property.bedrooms !== null &&
+                                        property.bedrooms !== undefined
                                             ? property.bedrooms === 0
                                                 ? `Studio ${typeLabel}`
                                                 : `${property.bedrooms} BHK ${typeLabel}`
@@ -2210,6 +2215,23 @@ export default function PropertyDetailsPage() {
                                         ? ` in ${locationLabel}`
                                         : ""}
                                 </p>
+
+                                {property.developerName ? (
+                                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
+                                        <Building2
+                                            size={15}
+                                            className="shrink-0 text-primary"
+                                            aria-hidden="true"
+                                        />
+
+                                        <span>
+            Developed by{" "}
+                                            <strong className="font-black text-slate-700">
+                {property.developerName}
+            </strong>
+        </span>
+                                    </div>
+                                ) : null}
 
                                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-slate-500">
                                     {locationLabel ? (
