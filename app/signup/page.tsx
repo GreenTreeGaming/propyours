@@ -185,7 +185,7 @@ function getPasswordScore(
 ): number {
     let score = 0;
 
-    if (password.length >= 8) {
+    if (password.length >= 12) {
         score += 1;
     }
 
@@ -896,11 +896,21 @@ function SignupFormContent() {
         }
 
         if (
-            form.password.length < 8
+            form.password.length < 12
         ) {
             showNotice(
                 "error",
-                "Create a password with at least 8 characters.",
+                "Create a password with at least 12 characters.",
+            );
+            return;
+        }
+
+        if (
+            form.password.length > 128
+        ) {
+            showNotice(
+                "error",
+                "Password cannot exceed 128 characters.",
             );
             return;
         }
@@ -2126,7 +2136,9 @@ function SecurityStep({
                         event.target.value,
                     )
                 }
-                placeholder="At least 8 characters"
+                minLength={12}
+                maxLength={128}
+                placeholder="12–128 characters"
                 className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-12 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
             />
 
@@ -2206,29 +2218,34 @@ function SecurityStep({
                     <div className="mt-3 grid gap-2 text-[10px] font-bold text-slate-500 sm:grid-cols-2">
                         <PasswordCriterion
                             met={
-                                password.length >= 8
+                                password.length >= 12
                             }
-                            label="At least 8 characters"
+                            label="At least 12 characters"
                         />
+
+                        <PasswordCriterion
+                            met={
+                                password.length <= 128
+                            }
+                            label="Maximum 128 characters"
+                        />
+
                         <PasswordCriterion
                             met={/[A-Z]/.test(
                                 password,
                             )}
-                            label="One uppercase letter"
+                            label="Uppercase improves strength"
                             optional
                         />
+
                         <PasswordCriterion
-                            met={/\d/.test(
-                                password,
-                            )}
-                            label="One number"
-                            optional
-                        />
-                        <PasswordCriterion
-                            met={/[^A-Za-z0-9]/.test(
-                                password,
-                            )}
-                            label="One symbol recommended"
+                            met={
+                                /\d/.test(password) ||
+                                /[^A-Za-z0-9]/.test(
+                                    password,
+                                )
+                            }
+                            label="Numbers or symbols improve strength"
                             optional
                         />
                     </div>

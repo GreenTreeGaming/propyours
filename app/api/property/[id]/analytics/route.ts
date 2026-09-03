@@ -369,113 +369,97 @@ export async function POST(
                             ],
                         },
 
-                        "analytics.dailyStats":
-                            {
-                                $let: {
-                                    vars: {
-                                        stats: {
-                                            $ifNull: [
-                                                "$analytics.dailyStats",
-                                                [],
-                                            ],
-                                        },
-                                    },
-
-                                    in: {
-                                        $cond: [
-                                            {
-                                                $in: [
-                                                    today,
-                                                    "$$stats.date",
-                                                ],
-                                            },
-
-                                            {
-                                                $map: {
-                                                    input:
-                                                        "$$stats",
-                                                    as: "stat",
-
-                                                    in: {
-                                                        $cond: [
-                                                            {
-                                                                $eq: [
-                                                                    "$$stat.date",
-                                                                    today,
-                                                                ],
-                                                            },
-
-                                                            {
-                                                                $mergeObjects:
-                                                                    [
-                                                                        "$$stat",
-
-                                                                        {
-                                                                            [dailyField]:
-                                                                                {
-                                                                                    $add: [
-                                                                                        {
-                                                                                            $ifNull:
-                                                                                                [
-                                                                                                    `$$stat.${dailyField}`,
-                                                                                                    0,
-                                                                                                ],
-                                                                                        },
-                                                                                        1,
-                                                                                    ],
-                                                                                },
-                                                                        },
-                                                                    ],
-                                                            },
-
-                                                            "$$stat",
-                                                        ],
-                                                    },
-                                                },
-                                            },
-
-                                            {
-                                                $concatArrays:
-                                                    [
-                                                        "$$stats",
-
-                                                        [
-                                                            {
-                                                                date: today,
-                                                                views:
-                                                                    eventType ===
-                                                                    "view"
-                                                                        ? 1
-                                                                        : 0,
-
-                                                                phoneClicks:
-                                                                    eventType ===
-                                                                    "phoneClick"
-                                                                        ? 1
-                                                                        : 0,
-                                                            },
-                                                        ],
-                                                    ],
-                                            },
+                        "analytics.dailyStats": {
+                            $let: {
+                                vars: {
+                                    stats: {
+                                        $ifNull: [
+                                            "$analytics.dailyStats",
+                                            [],
                                         ],
                                     },
                                 },
-                            },
-                    },
-                },
 
-                {
-                    $set: {
-                        "analytics.dailyStats":
-                            {
-                                $slice: [
-                                    "$analytics.dailyStats",
-                                    -90,
-                                ],
+                                in: {
+                                    $cond: [
+                                        {
+                                            $in: [
+                                                today,
+                                                "$$stats.date",
+                                            ],
+                                        },
+
+                                        {
+                                            $map: {
+                                                input: "$$stats",
+                                                as: "stat",
+
+                                                in: {
+                                                    $cond: [
+                                                        {
+                                                            $eq: [
+                                                                "$$stat.date",
+                                                                today,
+                                                            ],
+                                                        },
+
+                                                        {
+                                                            $mergeObjects: [
+                                                                "$$stat",
+
+                                                                {
+                                                                    [dailyField]: {
+                                                                        $add: [
+                                                                            {
+                                                                                $ifNull: [
+                                                                                    `$$stat.${dailyField}`,
+                                                                                    0,
+                                                                                ],
+                                                                            },
+                                                                            1,
+                                                                        ],
+                                                                    },
+                                                                },
+                                                            ],
+                                                        },
+
+                                                        "$$stat",
+                                                    ],
+                                                },
+                                            },
+                                        },
+
+                                        {
+                                            $concatArrays: [
+                                                "$$stats",
+
+                                                [
+                                                    {
+                                                        date: today,
+                                                        views:
+                                                            eventType ===
+                                                            "view"
+                                                                ? 1
+                                                                : 0,
+                                                        phoneClicks:
+                                                            eventType ===
+                                                            "phoneClick"
+                                                                ? 1
+                                                                : 0,
+                                                    },
+                                                ],
+                                            ],
+                                        },
+                                    ],
+                                },
                             },
+                        },
                     },
                 },
             ],
+            {
+                updatePipeline: true,
+            },
         );
 
         return NextResponse.json({

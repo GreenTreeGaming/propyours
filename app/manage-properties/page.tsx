@@ -2318,10 +2318,6 @@ export default function ManagePropertiesPage() {
                 isOpen={Boolean(editProperty)}
                 property={editProperty}
                 plan={currentPlan}
-                canUploadBrochure={
-                    user.role === "Builder" ||
-                    currentPlan.audience === "builder"
-                }
                 onClose={() => setEditProperty(null)}
                 onSaved={(updatedProperty) => {
                     setProperties((current) =>
