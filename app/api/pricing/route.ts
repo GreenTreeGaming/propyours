@@ -8,7 +8,14 @@ import {
 
 import {
     PLAN_CATALOG,
+    type PlanAudience,
 } from "@/lib/plan-catalog";
+
+import {
+    connectDB,
+} from "@/lib/mongoose";
+
+import User from "@/models/User";
 
 export async function GET() {
     try {
@@ -17,6 +24,29 @@ export async function GET() {
 
         const canViewPrices =
             viewer !== null;
+
+        let accountAudience:
+            PlanAudience | null = null;
+
+        if (viewer) {
+            await connectDB();
+
+            const user =
+                await User.findById(
+                    viewer.userId,
+                )
+                    .select("role")
+                    .lean();
+
+            if (user) {
+                accountAudience =
+                    user.role === "Builder"
+                        ? "builder"
+                        : user.role === "Agent"
+                            ? "agent"
+                            : "owner";
+            }
+        }
 
         const plans =
             Object.values(
@@ -49,8 +79,11 @@ export async function GET() {
 
         return NextResponse.json({
             plans,
+
             pricesLocked:
                 !canViewPrices,
+
+            accountAudience,
         });
     } catch (error) {
         console.error(

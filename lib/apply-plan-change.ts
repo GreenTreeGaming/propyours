@@ -84,6 +84,22 @@ export async function applyPlanChange({
             const now = new Date();
             const targetPlan = PLAN_CATALOG[tier];
 
+            const expectedAudience: PlanAudience =
+                user.role === "Builder"
+                    ? "builder"
+                    : user.role === "Agent"
+                        ? "agent"
+                        : "owner";
+
+            if (
+                targetPlan.audience !==
+                expectedAudience
+            ) {
+                throw new Error(
+                    "This plan is not available for this account type.",
+                );
+            }
+
             const limits = {
                 tier,
                 audience: targetPlan.audience,

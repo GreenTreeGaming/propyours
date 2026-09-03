@@ -60,6 +60,9 @@ import {
 import {
     developerComparison,
 } from "@/data/pricing/developerComparison";
+import {
+    agentComparison,
+} from "@/data/pricing/agentComparison";
 import type {
     ComparisonRow,
 } from "@/types/pricing";
@@ -117,7 +120,11 @@ type PricingPlan =
 
 type PricingApiResponse = {
     plans: PricingPlan[];
+
     pricesLocked: boolean;
+
+    accountAudience:
+        PlanAudience | null;
 };
 
 const OWNER_PLAN_TIERS = [
@@ -207,14 +214,22 @@ const OWNER_FAQS = [
             "Yes. Silver has no monthly charge. It supports one active property for 30 days, up to five images and the standard listing experience.",
     },
     {
-        question: "Are Gold and Platinum billed monthly?",
+        question:
+            "Are Gold and Platinum monthly subscriptions?",
         answer:
-            "Yes. Gold and Platinum are monthly owner subscriptions. Their listing-duration limits describe how long an individual listing may remain active; that is separate from the subscription billing cycle.",
+            "No. Gold and Platinum are one-time owner packs. Gold covers a 90-day listing period and Platinum covers a 180-day listing period.",
     },
     {
-        question: "Why does a monthly plan have a 90-day or 180-day listing duration?",
+        question:
+            "How long do Gold and Platinum listings remain active?",
         answer:
-            "Billing controls access to the plan. Listing duration controls the maximum active window assigned to a property under that plan. They are two different product rules.",
+            "Gold supports a 90-day listing period and Platinum supports a 180-day listing period. You pay once for the selected pack rather than being billed monthly.",
+    },
+    {
+        question:
+            "What happens when my paid pack reaches the end of its listing period?",
+        answer:
+            "The listing can become inactive when its pack validity ends. You can choose another eligible pack if you want to keep the property active.",
     },
     {
         question: "How many properties can I keep active?",
@@ -264,6 +279,45 @@ const BUILDER_FAQS = [
         question: "How do I activate a builder plan?",
         answer:
             "The repository does not currently include a public builder checkout or registration route. Use the contact flow to discuss activation and onboarding.",
+    },
+];
+
+const AGENT_FAQS = [
+    {
+        question:
+            "Are agent plans subscriptions?",
+        answer:
+            "No. Ruby, Emerald and Diamond are one-time listing packs. Ruby is valid for 90 days, while Emerald and Diamond are valid for 180 days.",
+    },
+    {
+        question:
+            "How many active listings can I manage?",
+        answer:
+            "Ruby supports 1 active listing, Emerald supports up to 3 and Diamond supports up to 10.",
+    },
+    {
+        question:
+            "Do agent plans support commission-based listings?",
+        answer:
+            "Yes. Agent accounts can use the commission options available in the property-listing workflow.",
+    },
+    {
+        question:
+            "Which agent plans include featured placement?",
+        answer:
+            "Emerald and Diamond include featured listing treatment. Diamond also includes homepage-featured eligibility.",
+    },
+    {
+        question:
+            "What analytics are included?",
+        answer:
+            "Ruby includes basic analytics, while Emerald and Diamond include advanced analytics.",
+    },
+    {
+        question:
+            "Do agent plans include lead notifications?",
+        answer:
+            "Yes. Ruby, Emerald and Diamond all include lead notifications.",
     },
 ];
 
@@ -728,9 +782,13 @@ function buildPlanFeatures(
             ? limits.activeProperties === 1
                 ? "active property"
                 : "active properties"
-            : limits.activeProperties === 1
-                ? "active project"
-                : "active projects";
+            : plan.audience === "builder"
+                ? limits.activeProperties === 1
+                    ? "active project"
+                    : "active projects"
+                : limits.activeProperties === 1
+                    ? "active listing"
+                    : "active listings";
 
     const features = [
         `${limits.activeProperties} ${subject}`,
@@ -859,9 +917,82 @@ function getFinderQuestions(
         return [
             {
                 key: "capacity",
-                label: "How many properties need to stay active?",
+                label:
+                    "How many properties need to stay active?",
                 description:
                     "Choose the maximum number you expect to manage at once.",
+                options: [
+                    {
+                        value: "1",
+                        label: "1 property",
+                        hint: "Silver or Gold",
+                    },
+                    {
+                        value: "2",
+                        label: "Up to 2",
+                        hint: "Platinum",
+                    },
+                ],
+            },
+            {
+                key: "duration",
+                label:
+                    "How long should each listing remain active?",
+                description:
+                    "Pick the minimum listing window you need.",
+                options: [
+                    {
+                        value: "30",
+                        label: "30 days",
+                        hint: "Silver",
+                    },
+                    {
+                        value: "90",
+                        label: "90 days",
+                        hint: "Gold",
+                    },
+                    {
+                        value: "180",
+                        label: "180 days",
+                        hint: "Platinum",
+                    },
+                ],
+            },
+            {
+                key: "analytics",
+                label:
+                    "How much performance insight do you need?",
+                description:
+                    "Choose the minimum analytics level that would be useful.",
+                options: [
+                    {
+                        value: "none",
+                        label: "No analytics",
+                        hint: "Silver",
+                    },
+                    {
+                        value: "basic",
+                        label: "Basic",
+                        hint: "Gold",
+                    },
+                    {
+                        value: "advanced",
+                        label: "Advanced",
+                        hint: "Platinum",
+                    },
+                ],
+            },
+        ];
+    }
+
+    if (audience === "builder") {
+        return [
+            {
+                key: "capacity",
+                label:
+                    "How many projects need to stay active?",
+                description:
+                    "Choose the maximum active portfolio size you expect.",
                 options: [
                     {
                         value: "1",
@@ -881,48 +1012,50 @@ function getFinderQuestions(
                 ],
             },
             {
-                key: "duration",
-                label: "How long should each listing remain active?",
+                key: "ranking",
+                label:
+                    "What visibility level do you need?",
                 description:
-                    "Pick the minimum listing window you need.",
+                    "Choose the minimum search-ranking treatment you want.",
                 options: [
                     {
-                        value: "30",
-                        label: "30 days",
-                        hint: "Short initial listing",
+                        value: "standard",
+                        label: "Standard",
+                        hint: "Builder Starter",
                     },
                     {
-                        value: "90",
-                        label: "90 days",
-                        hint: "Longer selling window",
+                        value: "priority",
+                        label: "Priority",
+                        hint: "Builder Growth",
                     },
                     {
-                        value: "180",
-                        label: "180 days",
-                        hint: "Maximum owner duration",
+                        value: "top",
+                        label: "Top",
+                        hint: "Builder Elite",
                     },
                 ],
             },
             {
                 key: "analytics",
-                label: "How much performance insight do you need?",
+                label:
+                    "How should performance be analysed?",
                 description:
-                    "Choose the minimum analytics level that would be useful.",
+                    "Choose the minimum analytics scope required by your team.",
                 options: [
-                    {
-                        value: "none",
-                        label: "No analytics",
-                        hint: "Listing access only",
-                    },
                     {
                         value: "basic",
                         label: "Basic",
-                        hint: "Views, calls and saves",
+                        hint: "Builder Starter",
                     },
                     {
-                        value: "advanced",
-                        label: "Advanced",
-                        hint: "Daily and conversion insights",
+                        value: "project",
+                        label: "Project",
+                        hint: "Builder Growth",
+                    },
+                    {
+                        value: "portfolio",
+                        label: "Portfolio",
+                        hint: "Builder Elite",
                     },
                 ],
             },
@@ -932,70 +1065,68 @@ function getFinderQuestions(
     return [
         {
             key: "capacity",
-            label: "How many projects need to stay active?",
+            label:
+                "How many listings need to stay active?",
             description:
-                "Choose the maximum active portfolio size you expect.",
+                "Choose the maximum number of active listings you expect to manage.",
             options: [
+                {
+                    value: "1",
+                    label: "1 listing",
+                    hint: "Ruby",
+                },
                 {
                     value: "3",
                     label: "Up to 3",
-                    hint: "Smaller builder portfolio",
+                    hint: "Emerald",
                 },
                 {
                     value: "10",
                     label: "Up to 10",
-                    hint: "Growing project portfolio",
-                },
-                {
-                    value: "25",
-                    label: "Up to 25",
-                    hint: "Established portfolio",
+                    hint: "Diamond",
                 },
             ],
         },
         {
             key: "ranking",
-            label: "What visibility level do you need?",
+            label:
+                "What visibility level do you need?",
             description:
                 "Choose the minimum search-ranking treatment you want.",
             options: [
                 {
                     value: "standard",
                     label: "Standard",
-                    hint: "Core directory presence",
+                    hint: "Ruby",
+                },
+                {
+                    value: "featured",
+                    label: "Featured",
+                    hint: "Emerald",
                 },
                 {
                     value: "priority",
                     label: "Priority",
-                    hint: "Stronger project placement",
-                },
-                {
-                    value: "top",
-                    label: "Top",
-                    hint: "Highest catalog ranking",
+                    hint: "Diamond",
                 },
             ],
         },
         {
             key: "analytics",
-            label: "How should performance be analysed?",
+            label:
+                "How much performance insight do you need?",
             description:
-                "Choose the minimum analytics scope required by your team.",
+                "Choose the minimum analytics level that would be useful.",
             options: [
                 {
                     value: "basic",
                     label: "Basic",
-                    hint: "Core listing activity",
+                    hint: "Ruby",
                 },
                 {
-                    value: "project",
-                    label: "Project",
-                    hint: "Project-level trends",
-                },
-                {
-                    value: "portfolio",
-                    label: "Portfolio",
-                    hint: "Portfolio-wide insights",
+                    value: "advanced",
+                    label: "Advanced",
+                    hint: "Emerald or Diamond",
                 },
             ],
         },
@@ -1154,18 +1285,40 @@ function renderComparisonValue(
     );
 }
 
+function getAudienceLabel(
+    audience: PlanAudience,
+): string {
+    switch (audience) {
+        case "builder":
+            return "builder";
+
+        case "agent":
+            return "agent";
+
+        default:
+            return "property owner";
+    }
+}
+
 function PlanCard({
                       plan,
                       index,
+                      accountAudience,
                   }: {
     plan: PricingPlan;
     index: number;
+    accountAudience:
+        PlanAudience | null;
 }) {
     const theme = getPlanTheme(plan);
     const Icon = theme.icon;
     const features = buildPlanFeatures(plan);
     const savings = getPlanSavings(plan);
     const cta = getPlanCta(plan);
+    const wrongAccountType =
+        accountAudience !== null &&
+        plan.audience !==
+        accountAudience;
     const isPremium =
         plan.tier === "platinum" ||
         plan.tier === "builder-elite" ||
@@ -1372,7 +1525,39 @@ function PlanCard({
                 </ul>
 
                 <div className="mt-auto pt-8">
-                    {plan.tier === "silver" ? (
+                    {wrongAccountType ? (
+                        <div>
+                            <button
+                                type="button"
+                                disabled
+                                className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-400"
+                            >
+                                Not available for your account
+                            </button>
+
+                            <p className="mt-2 text-center text-xs font-semibold leading-5 text-slate-500">
+                                This plan is for{" "}
+                                {getAudienceLabel(
+                                    plan.audience,
+                                )}{" "}
+                                accounts.
+                            </p>
+                        </div>
+                    ) : plan.priceLocked ? (
+                        <Link
+                            href={`/login?redirect=${encodeURIComponent(
+                                `/pricing?audience=${plan.audience}`,
+                            )}`}
+                            className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 ${theme.primaryCtaClass}`}
+                        >
+                            Login to choose plan
+
+                            <ArrowRight
+                                size={16}
+                                aria-hidden="true"
+                            />
+                        </Link>
+                    ) : plan.tier === "silver" ? (
                         <Link
                             href={cta.href}
                             className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-black transition duration-200 ${theme.primaryCtaClass}`}
@@ -1432,6 +1617,13 @@ function PricingPageContent() {
     const [allPlans, setAllPlans] =
         useState<PricingPlan[]>([]);
 
+    const [
+        accountAudience,
+        setAccountAudience,
+    ] = useState<PlanAudience | null>(
+        null,
+    );
+
     const [pricingLoading, setPricingLoading] =
         useState(true);
 
@@ -1472,6 +1664,10 @@ function PricingPageContent() {
                 ) {
                     setAllPlans(
                         data.plans,
+                    );
+
+                    setAccountAudience(
+                        data.accountAudience,
                     );
                 }
             } catch (error) {
@@ -1521,10 +1717,13 @@ function PricingPageContent() {
         ],
     );
 
-    const comparisonRows: ComparisonRow[] =
+    const comparisonRows:
+        ComparisonRow[] =
         audience === "owner"
             ? ownerComparison
-            : developerComparison;
+            : audience === "builder"
+                ? developerComparison
+                : agentComparison;
 
     const finderQuestions =
         getFinderQuestions(audience);
@@ -1549,7 +1748,9 @@ function PricingPageContent() {
     const faqs =
         audience === "owner"
             ? OWNER_FAQS
-            : BUILDER_FAQS;
+            : audience === "builder"
+                ? BUILDER_FAQS
+                : AGENT_FAQS;
 
     const audienceSnapshot =
         audience === "owner"
@@ -1662,49 +1863,82 @@ function PricingPageContent() {
             ? [
                 {
                     number: "01",
-                    title: "Choose visibility",
+                    title:
+                        "Choose visibility",
                     description:
-                        "Compare the free and monthly owner plans.",
+                        "Compare the free and paid owner packs.",
                     icon: Target,
                 },
                 {
                     number: "02",
-                    title: "Create the listing",
+                    title:
+                        "Create the listing",
                     description:
                         "Add property details, images and pricing.",
                     icon: ListChecks,
                 },
                 {
                     number: "03",
-                    title: "Manage performance",
+                    title:
+                        "Manage performance",
                     description:
                         "Edit the listing and open analytics when included.",
                     icon: LayoutDashboard,
                 },
             ]
-            : [
-                {
-                    number: "01",
-                    title: "Choose portfolio scale",
-                    description:
-                        "Compare annual project capacity and visibility.",
-                    icon: Building2,
-                },
-                {
-                    number: "02",
-                    title: "Discuss activation",
-                    description:
-                        "Use the contact flow for builder onboarding.",
-                    icon: MessageSquareText,
-                },
-                {
-                    number: "03",
-                    title: "Manage projects",
-                    description:
-                        "Publish projects and use plan-aware analytics.",
-                    icon: LineChart,
-                },
-            ];
+            : audience === "builder"
+                ? [
+                    {
+                        number: "01",
+                        title:
+                            "Choose portfolio scale",
+                        description:
+                            "Compare annual project capacity and visibility.",
+                        icon: Building2,
+                    },
+                    {
+                        number: "02",
+                        title:
+                            "Discuss activation",
+                        description:
+                            "Use the contact flow for builder onboarding.",
+                        icon: MessageSquareText,
+                    },
+                    {
+                        number: "03",
+                        title:
+                            "Manage projects",
+                        description:
+                            "Publish projects and use plan-aware analytics.",
+                        icon: LineChart,
+                    },
+                ]
+                : [
+                    {
+                        number: "01",
+                        title:
+                            "Choose listing capacity",
+                        description:
+                            "Compare Ruby, Emerald and Diamond based on how many listings you manage.",
+                        icon: Briefcase,
+                    },
+                    {
+                        number: "02",
+                        title:
+                            "Choose your pack",
+                        description:
+                            "Select the eligible agent pack that matches your listing needs.",
+                        icon: ListChecks,
+                    },
+                    {
+                        number: "03",
+                        title:
+                            "Manage listings",
+                        description:
+                            "Publish listings, receive leads and review included analytics.",
+                        icon: LineChart,
+                    },
+                ];
 
     function selectAudience(
         nextAudience: PlanAudience,
@@ -1798,7 +2032,7 @@ function PricingPageContent() {
                             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
                                 {[
                                     "Catalog-backed limits",
-                                    "Owner and builder plans",
+                                    "Owner, builder and agent plans",
                                     "Side-by-side comparison",
                                 ].map((item) => (
                                     <span
@@ -2042,6 +2276,9 @@ function PricingPageContent() {
                                     key={plan.tier}
                                     plan={plan}
                                     index={index}
+                                    accountAudience={
+                                        accountAudience
+                                    }
                                 />
                             ))}
                         </motion.div>
@@ -2213,13 +2450,56 @@ function PricingPageContent() {
                                             </div>
 
                                             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                                <Link
-                                                    href={getPlanCta(recommendedPlan).href}
-                                                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
-                                                >
-                                                    {getPlanCta(recommendedPlan).label}
-                                                    <ArrowRight size={16} aria-hidden="true" />
-                                                </Link>
+                                                {accountAudience !== null &&
+                                                recommendedPlan.audience !== accountAudience ? (
+                                                    <div className="flex-1">
+                                                        <button
+                                                            type="button"
+                                                            disabled
+                                                            className="inline-flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-5 text-sm font-black text-slate-400"
+                                                        >
+                                                            Not available for your account
+                                                        </button>
+
+                                                        <p className="mt-2 text-center text-xs font-semibold text-slate-500">
+                                                            This plan is for{" "}
+                                                            {getAudienceLabel(
+                                                                recommendedPlan.audience,
+                                                            )}{" "}
+                                                            accounts.
+                                                        </p>
+                                                    </div>
+                                                ) : recommendedPlan.priceLocked ? (
+                                                    <Link
+                                                        href={`/login?redirect=${encodeURIComponent(
+                                                            `/pricing?audience=${recommendedPlan.audience}`,
+                                                        )}`}
+                                                        className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
+                                                    >
+                                                        Login to choose plan
+
+                                                        <ArrowRight
+                                                            size={16}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </Link>
+                                                ) : (
+                                                    <Link
+                                                        href={getPlanCta(
+                                                            recommendedPlan,
+                                                        ).href}
+                                                        className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"
+                                                    >
+                                                        {getPlanCta(
+                                                            recommendedPlan,
+                                                        ).label}
+
+                                                        <ArrowRight
+                                                            size={16}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </Link>
+                                                )}
 
                                                 <button
                                                     type="button"
@@ -2353,25 +2633,53 @@ function PricingPageContent() {
                         <div className="inline-flex w-fit rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                             <button
                                 type="button"
-                                onClick={() => selectAudience("owner")}
+                                onClick={() =>
+                                    selectAudience(
+                                        "owner",
+                                    )
+                                }
                                 className={`rounded-lg px-4 py-2.5 text-xs font-black transition ${
-                                    audience === "owner"
+                                    audience ===
+                                    "owner"
                                         ? "bg-slate-950 text-white"
                                         : "text-slate-500 hover:text-slate-950"
                                 }`}
                             >
-                                Owner comparison
+                                Owner
                             </button>
+
                             <button
                                 type="button"
-                                onClick={() => selectAudience("builder")}
+                                onClick={() =>
+                                    selectAudience(
+                                        "builder",
+                                    )
+                                }
                                 className={`rounded-lg px-4 py-2.5 text-xs font-black transition ${
-                                    audience === "builder"
+                                    audience ===
+                                    "builder"
                                         ? "bg-slate-950 text-white"
                                         : "text-slate-500 hover:text-slate-950"
                                 }`}
                             >
-                                Builder comparison
+                                Builder
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    selectAudience(
+                                        "agent",
+                                    )
+                                }
+                                className={`rounded-lg px-4 py-2.5 text-xs font-black transition ${
+                                    audience ===
+                                    "agent"
+                                        ? "bg-slate-950 text-white"
+                                        : "text-slate-500 hover:text-slate-950"
+                                }`}
+                            >
+                                Agent
                             </button>
                         </div>
                     </div>
@@ -2577,7 +2885,13 @@ function PricingPageContent() {
                                     </td>
 
                                     {plans.map((plan, index) => {
-                                        const cta = getPlanCta(plan);
+                                        const cta =
+                                            getPlanCta(plan);
+
+                                        const wrongAccountType =
+                                            accountAudience !== null &&
+                                            plan.audience !==
+                                            accountAudience;
 
                                         return (
                                             <td
@@ -2590,18 +2904,63 @@ function PricingPageContent() {
                                                             : "bg-slate-50"
                                                 }`}
                                             >
-                                                <Link
-                                                    href={cta.href}
-                                                    className={`flex h-11 items-center justify-center rounded-xl px-4 text-xs font-black transition ${
-                                                        index === 1
-                                                            ? "bg-primary text-white hover:bg-primary-dark"
-                                                            : index === 2
-                                                                ? "bg-white text-slate-950 hover:bg-teal-200"
-                                                                : "bg-slate-950 text-white hover:bg-primary"
-                                                    }`}
-                                                >
-                                                    {cta.label}
-                                                </Link>
+                                                {wrongAccountType ? (
+                                                    <div>
+                                                        <button
+                                                            type="button"
+                                                            disabled
+                                                            className={`flex h-11 w-full cursor-not-allowed items-center justify-center rounded-xl px-4 text-xs font-black ${
+                                                                index === 2
+                                                                    ? "bg-white/10 text-slate-400"
+                                                                    : "bg-slate-200 text-slate-400"
+                                                            }`}
+                                                        >
+                                                            Not available
+                                                        </button>
+
+                                                        <p
+                                                            className={`mt-2 text-center text-[10px] font-semibold ${
+                                                                index === 2
+                                                                    ? "text-slate-400"
+                                                                    : "text-slate-500"
+                                                            }`}
+                                                        >
+                                                            For{" "}
+                                                            {getAudienceLabel(
+                                                                plan.audience,
+                                                            )}{" "}
+                                                            accounts
+                                                        </p>
+                                                    </div>
+                                                ) : plan.priceLocked ? (
+                                                    <Link
+                                                        href={`/login?redirect=${encodeURIComponent(
+                                                            `/pricing?audience=${plan.audience}`,
+                                                        )}`}
+                                                        className={`flex h-11 items-center justify-center rounded-xl px-4 text-xs font-black transition ${
+                                                            index === 1
+                                                                ? "bg-primary text-white hover:bg-primary-dark"
+                                                                : index === 2
+                                                                    ? "bg-white text-slate-950 hover:bg-teal-200"
+                                                                    : "bg-slate-950 text-white hover:bg-primary"
+                                                        }`}
+                                                    >
+                                                        Login to choose
+                                                    </Link>
+                                                ) : (
+                                                    <Link
+                                                        href={cta.href}
+                                                        className={`flex h-11 items-center justify-center rounded-xl px-4 text-xs font-black transition ${
+                                                            index === 1
+                                                                ? "bg-primary text-white hover:bg-primary-dark"
+                                                                : index === 2
+                                                                    ? "bg-white text-slate-950 hover:bg-teal-200"
+                                                                    : "bg-slate-950 text-white hover:bg-primary"
+                                                        }`}
+                                                    >
+                                                        {cta.label}
+                                                    </Link>
+                                                )}
                                             </td>
                                         );
                                     })}
@@ -2634,15 +2993,17 @@ function PricingPageContent() {
                             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                                 <Link
                                     href={
-                                        audience === "owner"
-                                            ? "/post-property"
-                                            : "/contact"
+                                        audience === "builder"
+                                            ? "/contact"
+                                            : "/post-property"
                                     }
                                     className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-6 py-3 text-sm font-black text-white transition hover:bg-primary sm:w-auto"
                                 >
                                     {audience === "owner"
                                         ? "Start a property listing"
-                                        : "Contact builder onboarding"}
+                                        : audience === "builder"
+                                            ? "Contact builder onboarding"
+                                            : "Start an agent listing"}
 
                                     <ArrowRight
                                         size={16}
@@ -2653,15 +3014,17 @@ function PricingPageContent() {
 
                                 <Link
                                     href={
-                                        audience === "owner"
-                                            ? "/manage-properties"
-                                            : "/builders"
+                                        audience === "builder"
+                                            ? "/builders"
+                                            : "/manage-properties"
                                     }
                                     className="inline-flex min-h-12 w-full shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary sm:w-auto"
                                 >
                                     {audience === "owner"
                                         ? "Manage properties"
-                                        : "Browse builder directory"}
+                                        : audience === "builder"
+                                            ? "Browse builder directory"
+                                            : "Manage listings"}
                                 </Link>
                             </div>
                         </div>
@@ -2771,8 +3134,10 @@ function PricingPageContent() {
 
                                     <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
                                         {audience === "owner"
-                                            ? "Start free or choose the monthly visibility you need."
-                                            : "Choose the annual portfolio capacity your team needs."}
+                                            ? "Start free or choose the visibility pack you need."
+                                            : audience === "builder"
+                                                ? "Choose the annual portfolio capacity your team needs."
+                                                : "Choose the listing pack that matches your business."}
                                     </h2>
 
                                     <p className="mt-3 max-w-xl text-sm leading-6 text-teal-50/85">
@@ -2792,15 +3157,17 @@ function PricingPageContent() {
 
                                 <Link
                                     href={
-                                        audience === "owner"
-                                            ? "/post-property"
-                                            : "/contact"
+                                        audience === "builder"
+                                            ? "/contact"
+                                            : "/post-property"
                                     }
                                     className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-black text-slate-950 shadow-lg transition hover:bg-teal-50"
                                 >
                                     {audience === "owner"
                                         ? "Start with Silver"
-                                        : "Contact builder onboarding"}
+                                        : audience === "builder"
+                                            ? "Contact builder onboarding"
+                                            : "Start an agent listing"}
                                     <ArrowRight size={16} aria-hidden="true" />
                                 </Link>
                             </div>
