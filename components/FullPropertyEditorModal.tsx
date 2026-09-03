@@ -89,7 +89,6 @@ interface FullPropertyEditorModalProps {
     isOpen: boolean;
     property: PropertyEditorProperty | null;
     plan: PlanDefinition;
-    canUploadBrochure: boolean;
     onClose: () => void;
     onSaved: (
         property: PropertyEditorProperty,
@@ -483,7 +482,6 @@ export default function FullPropertyEditorModal({
                                                     isOpen,
                                                     property,
                                                     plan,
-                                                    canUploadBrochure,
                                                     onClose,
                                                     onSaved,
                                                 }: FullPropertyEditorModalProps) {
@@ -1182,10 +1180,8 @@ export default function FullPropertyEditorModal({
                         .filter(Boolean),
             };
 
-            if (canUploadBrochure) {
-                payload.brochure =
-                    form.brochure;
-            }
+            payload.brochure =
+                form.brochure;
 
             const response = await fetch(
                 `/api/property/${property._id}`,
@@ -2717,7 +2713,7 @@ export default function FullPropertyEditorModal({
                                                 <SectionHeading
                                                     eyebrow="Photos & media"
                                                     title="Control the public presentation"
-                                                    description="Add or remove images, choose the cover photo, manage video links and update a builder brochure."
+                                                    description="Add or remove images, choose the cover photo, manage video links and update the property brochure."
                                                     icon={ImageIcon}
                                                 />
 
@@ -3148,153 +3144,132 @@ export default function FullPropertyEditorModal({
                                                             Property brochure
                                                         </h3>
                                                         <p className="mt-1 text-sm leading-6 text-slate-500">
-                                                            Available only to
-                                                            builder or developer
-                                                            accounts.
+                                                            Upload a PDF brochure for this property.
                                                         </p>
 
-                                                        {canUploadBrochure ? (
-                                                            form.brochure ? (
-                                                                <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4">
-                                                                    <div className="flex items-start gap-3">
-                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-                                      <FileText
-                                          size={18}
-                                          aria-hidden="true"
-                                      />
-                                    </span>
+                                                        {form.brochure ? (
+                                                            <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                                                <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                <FileText
+                    size={18}
+                    aria-hidden="true"
+                />
+            </span>
 
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <p className="truncate text-sm font-black text-slate-950">
-                                                                                {
-                                                                                    form
-                                                                                        .brochure
-                                                                                        .fileName
-                                                                                }
-                                                                            </p>
-                                                                            <a
-                                                                                href={
-                                                                                    form
-                                                                                        .brochure
-                                                                                        .url
-                                                                                }
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="mt-1 inline-flex text-xs font-black text-primary"
-                                                                            >
-                                                                                Open PDF
-                                                                            </a>
-                                                                        </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="truncate text-sm font-black text-slate-950">
+                                                                            {form.brochure.fileName}
+                                                                        </p>
 
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                void removeBrochure()
-                                                                            }
-                                                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
-                                                                            aria-label="Remove brochure"
+                                                                        <a
+                                                                            href={form.brochure.url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="mt-1 inline-flex text-xs font-black text-primary"
                                                                         >
-                                                                            <Trash2
-                                                                                size={15}
-                                                                                aria-hidden="true"
-                                                                            />
-                                                                        </button>
+                                                                            Open PDF
+                                                                        </a>
                                                                     </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-                                                                    <UploadDropzone
-                                                                        endpoint="developerBrochureUploader"
-                                                                        config={{
-                                                                            mode: "auto",
-                                                                        }}
-                                                                        onUploadBegin={() =>
-                                                                            setUploadMessage(
-                                                                                "Uploading brochure...",
-                                                                            )
-                                                                        }
-                                                                        onClientUploadComplete={(
-                                                                            result,
-                                                                        ) => {
-                                                                            const file =
-                                                                                result?.[0] as
-                                                                                    | EditorUploadFile
-                                                                                    | undefined;
-                                                                            const descriptor =
-                                                                                file
-                                                                                    ? getEditorUploadedFileDescriptor(
-                                                                                        file,
-                                                                                    )
-                                                                                    : null;
 
-                                                                            if (!descriptor) {
-                                                                                setUploadMessage(
-                                                                                    "Upload completed, but no brochure URL was returned.",
-                                                                                );
-                                                                                return;
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            void removeBrochure()
+                                                                        }
+                                                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                                                        aria-label="Remove brochure"
+                                                                    >
+                                                                        <Trash2
+                                                                            size={15}
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                                                                <UploadDropzone
+                                                                    endpoint="developerBrochureUploader"
+                                                                    config={{
+                                                                        mode: "auto",
+                                                                    }}
+                                                                    onUploadBegin={() =>
+                                                                        setUploadMessage(
+                                                                            "Uploading brochure...",
+                                                                        )
+                                                                    }
+                                                                    onClientUploadComplete={(
+                                                                        result,
+                                                                    ) => {
+                                                                        const file =
+                                                                            result?.[0] as
+                                                                                | EditorUploadFile
+                                                                                | undefined;
+
+                                                                        const descriptor =
+                                                                            file
+                                                                                ? getEditorUploadedFileDescriptor(
+                                                                                    file,
+                                                                                )
+                                                                                : null;
+
+                                                                        if (!descriptor) {
+                                                                            setUploadMessage(
+                                                                                "Upload completed, but no brochure URL was returned.",
+                                                                            );
+                                                                            return;
+                                                                        }
+
+                                                                        setForm((current) => {
+                                                                            if (!current) {
+                                                                                return current;
                                                                             }
 
-                                                                            setForm(
-                                                                                (current) => {
-                                                                                    if (!current) {
-                                                                                        return current;
-                                                                                    }
+                                                                            const nextGrants = {
+                                                                                ...current.uploadDeleteGrants,
+                                                                            };
 
-                                                                                    const nextGrants = {
-                                                                                        ...current.uploadDeleteGrants,
-                                                                                    };
+                                                                            if (
+                                                                                descriptor.fileKey &&
+                                                                                descriptor.deleteToken
+                                                                            ) {
+                                                                                nextGrants[
+                                                                                    descriptor.url
+                                                                                    ] = {
+                                                                                    fileKey:
+                                                                                    descriptor.fileKey,
+                                                                                    deleteToken:
+                                                                                    descriptor.deleteToken,
+                                                                                };
+                                                                            }
 
-                                                                                    if (
-                                                                                        descriptor.fileKey &&
-                                                                                        descriptor.deleteToken
-                                                                                    ) {
-                                                                                        nextGrants[
-                                                                                            descriptor.url
-                                                                                            ] = {
-                                                                                            fileKey:
-                                                                                            descriptor.fileKey,
-                                                                                            deleteToken:
-                                                                                            descriptor.deleteToken,
-                                                                                        };
-                                                                                    }
-
-                                                                                    return {
-                                                                                        ...current,
-                                                                                        brochure: {
-                                                                                            url: descriptor.url,
-                                                                                            fileName:
-                                                                                                descriptor.fileName ||
-                                                                                                "Property brochure.pdf",
-                                                                                        },
-                                                                                        uploadDeleteGrants:
-                                                                                        nextGrants,
-                                                                                    };
+                                                                            return {
+                                                                                ...current,
+                                                                                brochure: {
+                                                                                    url: descriptor.url,
+                                                                                    fileName:
+                                                                                        descriptor.fileName ||
+                                                                                        "Property brochure.pdf",
                                                                                 },
-                                                                            );
+                                                                                uploadDeleteGrants:
+                                                                                nextGrants,
+                                                                            };
+                                                                        });
 
-                                                                            setUploadMessage(
-                                                                                "Brochure uploaded successfully.",
-                                                                            );
-                                                                        }}
-                                                                        onUploadError={(
-                                                                            error: Error,
-                                                                        ) =>
-                                                                            setUploadMessage(
-                                                                                error.message ||
-                                                                                "Brochure upload failed.",
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                            )
-                                                        ) : (
-                                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                                                                <p className="text-sm font-bold text-slate-600">
-                                                                    This account
-                                                                    cannot attach a
-                                                                    developer
-                                                                    brochure.
-                                                                </p>
+                                                                        setUploadMessage(
+                                                                            "Brochure uploaded successfully.",
+                                                                        );
+                                                                    }}
+                                                                    onUploadError={(
+                                                                        error: Error,
+                                                                    ) =>
+                                                                        setUploadMessage(
+                                                                            error.message ||
+                                                                            "Brochure upload failed.",
+                                                                        )
+                                                                    }
+                                                                />
                                                             </div>
                                                         )}
                                                     </div>
@@ -3356,6 +3331,13 @@ export default function FullPropertyEditorModal({
                                                                 value={`${form.address}, ${form.locality}, ${form.city}, Tamil Nadu`}
                                                             />
                                                             <ReviewRow
+                                                                label="Developer / Builder"
+                                                                value={
+                                                                    form.developerName ||
+                                                                    "Not provided"
+                                                                }
+                                                            />
+                                                            <ReviewRow
                                                                 label="Landmark"
                                                                 value={
                                                                     form.landmark ||
@@ -3370,13 +3352,6 @@ export default function FullPropertyEditorModal({
                                                                 label="Ownership"
                                                                 value={
                                                                     form.ownershipType
-                                                                }
-                                                            />
-                                                            <ReviewRow
-                                                                label="Developer / Builder"
-                                                                value={
-                                                                    form.developerName ||
-                                                                    "Not provided"
                                                                 }
                                                             />
 
@@ -3503,17 +3478,13 @@ export default function FullPropertyEditorModal({
                                                                 label="Video links"
                                                                 value={`${form.videoLinks.filter(Boolean).length}/${maxVideoLinks}`}
                                                             />
-                                                            {canUploadBrochure ? (
-                                                                <ReviewRow
-                                                                    label="Brochure"
-                                                                    value={
-                                                                        form
-                                                                            .brochure
-                                                                            ?.fileName ||
-                                                                        "Not uploaded"
-                                                                    }
-                                                                />
-                                                            ) : null}
+                                                            <ReviewRow
+                                                                label="Brochure"
+                                                                value={
+                                                                    form.brochure?.fileName ||
+                                                                    "Not uploaded"
+                                                                }
+                                                            />
                                                         </ReviewCard>
 
                                                         <div className="rounded-[1.75rem] border border-teal-100 bg-teal-50 p-5">

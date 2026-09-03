@@ -73,6 +73,7 @@ export const propertySearchQuerySchema = z
             .enum([
                 "all",
                 "featured",
+                "zero-commission",
             ])
             .default("all"),
 

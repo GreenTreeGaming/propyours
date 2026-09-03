@@ -261,6 +261,21 @@ function buildPropertyMatch(
         });
     }
 
+    if (
+        query.filter === "zero-commission"
+    ) {
+        conditions.push({
+            $or: [
+                {
+                    zeroCommission: true,
+                },
+                {
+                    commissionType: "zero",
+                },
+            ],
+        });
+    }
+
     return {
         $and: conditions,
     };

@@ -83,6 +83,11 @@ interface Property {
   };
 }
 
+type ListingFilter =
+    | "all"
+    | "featured"
+    | "zero-commission";
+
 interface PropertySearchApiResponse {
   properties: Property[];
 
@@ -175,13 +180,15 @@ interface FilterPanelProps {
   selectedBHK: string;
   minPrice: string;
   maxPrice: string;
-  featuredOnly: boolean;
+  listingFilter: ListingFilter;
   propertyTypes: string[];
   onTypeChange: (value: string) => void;
   onBHKChange: (value: string) => void;
   onMinPriceChange: (value: string) => void;
   onMaxPriceChange: (value: string) => void;
-  onFeaturedOnlyChange: (value: boolean) => void;
+  onListingFilterChange: (
+      value: ListingFilter,
+  ) => void;
   onClear: () => void;
   onDone?: () => void;
 }
@@ -664,13 +671,13 @@ function FilterPanel({
                        selectedBHK,
                        minPrice,
                        maxPrice,
-                       featuredOnly,
+                       listingFilter,
                        propertyTypes,
                        onTypeChange,
                        onBHKChange,
                        onMinPriceChange,
                        onMaxPriceChange,
-                       onFeaturedOnlyChange,
+                       onListingFilterChange,
                        onClear,
                        onDone,
                      }: FilterPanelProps) {
@@ -839,35 +846,108 @@ function FilterPanel({
           </section>
 
           <section>
-            <button
-                type="button"
-                aria-pressed={featuredOnly}
-                onClick={() => onFeaturedOnlyChange(!featuredOnly)}
-                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition ${
-                    featuredOnly
-                        ? "border-primary bg-teal-50"
-                        : "border-slate-200 bg-white hover:border-teal-200"
-                }`}
-            >
-            <span
-                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                    featuredOnly
-                        ? "border-primary bg-primary text-white"
-                        : "border-slate-300 bg-white text-transparent"
-                }`}
-            >
-              <Check size={13} aria-hidden="true" />
-            </span>
+            <h3 className="text-sm font-black text-slate-950">
+              Listing type
+            </h3>
 
-              <span>
-              <span className="block text-sm font-black text-slate-900">
-                Featured listings only
-              </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">
-                Prioritise promoted and featured properties.
-              </span>
-            </span>
-            </button>
+            <div className="mt-4 space-y-2">
+              <button
+                  type="button"
+                  aria-pressed={
+                      listingFilter ===
+                      "zero-commission"
+                  }
+                  onClick={() =>
+                      onListingFilterChange(
+                          listingFilter ===
+                          "zero-commission"
+                              ? "all"
+                              : "zero-commission",
+                      )
+                  }
+                  className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition ${
+                      listingFilter ===
+                      "zero-commission"
+                          ? "border-emerald-300 bg-emerald-50"
+                          : "border-slate-200 bg-white hover:border-emerald-200"
+                  }`}
+              >
+      <span
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+              listingFilter ===
+              "zero-commission"
+                  ? "border-emerald-500 bg-emerald-500 text-white"
+                  : "border-slate-300 bg-white text-transparent"
+          }`}
+      >
+        <Check
+            size={13}
+            aria-hidden="true"
+        />
+      </span>
+
+                <span>
+        <span className="flex items-center gap-2 text-sm font-black text-slate-900">
+          <ShieldCheck
+              size={15}
+              className="text-emerald-600"
+              aria-hidden="true"
+          />
+          Zero Commission
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          Show only properties with no commission.
+        </span>
+      </span>
+              </button>
+
+              <button
+                  type="button"
+                  aria-pressed={
+                      listingFilter ===
+                      "featured"
+                  }
+                  onClick={() =>
+                      onListingFilterChange(
+                          listingFilter ===
+                          "featured"
+                              ? "all"
+                              : "featured",
+                      )
+                  }
+                  className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition ${
+                      listingFilter ===
+                      "featured"
+                          ? "border-primary bg-teal-50"
+                          : "border-slate-200 bg-white hover:border-teal-200"
+                  }`}
+              >
+      <span
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+              listingFilter ===
+              "featured"
+                  ? "border-primary bg-primary text-white"
+                  : "border-slate-300 bg-white text-transparent"
+          }`}
+      >
+        <Check
+            size={13}
+            aria-hidden="true"
+        />
+      </span>
+
+                <span>
+        <span className="block text-sm font-black text-slate-900">
+          Featured listings only
+        </span>
+
+        <span className="mt-1 block text-xs leading-5 text-slate-500">
+          Prioritise promoted and featured properties.
+        </span>
+      </span>
+              </button>
+            </div>
           </section>
         </div>
 
@@ -968,9 +1048,20 @@ function BuyPageContent() {
   const [maxPrice, setMaxPrice] = useState(
       searchParams.get("maxPrice") || "",
   );
-  const [featuredOnly, setFeaturedOnly] = useState(
-      searchParams.get("filter") === "featured",
-  );
+  const [listingFilter, setListingFilter] =
+      useState<ListingFilter>(() => {
+        const filter =
+            searchParams.get("filter");
+
+        if (
+            filter === "featured" ||
+            filter === "zero-commission"
+        ) {
+          return filter;
+        }
+
+        return "all";
+      });
   const [sortBy, setSortBy] = useState<SortOption>(
       (searchParams.get("sort") as SortOption) || "default",
   );
@@ -1017,7 +1108,15 @@ function BuyPageContent() {
     setSelectedBHK(searchParams.get("bhk") || "All");
     setMinPrice(searchParams.get("minPrice") || "");
     setMaxPrice(searchParams.get("maxPrice") || "");
-    setFeaturedOnly(searchParams.get("filter") === "featured");
+    const nextFilter =
+        searchParams.get("filter");
+
+    setListingFilter(
+        nextFilter === "featured" ||
+        nextFilter === "zero-commission"
+            ? nextFilter
+            : "all",
+    );
 
     const nextSort = searchParams.get("sort") as SortOption | null;
     setSortBy(
@@ -1114,10 +1213,12 @@ function BuyPageContent() {
                 );
               }
 
-              if (featuredOnly) {
+              if (
+                  listingFilter !== "all"
+              ) {
                 apiParams.set(
                     "filter",
-                    "featured",
+                    listingFilter,
                 );
               }
 
@@ -1263,7 +1364,7 @@ function BuyPageContent() {
             }
           },
           [
-            featuredOnly,
+            listingFilter,
             maxPrice,
             minPrice,
             mode,
@@ -1326,8 +1427,11 @@ function BuyPageContent() {
         params.set("maxPrice", maxPrice);
       }
 
-      if (featuredOnly) {
-        params.set("filter", "featured");
+      if (listingFilter !== "all") {
+        params.set(
+            "filter",
+            listingFilter,
+        );
       }
 
       if (sortBy !== "default") {
@@ -1343,7 +1447,7 @@ function BuyPageContent() {
 
     return () => window.clearTimeout(timer);
   }, [
-    featuredOnly,
+    listingFilter,
     maxPrice,
     minPrice,
     mode,
@@ -1476,11 +1580,16 @@ function BuyPageContent() {
           },
         }
         : null,
-    featuredOnly
+    listingFilter !== "all"
         ? {
-          id: "featured",
-          label: "Featured only",
-          remove: () => setFeaturedOnly(false),
+          id: "listing-filter",
+          label:
+              listingFilter ===
+              "zero-commission"
+                  ? "Zero Commission"
+                  : "Featured only",
+          remove: () =>
+              setListingFilter("all"),
         }
         : null,
   ].filter(
@@ -1529,7 +1638,7 @@ function BuyPageContent() {
     setSelectedBHK("All");
     setMinPrice("");
     setMaxPrice("");
-    setFeaturedOnly(false);
+    setListingFilter("all");
     setSortBy("default");
     setShowSuggestions(false);
   }
@@ -1836,13 +1945,15 @@ function BuyPageContent() {
                     selectedBHK={selectedBHK}
                     minPrice={minPrice}
                     maxPrice={maxPrice}
-                    featuredOnly={featuredOnly}
+                    listingFilter={listingFilter}
                     propertyTypes={availablePropertyTypes}
                     onTypeChange={handleTypeChange}
                     onBHKChange={setSelectedBHK}
                     onMinPriceChange={setMinPrice}
                     onMaxPriceChange={setMaxPrice}
-                    onFeaturedOnlyChange={setFeaturedOnly}
+                    onListingFilterChange={
+                      setListingFilter
+                    }
                     onClear={clearFilters}
                 />
               </div>
@@ -2223,15 +2334,29 @@ function BuyPageContent() {
                         selectedBHK={selectedBHK}
                         minPrice={minPrice}
                         maxPrice={maxPrice}
-                        featuredOnly={featuredOnly}
-                        propertyTypes={availablePropertyTypes}
-                        onTypeChange={handleTypeChange}
-                        onBHKChange={setSelectedBHK}
-                        onMinPriceChange={setMinPrice}
-                        onMaxPriceChange={setMaxPrice}
-                        onFeaturedOnlyChange={setFeaturedOnly}
+                        listingFilter={listingFilter}
+                        propertyTypes={
+                          availablePropertyTypes
+                        }
+                        onTypeChange={
+                          handleTypeChange
+                        }
+                        onBHKChange={
+                          setSelectedBHK
+                        }
+                        onMinPriceChange={
+                          setMinPrice
+                        }
+                        onMaxPriceChange={
+                          setMaxPrice
+                        }
+                        onListingFilterChange={
+                          setListingFilter
+                        }
                         onClear={clearFilters}
-                        onDone={() => setFilterDrawerOpen(false)}
+                        onDone={() =>
+                            setFilterDrawerOpen(false)
+                        }
                     />
                   </div>
                 </motion.aside>
