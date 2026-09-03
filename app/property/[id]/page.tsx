@@ -111,6 +111,13 @@ interface PropertyRecord {
     purpose?: string;
     propertyType?: string;
     commercialType?: string | null;
+    unitConfigurations?: Array<{
+        _id?: string;
+        bedrooms: number;
+        size: number;
+        sizeUnit: string;
+        price: number;
+    }>;
     bedrooms?: number | null;
     locality?: string;
     city?: string;
@@ -119,6 +126,8 @@ interface PropertyRecord {
     priceLocked?: boolean;
     priceType?: string;
     negotiable?: boolean;
+    gstApplicable?: boolean;
+    registrationChargesAdditional?: boolean;
     bathrooms?: number | null;
     size?: number;
     sizeUnit?: string;
@@ -909,6 +918,22 @@ function getFactRows(
         });
     }
 
+    if (property.gstApplicable) {
+        rows.push({
+            label: "GST",
+            value: "Applicable",
+        });
+    }
+
+    if (
+        property.registrationChargesAdditional
+    ) {
+        rows.push({
+            label: "Govt. registration charges",
+            value: "Additional",
+        });
+    }
+
     if (property.ownershipType) {
         rows.push({
             label: "Ownership",
@@ -925,9 +950,10 @@ function getFactRows(
             label: "UDS",
             value: `${new Intl.NumberFormat(
                 "en-IN",
-            ).format(
-                property.uds,
-            )} sq ft`,
+                {
+                    maximumFractionDigits: 2,
+                },
+            ).format(property.uds)}%`,
         });
     }
 
@@ -1457,6 +1483,23 @@ export default function PropertyDetailsPage() {
             property,
         )
         : "Property";
+
+    const unitPrices =
+        property?.unitConfigurations
+            ?.map(
+                (configuration) =>
+                    configuration.price,
+            )
+            .filter(
+                (price) =>
+                    Number.isFinite(price) &&
+                    price > 0,
+            ) ?? [];
+
+    const minimumUnitPrice =
+        unitPrices.length > 0
+            ? Math.min(...unitPrices)
+            : null;
 
     const locationLabel = property
         ? getLocationLabel(property)
@@ -2138,17 +2181,31 @@ export default function PropertyDetailsPage() {
                                 </h1>
 
                                 <p className="mt-3 text-lg font-bold text-slate-500 sm:text-xl">
-                                    {category ===
-                                    "residential" &&
-                                    property.bedrooms !==
-                                    null &&
-                                    property.bedrooms !==
-                                    undefined
-                                        ? property.bedrooms ===
-                                        0
-                                            ? `Studio ${typeLabel}`
-                                            : `${property.bedrooms} BHK ${typeLabel}`
-                                        : typeLabel}
+                                    {category === "residential" &&
+                                    property.unitConfigurations &&
+                                    property.unitConfigurations.length >
+                                    0
+                                        ? `${typeLabel} · ${property.unitConfigurations
+                                            .map((unit) =>
+                                                unit.bedrooms === 0
+                                                    ? "Studio"
+                                                    : `${unit.bedrooms} BHK`,
+                                            )
+                                            .filter(
+                                                (value, index, values) =>
+                                                    values.indexOf(value) === index,
+                                            )
+                                            .join(" / ")}`
+                                        : category === "residential" &&
+                                        property.bedrooms !==
+                                        null &&
+                                        property.bedrooms !==
+                                        undefined
+                                            ? property.bedrooms === 0
+                                                ? `Studio ${typeLabel}`
+                                                : `${property.bedrooms} BHK ${typeLabel}`
+                                            : typeLabel}
+
                                     {locationLabel
                                         ? ` in ${locationLabel}`
                                         : ""}
@@ -2235,9 +2292,13 @@ export default function PropertyDetailsPage() {
                                     ) : (
                                         <>
                                             <p className="mt-3 text-4xl font-black tracking-[-0.04em] text-white lg:text-5xl">
-                                                {formatPrice(
-                                                    property.price,
-                                                )}
+                                                {minimumUnitPrice !== null
+                                                    ? `From ${formatPrice(
+                                                        minimumUnitPrice,
+                                                    )}`
+                                                    : formatPrice(
+                                                        property.price,
+                                                    )}
                                             </p>
 
                                             {property.priceType ? (
@@ -2256,6 +2317,39 @@ export default function PropertyDetailsPage() {
                                         }
                                         className="mt-4"
                                     />
+
+                                    {property.gstApplicable ||
+                                    property.registrationChargesAdditional ? (
+                                        <div className="mt-4 space-y-2">
+                                            {property.gstApplicable ? (
+                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                                                    <CheckCircle2
+                                                        size={14}
+                                                        className="shrink-0 text-teal-300"
+                                                        aria-hidden="true"
+                                                    />
+
+                                                    <span>
+                    GST applicable
+                </span>
+                                                </div>
+                                            ) : null}
+
+                                            {property.registrationChargesAdditional ? (
+                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+                                                    <CheckCircle2
+                                                        size={14}
+                                                        className="shrink-0 text-teal-300"
+                                                        aria-hidden="true"
+                                                    />
+
+                                                    <span>
+                    Govt. registration charges additional
+                </span>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
 
                                     <div className="mt-7 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.055] p-4">
                                         <ShieldCheck
@@ -2482,6 +2576,104 @@ export default function PropertyDetailsPage() {
                                     ),
                                 )}
                             </div>
+                            {property.unitConfigurations &&
+                            property.unitConfigurations.length > 0 ? (
+                                <div className="mt-8 border-t border-slate-100 pt-7">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                                            Available configurations
+                                        </p>
+
+                                        <h3 className="mt-2 text-xl font-black tracking-[-0.02em] text-slate-950">
+                                            Choose the unit that fits you
+                                        </h3>
+
+                                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                                            This project has multiple unit
+                                            configurations with different areas and
+                                            prices.
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                        {property.unitConfigurations.map(
+                                            (configuration, index) => (
+                                                <div
+                                                    key={
+                                                        configuration._id ??
+                                                        `${configuration.bedrooms}-${configuration.size}-${index}`
+                                                    }
+                                                    className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                                >
+                                                    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                                    <BedDouble
+                                        size={17}
+                                        aria-hidden="true"
+                                    />
+                                </span>
+
+                                                            <div>
+                                                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                                                                    Configuration
+                                                                </p>
+
+                                                                <p className="mt-0.5 text-sm font-black text-slate-950">
+                                                                    {configuration.bedrooms ===
+                                                                    0
+                                                                        ? "Studio"
+                                                                        : `${configuration.bedrooms} BHK`}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <span className="text-sm font-black text-primary">
+                                {formatPrice(
+                                    configuration.price,
+                                )}
+                            </span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 divide-x divide-slate-200">
+                                                        <div className="p-4">
+                                                            <p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
+                                                                Built-up area
+                                                            </p>
+
+                                                            <p className="mt-2 text-sm font-black text-slate-950">
+                                                                {new Intl.NumberFormat(
+                                                                    "en-IN",
+                                                                ).format(
+                                                                    configuration.size,
+                                                                )}{" "}
+                                                                {SIZE_UNITS.find(
+                                                                        (unit) =>
+                                                                            unit.value ===
+                                                                            configuration.sizeUnit,
+                                                                    )?.label ??
+                                                                    configuration.sizeUnit}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="p-4">
+                                                            <p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
+                                                                Price
+                                                            </p>
+
+                                                            <p className="mt-2 text-sm font-black text-slate-950">
+                                                                {formatPrice(
+                                                                    configuration.price,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
                         </section>
 
                         <section
@@ -2650,16 +2842,17 @@ export default function PropertyDetailsPage() {
                             </section>
                         ) : null}
 
-                        {property.purpose ===
-                        "Sell" &&
-                        (property.price ?? 0) >
-                        0 ? (
+                        {property.purpose === "Sell" &&
+                        (minimumUnitPrice ??
+                            property.price ??
+                            0) > 0 ? (
                             <section
                                 id="finance"
                                 className="scroll-mt-28"
                             >
                                 <EMICalculator
                                     propertyPrice={
+                                        minimumUnitPrice ??
                                         property.price ??
                                         0
                                     }
@@ -2699,6 +2892,7 @@ export default function PropertyDetailsPage() {
             {!isOwner ? (
                 <MobileContactBar
                     property={property}
+                    minimumUnitPrice={minimumUnitPrice}
                     contactLoading={
                         contactLoading
                     }
@@ -3451,11 +3645,13 @@ function ContactCard({
 
 function MobileContactBar({
                               property,
+                              minimumUnitPrice,
                               contactLoading,
                               onPhone,
                               onWhatsApp,
                           }: {
     property: PropertyRecord;
+    minimumUnitPrice: number | null;
     contactLoading:
         | "phone"
         | "email"
@@ -3488,9 +3684,13 @@ function MobileContactBar({
                         </button>
                     ) : (
                         <p className="truncate text-lg font-black text-slate-950">
-                            {formatPrice(
-                                property.price,
-                            )}
+                            {minimumUnitPrice !== null
+                                ? `From ${formatPrice(
+                                    minimumUnitPrice,
+                                )}`
+                                : formatPrice(
+                                    property.price,
+                                )}
                         </p>
                     )}
                 </div>

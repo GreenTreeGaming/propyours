@@ -1,5 +1,44 @@
 import mongoose from "mongoose";
 
+const UnitConfigurationSchema =
+    new mongoose.Schema(
+        {
+            bedrooms: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+
+            size: {
+                type: Number,
+                required: true,
+                min: 0.01,
+            },
+
+            sizeUnit: {
+                type: String,
+                enum: [
+                    "sqft",
+                    "sqyd",
+                    "sqm",
+                    "acre",
+                    "kanal",
+                    "marla",
+                ],
+                default: "sqft",
+            },
+
+            price: {
+                type: Number,
+                required: true,
+                min: 1,
+            },
+        },
+        {
+            _id: true,
+        },
+    );
+
 const PropertySchema =
     new mongoose.Schema(
         {
@@ -87,6 +126,12 @@ const PropertySchema =
             state: String,
             landmark: String,
 
+            developerName: {
+                type: String,
+                trim: true,
+                maxlength: 150,
+            },
+
             size: {
                 type: Number,
                 required: true,
@@ -103,7 +148,11 @@ const PropertySchema =
                 ],
                 default: "sqft",
             },
-            uds: Number,
+            uds: {
+                type: Number,
+                min: 0,
+                max: 100,
+            },
             dimensions: String,
             ownershipType: {
                 type: String,
@@ -124,6 +173,11 @@ const PropertySchema =
             bathrooms: Number,
             floors: Number,
 
+            unitConfigurations: {
+                type: [UnitConfigurationSchema],
+                default: [],
+            },
+
             price: {
                 type: Number,
                 required: true,
@@ -139,6 +193,16 @@ const PropertySchema =
             negotiable: {
                 type: Boolean,
                 default: true,
+            },
+
+            gstApplicable: {
+                type: Boolean,
+                default: false,
+            },
+
+            registrationChargesAdditional: {
+                type: Boolean,
+                default: false,
             },
 
             amenities: {

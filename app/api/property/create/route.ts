@@ -376,25 +376,31 @@ export async function POST(
             );
         }
 
-        const isBuilder =
-            user.role === "Builder" ||
-            user.plan?.audience ===
-            "builder";
-
-        const isAgent =
-            user.role === "Agent" ||
-            user.plan?.audience ===
-            "agent";
+        if (
+            body.gstApplicable !== undefined &&
+            typeof body.gstApplicable !== "boolean"
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "GST applicable must be either true or false.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
 
         if (
-            isAgent &&
-            typeof body.zeroCommission !==
+            body.registrationChargesAdditional !==
+            undefined &&
+            typeof body.registrationChargesAdditional !==
             "boolean"
         ) {
             return NextResponse.json(
                 {
                     error:
-                        "Choose whether commission applies to this listing.",
+                        "Registration charges additional must be either true or false.",
                 },
                 {
                     status: 400,
@@ -403,7 +409,7 @@ export async function POST(
         }
 
         const zeroCommission =
-            isAgent
+            typeof body.zeroCommission === "boolean"
                 ? body.zeroCommission
                 : true;
 
@@ -502,18 +508,6 @@ export async function POST(
             | undefined;
 
         if (body.brochure != null) {
-            if (!isBuilder) {
-                return NextResponse.json(
-                    {
-                        error:
-                            "Only developers can attach property brochures.",
-                    },
-                    {
-                        status: 403,
-                    },
-                );
-            }
-
             if (
                 typeof body.brochure !==
                 "object" ||
@@ -554,6 +548,83 @@ export async function POST(
             };
         }
 
+        const unitConfigurations =
+            !isLand &&
+            !isCommercial &&
+            Array.isArray(body.unitConfigurations)
+                ? body.unitConfigurations
+                : [];
+
+        for (const configuration of unitConfigurations) {
+            if (
+                typeof configuration !== "object" ||
+                configuration === null
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "One or more unit configurations are invalid.",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            const bedrooms =
+                "bedrooms" in configuration
+                    ? configuration.bedrooms
+                    : undefined;
+
+            const size =
+                "size" in configuration
+                    ? configuration.size
+                    : undefined;
+
+            const sizeUnit =
+                "sizeUnit" in configuration
+                    ? configuration.sizeUnit
+                    : undefined;
+
+            const price =
+                "price" in configuration
+                    ? configuration.price
+                    : undefined;
+
+            if (
+                typeof bedrooms !== "number" ||
+                !Number.isFinite(bedrooms) ||
+                !Number.isInteger(bedrooms) ||
+                bedrooms < 0 ||
+                bedrooms > 20 ||
+                typeof size !== "number" ||
+                !Number.isFinite(size) ||
+                size <= 0 ||
+                typeof sizeUnit !== "string" ||
+                ![
+                    "sqft",
+                    "sqyd",
+                    "sqm",
+                    "acre",
+                    "kanal",
+                    "marla",
+                ].includes(sizeUnit) ||
+                typeof price !== "number" ||
+                !Number.isFinite(price) ||
+                price <= 0
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "Complete the BHK, size, unit and price for every unit configuration.",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+        }
+
         const listingExpiresAt =
             new Date();
         listingExpiresAt.setDate(
@@ -578,29 +649,50 @@ export async function POST(
                 locality,
                 city,
                 state: "Tamil Nadu",
-                landmark: cleanText(
-                    body.landmark,
-                    200,
-                ),
-                uds: body.uds,
-                size: body.size,
-                sizeUnit: body.sizeUnit,
-                dimensions: cleanText(
+                    landmark: cleanText(
+                        body.landmark,
+                        200,
+                    ),
+
+                    developerName: cleanText(
+                        body.developerName,
+                        150,
+                    ),
+
+                    uds: body.uds,
+                    size: body.size,
+                    sizeUnit: body.sizeUnit,
+
+                    unitConfigurations,
+
+                    dimensions: cleanText(
                     body.dimensions,
                     100,
                 ),
                 ownershipType:
                 body.ownershipType,
-                price: body.price,
-                priceType: body.priceType,
-                negotiable:
-                    typeof body.negotiable ===
-                    "boolean"
-                        ? body.negotiable
-                        : true,
-                bedrooms: isLand
-                    ? null
-                    : body.bedrooms,
+                    price: body.price,
+                    priceType: body.priceType,
+
+                    negotiable:
+                        typeof body.negotiable === "boolean"
+                            ? body.negotiable
+                            : true,
+
+                    gstApplicable:
+                        typeof body.gstApplicable === "boolean"
+                            ? body.gstApplicable
+                            : false,
+
+                    registrationChargesAdditional:
+                        typeof body.registrationChargesAdditional ===
+                        "boolean"
+                            ? body.registrationChargesAdditional
+                            : false,
+
+                    bedrooms: isLand
+                        ? null
+                        : body.bedrooms,
                 bathrooms: isLand
                     ? null
                     : body.bathrooms,

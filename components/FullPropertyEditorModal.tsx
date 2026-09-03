@@ -55,6 +55,7 @@ export interface PropertyEditorProperty {
     city: string;
     state?: string;
     landmark?: string;
+    developerName?: string;
     uds?: number | null;
     size: number;
     sizeUnit?: string;
@@ -119,6 +120,7 @@ interface EditorForm {
     city: string;
     state: "Tamil Nadu";
     landmark: string;
+    developerName: string;
     uds: string;
     size: string;
     sizeUnit: string;
@@ -211,6 +213,10 @@ function createEditorForm(
         city: property.city || "",
         state: "Tamil Nadu",
         landmark: property.landmark || "",
+
+        developerName:
+            property.developerName || "",
+
         uds:
             property.uds === null ||
             property.uds === undefined
@@ -956,6 +962,8 @@ export default function FullPropertyEditorModal({
                     form.description.trim(),
                 address: form.address.trim(),
                 locality: form.locality,
+                developerName:
+                    form.developerName.trim(),
                 city: form.city,
                 state: "Tamil Nadu",
                 landmark:
@@ -1625,6 +1633,30 @@ export default function FullPropertyEditorModal({
                                                                     }
                                                                 </ErrorText>
                                                             ) : null}
+                                                        </label>
+
+                                                        <label className="sm:col-span-2">
+                                                            <FieldLabel hint="Optional">
+                                                                Developer / Builder name
+                                                            </FieldLabel>
+
+                                                            <input
+                                                                value={form.developerName}
+                                                                maxLength={150}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        developerName:
+                                                                        event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="e.g. DAC Developers"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+
+                                                            <p className="mt-2 text-xs leading-5 text-slate-400">
+                                                                This name will appear on the public
+                                                                property listing.
+                                                            </p>
                                                         </label>
 
                                                         <label>

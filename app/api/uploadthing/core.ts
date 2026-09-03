@@ -10,11 +10,9 @@ import {
     getAuthenticatedUser,
     isAuthError,
 } from "@/lib/auth";
-import { connectDB } from "@/lib/mongoose";
 import {
     createUploadDeleteToken,
 } from "@/lib/uploadthing-storage";
-import User from "@/models/User";
 
 const f = createUploadthing();
 
@@ -73,25 +71,6 @@ export const ourFileRouter = {
         .middleware(async () => {
             const auth =
                 await requireAuthenticatedUser();
-
-            await connectDB();
-
-            const user = await User.findById(
-                auth.userId,
-            )
-                .select("role plan.audience")
-                .lean();
-
-            const isDeveloper =
-                user?.role === "Builder" ||
-                user?.plan?.audience ===
-                "builder";
-
-            if (!isDeveloper) {
-                throw new UploadThingError(
-                    "Only builders or developers can upload property brochures.",
-                );
-            }
 
             return {
                 userId: auth.userId,

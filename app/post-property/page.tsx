@@ -37,7 +37,6 @@ import {
     Ruler,
     Save,
     ShoppingBag,
-    Sparkles,
     Stethoscope,
     Store,
     Trash2,
@@ -105,6 +104,14 @@ interface UploadDeleteGrant {
     deleteToken: string;
 }
 
+interface UnitConfigurationForm {
+    id: string;
+    bedrooms: string;
+    size: string;
+    sizeUnit: string;
+    price: string;
+}
+
 interface PropertyForm {
     category: PropertyCategory;
     purpose: string;
@@ -116,17 +123,21 @@ interface PropertyForm {
     city: string;
     state: "Tamil Nadu";
     landmark: string;
+    developerName: string;
     uds: string;
     size: string;
     sizeUnit: string;
     dimensions: string;
     ownershipType: string;
+    unitConfigurations: UnitConfigurationForm[];
     price: string;
     zeroCommission: boolean;
     priceType: string;
     negotiable: boolean;
     bedrooms: string;
     bathrooms: string;
+    gstApplicable: boolean;
+    registrationChargesAdditional: boolean;
     floors: string;
     amenities: string[];
     images: string[];
@@ -139,6 +150,23 @@ interface PropertyForm {
         url: string;
         fileName: string;
     } | null;
+}
+
+function createUnitConfiguration():
+    UnitConfigurationForm {
+    return {
+        id:
+            typeof crypto !==
+            "undefined" &&
+            "randomUUID" in crypto
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random()}`,
+
+        bedrooms: "",
+        size: "",
+        sizeUnit: "sqft",
+        price: "",
+    };
 }
 
 interface UploadFile {
@@ -229,7 +257,9 @@ const DEFAULT_FORM: PropertyForm = {
     city: "",
     state: "Tamil Nadu",
     landmark: "",
+    developerName: "",
     uds: "",
+    unitConfigurations: [],
     size: "",
     sizeUnit: "sqft",
     dimensions: "",
@@ -238,6 +268,8 @@ const DEFAULT_FORM: PropertyForm = {
     priceType: "Total",
     negotiable: true,
     zeroCommission: true,
+    gstApplicable: false,
+    registrationChargesAdditional: false,
     bedrooms: "",
     bathrooms: "",
     floors: "",
@@ -330,6 +362,12 @@ function loadInitialForm(): PropertyForm {
             videoLinks: Array.isArray(parsed.videoLinks)
                 ? parsed.videoLinks
                 : [],
+            unitConfigurations:
+                Array.isArray(
+                    parsed.unitConfigurations,
+                )
+                    ? parsed.unitConfigurations
+                    : [],
             uploadDeleteGrants:
                 typeof parsed.uploadDeleteGrants === "object" &&
                 parsed.uploadDeleteGrants !== null &&
@@ -621,15 +659,6 @@ export default function PostPropertyPage() {
         };
     }, [activeStep, form]);
 
-    const isDeveloper =
-        user?.role === "Builder" ||
-        user?.plan?.audience ===
-        "builder";
-
-    const isAgent =
-        user?.role === "Agent" ||
-        user?.plan?.audience ===
-        "agent";
     const hasActivePaidPlan =
         user?.plan?.status === "active";
     const storedTier = user?.plan?.tier;
@@ -681,12 +710,73 @@ export default function PostPropertyPage() {
         }));
     }
 
+    function addUnitConfiguration() {
+        setForm((current) => ({
+            ...current,
+
+            unitConfigurations: [
+                ...current.unitConfigurations,
+                createUnitConfiguration(),
+            ],
+        }));
+
+        setErrors((current) => {
+            const next = {
+                ...current,
+            };
+
+            delete next.unitConfigurations;
+
+            return next;
+        });
+    }
+
+    function updateUnitConfiguration(
+        id: string,
+        field:
+            | "bedrooms"
+            | "size"
+            | "sizeUnit"
+            | "price",
+        value: string,
+    ) {
+        setForm((current) => ({
+            ...current,
+
+            unitConfigurations:
+                current.unitConfigurations.map(
+                    (configuration) =>
+                        configuration.id === id
+                            ? {
+                                ...configuration,
+                                [field]: value,
+                            }
+                            : configuration,
+                ),
+        }));
+    }
+
+    function removeUnitConfiguration(
+        id: string,
+    ) {
+        setForm((current) => ({
+            ...current,
+
+            unitConfigurations:
+                current.unitConfigurations.filter(
+                    (configuration) =>
+                        configuration.id !== id,
+                ),
+        }));
+    }
+
     function selectCategory(category: PropertyCategory) {
         if (category === "commercial") {
             updateForm({
                 category,
                 propertyType: "Commercial",
                 commercialType: "",
+                unitConfigurations: [],
                 purpose:
                     form.purpose === "PG/CO-Living"
                         ? "Rent"
@@ -704,6 +794,7 @@ export default function PostPropertyPage() {
                 category,
                 propertyType: "Plot",
                 commercialType: "",
+                unitConfigurations: [],
                 purpose:
                     form.purpose === "PG/CO-Living"
                         ? "Sell"
@@ -767,13 +858,67 @@ export default function PostPropertyPage() {
                     "Enter a valid property size.";
             }
 
+            const uds =
+                optionalNumber(form.uds);
+
             if (
-                form.uds.trim() &&
-                (!Number.isFinite(Number(form.uds)) ||
-                    Number(form.uds) < 0)
+                uds !== null &&
+                (
+                    !Number.isFinite(uds) ||
+                    uds < 0 ||
+                    uds > 100
+                )
             ) {
                 nextErrors.uds =
-                    "Enter a valid UDS value.";
+                    "UDS must be between 0% and 100%.";
+            }
+
+            if (
+                form.unitConfigurations.length > 0
+            ) {
+                const invalidConfiguration =
+                    form.unitConfigurations.some(
+                        (configuration) => {
+                            const bedrooms =
+                                Number(
+                                    configuration.bedrooms,
+                                );
+
+                            const size =
+                                Number(
+                                    configuration.size,
+                                );
+
+                            const price =
+                                Number(
+                                    configuration.price,
+                                );
+
+                            return (
+                                !Number.isFinite(
+                                    bedrooms,
+                                ) ||
+                                !Number.isInteger(
+                                    bedrooms,
+                                ) ||
+                                bedrooms < 0 ||
+                                bedrooms > 20 ||
+                                !Number.isFinite(
+                                    size,
+                                ) ||
+                                size <= 0 ||
+                                !Number.isFinite(
+                                    price,
+                                ) ||
+                                price <= 0
+                            );
+                        },
+                    );
+
+                if (invalidConfiguration) {
+                    nextErrors.unitConfigurations =
+                        "Complete the BHK, size and price for every unit configuration.";
+                }
             }
         }
 
@@ -1114,14 +1259,49 @@ export default function PostPropertyPage() {
                         city: form.city,
                         state: "Tamil Nadu",
                         landmark: form.landmark.trim(),
+
+                        developerName:
+                            form.developerName.trim(),
+
                         uds: optionalNumber(form.uds),
+
                         size: Number(form.size),
-                        sizeUnit: form.sizeUnit,
-                        dimensions: form.dimensions.trim(),
+
+                        sizeUnit:
+                        form.sizeUnit,
+
+                        unitConfigurations:
+                            form.unitConfigurations.map(
+                                (configuration) => ({
+                                    bedrooms:
+                                        Number(
+                                            configuration.bedrooms,
+                                        ),
+
+                                    size:
+                                        Number(
+                                            configuration.size,
+                                        ),
+
+                                    sizeUnit:
+                                    configuration.sizeUnit,
+
+                                    price:
+                                        Number(
+                                            configuration.price,
+                                        ),
+                                }),
+                            ),
+
+                        dimensions:
+                            form.dimensions.trim(),
                         ownershipType: form.ownershipType,
                         price: Number(form.price),
                         priceType: form.priceType,
                         negotiable: form.negotiable,
+                        gstApplicable: form.gstApplicable,
+                        registrationChargesAdditional:
+                        form.registrationChargesAdditional,
 
                         zeroCommission:
                         form.zeroCommission,
@@ -1200,10 +1380,6 @@ export default function PostPropertyPage() {
                     <div className="mx-auto max-w-7xl px-5 pb-12 pt-12 sm:px-6 lg:px-8 lg:pb-14">
                         <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
                             <div>
-                                <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-primary shadow-sm">
-                                    <Sparkles size={14} aria-hidden="true" />
-                                    Clear property publishing
-                                </div>
                                 <h1 className="mt-5 max-w-4xl font-heading text-4xl font-black leading-[1.06] tracking-[-0.045em] text-slate-950 sm:text-5xl">
                                     Publish a property people
                                     <span className="block text-primary">
@@ -1889,19 +2065,35 @@ export default function PostPropertyPage() {
                                                 </div>
 
                                                 <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                                                    <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary">
-                              <Ruler size={19} aria-hidden="true" />
-                            </span>
-                                                        <div>
-                                                            <h3 className="font-black text-slate-950">
-                                                                Property area
-                                                            </h3>
-                                                            <p className="mt-1 text-xs text-slate-500">
-                                                                Enter the actual usable or total area
-                                                                and select the matching unit.
-                                                            </p>
+                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                <Ruler size={19} aria-hidden="true" />
+            </span>
+
+                                                            <div>
+                                                                <h3 className="font-black text-slate-950">
+                                                                    Property area
+                                                                </h3>
+
+                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                    Enter the primary area or add multiple
+                                                                    BHK configurations with different sizes
+                                                                    and prices.
+                                                                </p>
+                                                            </div>
                                                         </div>
+
+                                                        {!isLand && !isCommercial ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={addUnitConfiguration}
+                                                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary transition hover:bg-primary/10"
+                                                            >
+                                                                <Plus size={15} aria-hidden="true" />
+                                                                Add unit
+                                                            </button>
+                                                        ) : null}
                                                     </div>
 
                                                     <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -1913,6 +2105,7 @@ export default function PostPropertyPage() {
                                                                         ? "Commercial area"
                                                                         : "Total size"}
                                                             </FieldLabel>
+
                                                             <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
                                                                 <input
                                                                     type="number"
@@ -1927,6 +2120,7 @@ export default function PostPropertyPage() {
                                                                     placeholder="Enter size"
                                                                     className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                                                                 />
+
                                                                 <SelectField
                                                                     value={form.sizeUnit}
                                                                     ariaLabel="Size unit"
@@ -1944,26 +2138,48 @@ export default function PostPropertyPage() {
                                                                     ))}
                                                                 </SelectField>
                                                             </div>
+
                                                             {errors.size ? (
                                                                 <ErrorText>{errors.size}</ErrorText>
                                                             ) : null}
                                                         </label>
 
                                                         <label>
-                                                            <FieldLabel hint="sq ft">UDS</FieldLabel>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                step="any"
-                                                                value={form.uds}
-                                                                onChange={(event) =>
-                                                                    updateForm({
-                                                                        uds: event.target.value,
-                                                                    })
-                                                                }
-                                                                placeholder="Optional"
-                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                                                            />
+                                                            <FieldLabel hint="Optional">
+                                                                UDS
+                                                            </FieldLabel>
+
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="100"
+                                                                    step="0.01"
+                                                                    value={form.uds}
+                                                                    onChange={(event) => {
+                                                                        const value =
+                                                                            event.target.value;
+
+                                                                        if (
+                                                                            value !== "" &&
+                                                                            Number(value) > 100
+                                                                        ) {
+                                                                            return;
+                                                                        }
+
+                                                                        updateForm({
+                                                                            uds: value,
+                                                                        });
+                                                                    }}
+                                                                    placeholder="Optional"
+                                                                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 pr-11 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                />
+
+                                                                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
+                    %
+                </span>
+                                                            </div>
+
                                                             {errors.uds ? (
                                                                 <ErrorText>{errors.uds}</ErrorText>
                                                             ) : null}
@@ -1979,11 +2195,13 @@ export default function PostPropertyPage() {
                                                             >
                                                                 Dimensions
                                                             </FieldLabel>
+
                                                             <input
                                                                 value={form.dimensions}
                                                                 onChange={(event) =>
                                                                     updateForm({
-                                                                        dimensions: event.target.value,
+                                                                        dimensions:
+                                                                        event.target.value,
                                                                     })
                                                                 }
                                                                 placeholder="Optional"
@@ -1991,6 +2209,178 @@ export default function PostPropertyPage() {
                                                             />
                                                         </label>
                                                     </div>
+
+                                                    {!isLand &&
+                                                    !isCommercial &&
+                                                    form.unitConfigurations.length > 0 ? (
+                                                        <div className="mt-6 border-t border-slate-100 pt-6">
+                                                            <div className="mb-4">
+                                                                <h4 className="text-sm font-black text-slate-950">
+                                                                    Available unit configurations
+                                                                </h4>
+
+                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                    Add each BHK, built-up area and asking
+                                                                    price offered within this project.
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="space-y-3">
+                                                                {form.unitConfigurations.map(
+                                                                    (configuration, index) => (
+                                                                        <div
+                                                                            key={configuration.id}
+                                                                            className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                                                                        >
+                                                                            <div className="mb-4 flex items-center justify-between">
+                                                                                <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+                                                                                    Unit {index + 1}
+                                                                                </p>
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        removeUnitConfiguration(
+                                                                                            configuration.id,
+                                                                                        )
+                                                                                    }
+                                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                                                                                    aria-label={`Remove unit ${index + 1}`}
+                                                                                >
+                                                                                    <Trash2 size={15} />
+                                                                                </button>
+                                                                            </div>
+
+                                                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[130px_minmax(0,1fr)_145px_minmax(0,1fr)]">
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        BHK
+                                                                                    </FieldLabel>
+
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="0"
+                                                                                        max="20"
+                                                                                        step="1"
+                                                                                        value={
+                                                                                            configuration.bedrooms
+                                                                                        }
+                                                                                        onChange={(event) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                "bedrooms",
+                                                                                                event.target.value,
+                                                                                            )
+                                                                                        }
+                                                                                        placeholder="2"
+                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                    />
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        Built-up size
+                                                                                    </FieldLabel>
+
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="0"
+                                                                                        step="any"
+                                                                                        value={
+                                                                                            configuration.size
+                                                                                        }
+                                                                                        onChange={(event) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                "size",
+                                                                                                event.target.value,
+                                                                                            )
+                                                                                        }
+                                                                                        placeholder="978"
+                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                    />
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel>
+                                                                                        Unit
+                                                                                    </FieldLabel>
+
+                                                                                    <SelectField
+                                                                                        value={
+                                                                                            configuration.sizeUnit
+                                                                                        }
+                                                                                        onChange={(value) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                "sizeUnit",
+                                                                                                value,
+                                                                                            )
+                                                                                        }
+                                                                                        ariaLabel={`Unit ${index + 1} area unit`}
+                                                                                    >
+                                                                                        {SIZE_UNITS.map(
+                                                                                            (unit) => (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        unit.value
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        unit.value
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        unit.label
+                                                                                                    }
+                                                                                                </option>
+                                                                                            ),
+                                                                                        )}
+                                                                                    </SelectField>
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        Price
+                                                                                    </FieldLabel>
+
+                                                                                    <div className="relative">
+                                                                                        <IndianRupee
+                                                                                            size={15}
+                                                                                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                                                                        />
+
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="1"
+                                                                                            step="1"
+                                                                                            value={
+                                                                                                configuration.price
+                                                                                            }
+                                                                                            onChange={(event) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
+                                                                                                    "price",
+                                                                                                    event.target.value,
+                                                                                                )
+                                                                                            }
+                                                                                            placeholder="6500000"
+                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                        />
+                                                                                    </div>
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+
+                                                            {errors.unitConfigurations ? (
+                                                                <ErrorText>
+                                                                    {errors.unitConfigurations}
+                                                                </ErrorText>
+                                                            ) : null}
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         ) : null}
@@ -2275,153 +2665,145 @@ export default function PostPropertyPage() {
                                                             </div>
 
                                                             <div className="sm:col-span-2">
-                                                                {isAgent ? (
-                                                                    <div>
-                                                                        <FieldLabel>
-                                                                            Commission preference
-                                                                        </FieldLabel>
+                                                                <FieldLabel>
+                                                                    Additional charges
+                                                                </FieldLabel>
 
-                                                                        <p className="mb-4 text-xs leading-5 text-slate-500">
-                                                                            Choose whether commission
-                                                                            applies to this property.
-                                                                            This will be shown clearly
-                                                                            on the published listing.
-                                                                        </p>
+                                                                <p className="mb-4 text-xs leading-5 text-slate-500">
+                                                                    Let buyers know which charges apply in addition to the
+                                                                    listed asking price.
+                                                                </p>
 
-                                                                        <div className="grid gap-3 sm:grid-cols-2">
-                                                                            <button
-                                                                                type="button"
-                                                                                aria-pressed={
-                                                                                    form.zeroCommission
-                                                                                }
-                                                                                onClick={() =>
-                                                                                    updateForm({
-                                                                                        zeroCommission:
-                                                                                            true,
-                                                                                    })
-                                                                                }
-                                                                                className={`relative rounded-2xl border p-4 text-left transition ${
-                                                                                    form.zeroCommission
-                                                                                        ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/10"
-                                                                                        : "border-slate-200 bg-white hover:border-emerald-300"
+                                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        aria-pressed={form.gstApplicable}
+                                                                        onClick={() =>
+                                                                            updateForm({
+                                                                                gstApplicable:
+                                                                                    !form.gstApplicable,
+                                                                            })
+                                                                        }
+                                                                        className={`relative rounded-2xl border p-4 text-left transition ${
+                                                                            form.gstApplicable
+                                                                                ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                                : "border-slate-200 bg-white hover:border-teal-300"
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-start justify-between gap-3">
+                                                                            <div>
+                                                                                <p className="text-sm font-black text-slate-950">
+                                                                                    GST applicable
+                                                                                </p>
+
+                                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                                    GST is charged in addition to the listed price.
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <span
+                                                                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                                                                    form.gstApplicable
+                                                                                        ? "border-primary bg-primary text-white"
+                                                                                        : "border-slate-300 bg-white text-transparent"
                                                                                 }`}
                                                                             >
-                                                                                <div className="flex items-start gap-3">
-                        <span
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                                form.zeroCommission
-                                    ? "bg-emerald-500 text-white"
-                                    : "bg-slate-100 text-slate-400"
-                            }`}
-                        >
-                            <BadgeCheck
-                                size={18}
-                                aria-hidden="true"
-                            />
-                        </span>
-
-                                                                                    <div>
-                                                                                        <p className="text-sm font-black text-slate-950">
-                                                                                            Zero Commission
-                                                                                        </p>
-
-                                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                                            No agent commission
-                                                                                            applies to this
-                                                                                            property.
-                                                                                        </p>
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                {form.zeroCommission ? (
-                                                                                    <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-                            <Check
-                                size={13}
-                                aria-hidden="true"
-                            />
-                        </span>
-                                                                                ) : null}
-                                                                            </button>
-
-                                                                            <button
-                                                                                type="button"
-                                                                                aria-pressed={
-                                                                                    !form.zeroCommission
-                                                                                }
-                                                                                onClick={() =>
-                                                                                    updateForm({
-                                                                                        zeroCommission:
-                                                                                            false,
-                                                                                    })
-                                                                                }
-                                                                                className={`relative rounded-2xl border p-4 text-left transition ${
-                                                                                    !form.zeroCommission
-                                                                                        ? "border-primary bg-teal-50 ring-2 ring-primary/10"
-                                                                                        : "border-slate-200 bg-white hover:border-teal-300"
-                                                                                }`}
-                                                                            >
-                                                                                <div className="flex items-start gap-3">
-                        <span
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                                !form.zeroCommission
-                                    ? "bg-primary text-white"
-                                    : "bg-slate-100 text-slate-400"
-                            }`}
-                        >
-                            <IndianRupee
-                                size={18}
-                                aria-hidden="true"
-                            />
-                        </span>
-
-                                                                                    <div>
-                                                                                        <p className="text-sm font-black text-slate-950">
-                                                                                            Commission Applicable
-                                                                                        </p>
-
-                                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                                            Agent commission may
-                                                                                            apply to this property.
-                                                                                        </p>
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                {!form.zeroCommission ? (
-                                                                                    <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white">
-                            <Check
-                                size={13}
-                                aria-hidden="true"
-                            />
-                        </span>
-                                                                                ) : null}
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                                                                        <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white">
-                    <BadgeCheck
-                        size={18}
+                    <Check
+                        size={13}
                         aria-hidden="true"
                     />
                 </span>
+                                                                        </div>
+                                                                    </button>
 
+                                                                    <button
+                                                                        type="button"
+                                                                        aria-pressed={
+                                                                            form.registrationChargesAdditional
+                                                                        }
+                                                                        onClick={() =>
+                                                                            updateForm({
+                                                                                registrationChargesAdditional:
+                                                                                    !form.registrationChargesAdditional,
+                                                                            })
+                                                                        }
+                                                                        className={`relative rounded-2xl border p-4 text-left transition ${
+                                                                            form.registrationChargesAdditional
+                                                                                ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                                : "border-slate-200 bg-white hover:border-teal-300"
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-start justify-between gap-3">
                                                                             <div>
-                                                                                <p className="text-sm font-black text-emerald-900">
-                                                                                    Zero Commission
+                                                                                <p className="text-sm font-black text-slate-950">
+                                                                                    Govt. registration charges additional
                                                                                 </p>
 
-                                                                                <p className="mt-1 text-xs leading-5 text-emerald-700">
-                                                                                    Owner and builder
-                                                                                    properties are listed
-                                                                                    as Zero Commission by
-                                                                                    default.
+                                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                                    Government registration and statutory charges
+                                                                                    are payable separately.
                                                                                 </p>
                                                                             </div>
+
+                                                                            <span
+                                                                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                                                                    form.registrationChargesAdditional
+                                                                                        ? "border-primary bg-primary text-white"
+                                                                                        : "border-slate-300 bg-white text-transparent"
+                                                                                }`}
+                                                                            >
+                    <Check
+                        size={13}
+                        aria-hidden="true"
+                    />
+                </span>
                                                                         </div>
-                                                                    </div>
-                                                                )}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="sm:col-span-2">
+                                                                <FieldLabel>
+                                                                    Commission preference
+                                                                </FieldLabel>
+
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={form.zeroCommission}
+                                                                    onClick={() =>
+                                                                        updateForm({
+                                                                            zeroCommission:
+                                                                                !form.zeroCommission,
+                                                                        })
+                                                                    }
+                                                                    className="flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-primary/40 hover:bg-teal-50/30"
+                                                                >
+        <span
+            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                form.zeroCommission
+                    ? "border-primary bg-primary text-white"
+                    : "border-slate-300 bg-white text-transparent"
+            }`}
+        >
+            <Check
+                size={13}
+                strokeWidth={3}
+                aria-hidden="true"
+            />
+        </span>
+
+                                                                    <span>
+            <span className="block text-sm font-black text-slate-950">
+                Zero Commission
+            </span>
+
+            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                Check this if no agent or
+                brokerage commission applies
+                to this property.
+            </span>
+        </span>
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2444,6 +2826,20 @@ export default function PostPropertyPage() {
                                                                     ? " · Negotiable"
                                                                     : " · Fixed"}
                                                             </p>
+                                                            {form.gstApplicable ||
+                                                            form.registrationChargesAdditional ? (
+                                                                <div className="mt-4 space-y-1.5 text-xs font-bold text-teal-50/90">
+                                                                    {form.gstApplicable ? (
+                                                                        <p>GST applicable</p>
+                                                                    ) : null}
+
+                                                                    {form.registrationChargesAdditional ? (
+                                                                        <p>
+                                                                            Govt. registration charges additional
+                                                                        </p>
+                                                                    ) : null}
+                                                                </div>
+                                                            ) : null}
                                                             <div className="mt-7 rounded-xl border border-white/15 bg-white/10 p-4 text-xs leading-6 text-teal-50/85">
                                                                 Compare the amount with similar
                                                                 properties in the same locality
@@ -2937,126 +3333,113 @@ export default function PostPropertyPage() {
                                                             accounts.
                                                         </p>
 
-                                                        {isDeveloper ? (
-                                                            form.brochure ? (
-                                                                <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4">
-                                                                    <div className="flex items-start gap-3">
-                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-                                      <FileText
-                                          size={18}
-                                          aria-hidden="true"
-                                      />
-                                    </span>
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <p className="truncate text-sm font-black text-slate-950">
-                                                                                {form.brochure.fileName}
-                                                                            </p>
-                                                                            <a
-                                                                                href={form.brochure.url}
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="mt-1 inline-flex text-xs font-black text-primary"
-                                                                            >
-                                                                                Open PDF
-                                                                            </a>
-                                                                        </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                void removeDraftBrochure()
-                                                                            }
-                                                                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
-                                                                            aria-label="Remove brochure"
+                                                        {form.brochure ? (
+                                                            <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                                                <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                <FileText
+                    size={18}
+                    aria-hidden="true"
+                />
+            </span>
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="truncate text-sm font-black text-slate-950">
+                                                                            {form.brochure.fileName}
+                                                                        </p>
+
+                                                                        <a
+                                                                            href={form.brochure.url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="mt-1 inline-flex text-xs font-black text-primary"
                                                                         >
-                                                                            <Trash2
-                                                                                size={15}
-                                                                                aria-hidden="true"
-                                                                            />
-                                                                        </button>
+                                                                            Open PDF
+                                                                        </a>
                                                                     </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-                                                                    <UploadDropzone
-                                                                        endpoint="developerBrochureUploader"
-                                                                        config={{ mode: "auto" }}
-                                                                        onUploadBegin={() =>
-                                                                            setUploadMessage(
-                                                                                "Uploading brochure...",
-                                                                            )
-                                                                        }
-                                                                        onClientUploadComplete={(
-                                                                            result,
-                                                                        ) => {
-                                                                            const file = (
-                                                                                result ?? []
-                                                                            )[0] as
-                                                                                | UploadFile
-                                                                                | undefined;
-                                                                            const descriptor =
-                                                                                file
-                                                                                    ? getUploadedFileDescriptor(
-                                                                                        file,
-                                                                                    )
-                                                                                    : null;
 
-                                                                            if (!descriptor) {
-                                                                                setUploadMessage(
-                                                                                    "Upload completed, but no brochure URL was returned.",
-                                                                                );
-                                                                                return;
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            void removeDraftBrochure()
+                                                                        }
+                                                                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                                                        aria-label="Remove brochure"
+                                                                    >
+                                                                        <Trash2
+                                                                            size={15}
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                                                                <UploadDropzone
+                                                                    endpoint="developerBrochureUploader"
+                                                                    config={{ mode: "auto" }}
+                                                                    onUploadBegin={() =>
+                                                                        setUploadMessage(
+                                                                            "Uploading brochure...",
+                                                                        )
+                                                                    }
+                                                                    onClientUploadComplete={(result) => {
+                                                                        const file = (result ?? [])[0] as
+                                                                            | UploadFile
+                                                                            | undefined;
+
+                                                                        const descriptor = file
+                                                                            ? getUploadedFileDescriptor(file)
+                                                                            : null;
+
+                                                                        if (!descriptor) {
+                                                                            setUploadMessage(
+                                                                                "Upload completed, but no brochure URL was returned.",
+                                                                            );
+                                                                            return;
+                                                                        }
+
+                                                                        setForm((current) => {
+                                                                            const nextGrants = {
+                                                                                ...current.uploadDeleteGrants,
+                                                                            };
+
+                                                                            if (
+                                                                                descriptor.fileKey &&
+                                                                                descriptor.deleteToken
+                                                                            ) {
+                                                                                nextGrants[descriptor.url] = {
+                                                                                    fileKey:
+                                                                                    descriptor.fileKey,
+                                                                                    deleteToken:
+                                                                                    descriptor.deleteToken,
+                                                                                };
                                                                             }
 
-                                                                            setForm((current) => {
-                                                                                const nextGrants = {
-                                                                                    ...current.uploadDeleteGrants,
-                                                                                };
+                                                                            return {
+                                                                                ...current,
+                                                                                brochure: {
+                                                                                    url: descriptor.url,
+                                                                                    fileName:
+                                                                                        descriptor.fileName ||
+                                                                                        "Property brochure.pdf",
+                                                                                },
+                                                                                uploadDeleteGrants:
+                                                                                nextGrants,
+                                                                            };
+                                                                        });
 
-                                                                                if (
-                                                                                    descriptor.fileKey &&
-                                                                                    descriptor.deleteToken
-                                                                                ) {
-                                                                                    nextGrants[
-                                                                                        descriptor.url
-                                                                                        ] = {
-                                                                                        fileKey:
-                                                                                        descriptor.fileKey,
-                                                                                        deleteToken:
-                                                                                        descriptor.deleteToken,
-                                                                                    };
-                                                                                }
-
-                                                                                return {
-                                                                                    ...current,
-                                                                                    brochure: {
-                                                                                        url: descriptor.url,
-                                                                                        fileName:
-                                                                                            descriptor.fileName ||
-                                                                                            "Property brochure.pdf",
-                                                                                    },
-                                                                                    uploadDeleteGrants:
-                                                                                    nextGrants,
-                                                                                };
-                                                                            });
-
-                                                                            setUploadMessage(
-                                                                                "Brochure uploaded successfully.",
-                                                                            );
-                                                                        }}
-                                                                        onUploadError={(error: Error) =>
-                                                                            setUploadMessage(
-                                                                                error.message ||
-                                                                                "Brochure upload failed.",
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                            )
-                                                        ) : (
-                                                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-500">
-                                                                Brochure upload appears after the
-                                                                account is approved as a builder or
-                                                                developer.
+                                                                        setUploadMessage(
+                                                                            "Brochure uploaded successfully.",
+                                                                        );
+                                                                    }}
+                                                                    onUploadError={(error: Error) =>
+                                                                        setUploadMessage(
+                                                                            error.message ||
+                                                                            "Brochure upload failed.",
+                                                                        )
+                                                                    }
+                                                                />
                                                             </div>
                                                         )}
                                                     </div>
@@ -3118,6 +3501,13 @@ export default function PostPropertyPage() {
                                                                 value={`${form.address}, ${form.locality}, ${form.city}, Tamil Nadu`}
                                                             />
                                                             <ReviewRow
+                                                                label="Developer / Builder"
+                                                                value={
+                                                                    form.developerName ||
+                                                                    "Not provided"
+                                                                }
+                                                            />
+                                                            <ReviewRow
                                                                 label="Landmark"
                                                                 value={
                                                                     form.landmark ||
@@ -3128,6 +3518,25 @@ export default function PostPropertyPage() {
                                                                 label="Area"
                                                                 value={`${form.size} ${form.sizeUnit}`}
                                                             />
+                                                            <ReviewRow
+                                                                label="UDS"
+                                                                value={
+                                                                    form.uds
+                                                                        ? `${form.uds}%`
+                                                                        : "Not provided"
+                                                                }
+                                                            />
+                                                            {form.unitConfigurations.length > 0 ? (
+                                                                <ReviewRow
+                                                                    label="Unit configurations"
+                                                                    value={form.unitConfigurations
+                                                                        .map(
+                                                                            (configuration, index) =>
+                                                                                `Unit ${index + 1}: ${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(configuration.price)}`,
+                                                                        )
+                                                                        .join("\n")}
+                                                                />
+                                                            ) : null}
                                                             <ReviewRow
                                                                 label="Ownership"
                                                                 value={form.ownershipType}
@@ -3152,6 +3561,23 @@ export default function PostPropertyPage() {
                                                                     form.negotiable
                                                                         ? "Negotiable"
                                                                         : "Fixed price"
+                                                                }
+                                                            />
+                                                            <ReviewRow
+                                                                label="GST"
+                                                                value={
+                                                                    form.gstApplicable
+                                                                        ? "Applicable"
+                                                                        : "Not applicable"
+                                                                }
+                                                            />
+
+                                                            <ReviewRow
+                                                                label="Govt. registration charges"
+                                                                value={
+                                                                    form.registrationChargesAdditional
+                                                                        ? "Additional"
+                                                                        : "Included / not marked additional"
                                                                 }
                                                             />
                                                             {form.category ===
@@ -3203,15 +3629,13 @@ export default function PostPropertyPage() {
                                                                         .length
                                                                 }/${maxVideoLinks}`}
                                                             />
-                                                            {isDeveloper ? (
-                                                                <ReviewRow
-                                                                    label="Brochure"
-                                                                    value={
-                                                                        form.brochure?.fileName ||
-                                                                        "Not uploaded"
-                                                                    }
-                                                                />
-                                                            ) : null}
+                                                            <ReviewRow
+                                                                label="Brochure"
+                                                                value={
+                                                                    form.brochure?.fileName ||
+                                                                    "Not uploaded"
+                                                                }
+                                                            />
                                                         </ReviewCard>
 
                                                         {form.images[0] ? (
