@@ -1204,16 +1204,21 @@ function getRecommendationReasons(
     plan: PricingPlan,
     audience: PlanAudience,
 ): string[] {
-    const reasons = [
-        `${plan.entitlements.activeProperties} active ${
-            audience === "owner"
+    const capacityLabel =
+        audience === "owner"
+            ? plan.entitlements.activeProperties === 1
+                ? "property"
+                : "properties"
+            : audience === "builder"
                 ? plan.entitlements.activeProperties === 1
-                    ? "property"
-                    : "properties"
-                : plan.entitlements.activeProperties === 1
                     ? "project"
                     : "projects"
-        }`,
+                : plan.entitlements.activeProperties === 1
+                    ? "listing"
+                    : "listings";
+
+    const reasons = [
+        `${plan.entitlements.activeProperties} active ${capacityLabel}`,
         `${plan.entitlements.listingDays}-day listing duration`,
         `${toTitle(
             plan.entitlements.analyticsLevel,
