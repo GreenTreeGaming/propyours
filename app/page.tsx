@@ -1165,171 +1165,171 @@ export default function HomePage() {
 
         <AuthorisedPartners />
 
-        <section className="relative z-20 mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8">
-          <div className="rounded-[2rem] border border-slate-200/80 bg-white/95 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-4">
-            <div className="mb-3 flex flex-col gap-2 px-2 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">
-                  Quick actions
-                </p>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Choose what you would like to do next.
-                </p>
-              </div>
+{/*        <section className="relative z-20 mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8">*/}
+{/*          <div className="rounded-[2rem] border border-slate-200/80 bg-white/95 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-4">*/}
+{/*            <div className="mb-3 flex flex-col gap-2 px-2 py-2 sm:flex-row sm:items-center sm:justify-between">*/}
+{/*              <div>*/}
+{/*                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-primary">*/}
+{/*                  Quick actions*/}
+{/*                </p>*/}
+{/*                <p className="mt-1 text-sm font-semibold text-slate-600">*/}
+{/*                  Choose what you would like to do next.*/}
+{/*                </p>*/}
+{/*              </div>*/}
 
-              <span className="hidden text-xs font-semibold text-slate-400 sm:block">
-        Simple tools for every property journey
-      </span>
-            </div>
+{/*              <span className="hidden text-xs font-semibold text-slate-400 sm:block">*/}
+{/*        Simple tools for every property journey*/}
+{/*      </span>*/}
+{/*            </div>*/}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
-              {/* Buy */}
-              <Link
-                  href="/buy"
-                  className="group relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#0d9488_52%,#14b8a6_100%)] p-6 text-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(13,148,136,0.28)] lg:col-span-4"
-              >
-                <div
-                    className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/20 blur-3xl"
-                    aria-hidden="true"
-                />
+{/*            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">*/}
+{/*              /!* Buy *!/*/}
+{/*              <Link*/}
+{/*                  href="/buy"*/}
+{/*                  className="group relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#0f766e_0%,#0d9488_52%,#14b8a6_100%)] p-6 text-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_rgba(13,148,136,0.28)] lg:col-span-4"*/}
+{/*              >*/}
+{/*                <div*/}
+{/*                    className="pointer-events-none absolute -right-12 -top-16 h-40 w-40 rounded-full bg-white/20 blur-3xl"*/}
+{/*                    aria-hidden="true"*/}
+{/*                />*/}
 
-                <div className="relative flex h-full min-h-[170px] flex-col justify-between">
-                  <div className="flex items-start justify-between gap-5">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20">
-              <Home size={22} aria-hidden="true" />
-            </span>
+{/*                <div className="relative flex h-full min-h-[170px] flex-col justify-between">*/}
+{/*                  <div className="flex items-start justify-between gap-5">*/}
+{/*            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white ring-1 ring-white/20">*/}
+{/*              <Home size={22} aria-hidden="true" />*/}
+{/*            </span>*/}
 
-                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white">
-    Most popular
-</span>
-                  </div>
+{/*                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white">*/}
+{/*    Most popular*/}
+{/*</span>*/}
+{/*                  </div>*/}
 
-                  <div className="mt-8">
-                    <h3 className="text-xl font-black tracking-tight">
-                      Buy a property
-                    </h3>
+{/*                  <div className="mt-8">*/}
+{/*                    <h3 className="text-xl font-black tracking-tight">*/}
+{/*                      Buy a property*/}
+{/*                    </h3>*/}
 
-                    <p className="mt-2 max-w-xs text-sm leading-6 text-teal-50">
-                      Explore apartments, houses, plots, land and commercial
-                      properties for sale.
-                    </p>
+{/*                    <p className="mt-2 max-w-xs text-sm leading-6 text-teal-50">*/}
+{/*                      Explore apartments, houses, plots, land and commercial*/}
+{/*                      properties for sale.*/}
+{/*                    </p>*/}
 
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white">
-              Browse properties
-              <ArrowRight
-                  size={17}
-                  className="transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-              />
-            </span>
-                  </div>
-                </div>
-              </Link>
+{/*                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white">*/}
+{/*              Browse properties*/}
+{/*              <ArrowRight*/}
+{/*                  size={17}*/}
+{/*                  className="transition-transform group-hover:translate-x-1"*/}
+{/*                  aria-hidden="true"*/}
+{/*              />*/}
+{/*            </span>*/}
+{/*                  </div>*/}
+{/*                </div>*/}
+{/*              </Link>*/}
 
-              {/* Sell */}
-              <Link
-                  href="/sell"
-                  className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#ecfdf9_0%,#ffffff_72%)] p-6 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"
-              >
-                <div className="flex h-full min-h-[170px] flex-col justify-between">
-                  <div className="flex items-start justify-between gap-5">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
-              <Store size={22} aria-hidden="true" />
-            </span>
+{/*              /!* Sell *!/*/}
+{/*              <Link*/}
+{/*                  href="/sell"*/}
+{/*                  className="group relative overflow-hidden rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#ecfdf9_0%,#ffffff_72%)] p-6 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"*/}
+{/*              >*/}
+{/*                <div className="flex h-full min-h-[170px] flex-col justify-between">*/}
+{/*                  <div className="flex items-start justify-between gap-5">*/}
+{/*            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">*/}
+{/*              <Store size={22} aria-hidden="true" />*/}
+{/*            </span>*/}
 
-                    <span className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary">
-              List online
-            </span>
-                  </div>
+{/*                    <span className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary">*/}
+{/*              List online*/}
+{/*            </span>*/}
+{/*                  </div>*/}
 
-                  <div className="mt-8">
-                    <h3 className="text-xl font-black tracking-tight text-slate-950">
-                      Sell your property
-                    </h3>
+{/*                  <div className="mt-8">*/}
+{/*                    <h3 className="text-xl font-black tracking-tight text-slate-950">*/}
+{/*                      Sell your property*/}
+{/*                    </h3>*/}
 
-                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">
-                      Create a clear listing and connect with serious buyers across
-                      Tamil Nadu.
-                    </p>
+{/*                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">*/}
+{/*                      Create a clear listing and connect with serious buyers across*/}
+{/*                      Tamil Nadu.*/}
+{/*                    </p>*/}
 
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
-              Post for free
-              <ArrowRight
-                  size={17}
-                  className="transition-transform group-hover:translate-x-1"
-                  aria-hidden="true"
-              />
-            </span>
-                  </div>
-                </div>
-              </Link>
+{/*                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">*/}
+{/*              Post for free*/}
+{/*              <ArrowRight*/}
+{/*                  size={17}*/}
+{/*                  className="transition-transform group-hover:translate-x-1"*/}
+{/*                  aria-hidden="true"*/}
+{/*              />*/}
+{/*            </span>*/}
+{/*                  </div>*/}
+{/*                </div>*/}
+{/*              </Link>*/}
 
-              {/* Builders */}
-              <Link
-                  href="/builders"
-                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"
-              >
-                <div className="flex items-start justify-between">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
-            <Building2 size={20} aria-hidden="true" />
-          </span>
+{/*              /!* Builders *!/*/}
+{/*              <Link*/}
+{/*                  href="/builders"*/}
+{/*                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"*/}
+{/*              >*/}
+{/*                <div className="flex items-start justify-between">*/}
+{/*          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">*/}
+{/*            <Building2 size={20} aria-hidden="true" />*/}
+{/*          </span>*/}
 
-                  <ArrowRight
-                      size={17}
-                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"
-                      aria-hidden="true"
-                  />
-                </div>
+{/*                  <ArrowRight*/}
+{/*                      size={17}*/}
+{/*                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"*/}
+{/*                      aria-hidden="true"*/}
+{/*                  />*/}
+{/*                </div>*/}
 
-                <div className="mt-8">
-                  <h3 className="font-black text-slate-950">
-                    Trusted builders
-                  </h3>
+{/*                <div className="mt-8">*/}
+{/*                  <h3 className="font-black text-slate-950">*/}
+{/*                    Trusted builders*/}
+{/*                  </h3>*/}
 
-                  <p className="mt-2 text-sm leading-5 text-slate-500">
-                    Discover builders and their latest projects.
-                  </p>
+{/*                  <p className="mt-2 text-sm leading-5 text-slate-500">*/}
+{/*                    Discover builders and their latest projects.*/}
+{/*                  </p>*/}
 
-                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">
-            Explore projects
-          </span>
-                </div>
-              </Link>
+{/*                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">*/}
+{/*            Explore projects*/}
+{/*          </span>*/}
+{/*                </div>*/}
+{/*              </Link>*/}
 
-              {/* Compare */}
-              <Link
-                  href="/compare"
-                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"
-              >
-                <div className="flex items-start justify-between">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
-            <Landmark size={20} aria-hidden="true" />
-          </span>
+{/*              /!* Compare *!/*/}
+{/*              <Link*/}
+{/*                  href="/compare"*/}
+{/*                  className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:bg-teal-50/40 hover:shadow-xl lg:col-span-2"*/}
+{/*              >*/}
+{/*                <div className="flex items-start justify-between">*/}
+{/*          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">*/}
+{/*            <Landmark size={20} aria-hidden="true" />*/}
+{/*          </span>*/}
 
-                  <ArrowRight
-                      size={17}
-                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"
-                      aria-hidden="true"
-                  />
-                </div>
+{/*                  <ArrowRight*/}
+{/*                      size={17}*/}
+{/*                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-primary"*/}
+{/*                      aria-hidden="true"*/}
+{/*                  />*/}
+{/*                </div>*/}
 
-                <div className="mt-8">
-                  <h3 className="font-black text-slate-950">
-                    Compare options
-                  </h3>
+{/*                <div className="mt-8">*/}
+{/*                  <h3 className="font-black text-slate-950">*/}
+{/*                    Compare options*/}
+{/*                  </h3>*/}
 
-                  <p className="mt-2 text-sm leading-5 text-slate-500">
-                    Review properties side by side before deciding.
-                  </p>
+{/*                  <p className="mt-2 text-sm leading-5 text-slate-500">*/}
+{/*                    Review properties side by side before deciding.*/}
+{/*                  </p>*/}
 
-                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">
-            Start comparing
-          </span>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
+{/*                  <span className="mt-4 block text-xs font-black uppercase tracking-wider text-primary">*/}
+{/*            Start comparing*/}
+{/*          </span>*/}
+{/*                </div>*/}
+{/*              </Link>*/}
+{/*            </div>*/}
+{/*          </div>*/}
+{/*        </section>*/}
 
         <section className="relative bg-white">
           <div className="mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
@@ -1629,216 +1629,216 @@ export default function HomePage() {
               aria-hidden="true"
           />
 
-          <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">
-            {/* Section heading */}
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-sm font-black uppercase tracking-[0.16em] text-primary">
-                  Browse your way
-                </p>
+        {/*  <div className="relative mx-auto max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-24">*/}
+        {/*    /!* Section heading *!/*/}
+        {/*    <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">*/}
+        {/*      <div>*/}
+        {/*        <p className="text-sm font-black uppercase tracking-[0.16em] text-primary">*/}
+        {/*          Browse your way*/}
+        {/*        </p>*/}
 
-                <h2 className="mt-3 max-w-3xl font-heading text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Start with the property type that fits your plan.
-                </h2>
+        {/*        <h2 className="mt-3 max-w-3xl font-heading text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">*/}
+        {/*          Start with the property type that fits your plan.*/}
+        {/*        </h2>*/}
 
-                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                  Whether you are looking for a place to live, land to build on,
-                  or space for your business, begin with a category and refine
-                  the details later.
-                </p>
-              </div>
+        {/*        <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">*/}
+        {/*          Whether you are looking for a place to live, land to build on,*/}
+        {/*          or space for your business, begin with a category and refine*/}
+        {/*          the details later.*/}
+        {/*        </p>*/}
+        {/*      </div>*/}
 
-              <Link
-                  href="/buy"
-                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-primary shadow-sm transition hover:border-primary hover:bg-teal-50"
-              >
-                Browse all properties
-                <ArrowRight size={17} aria-hidden="true" />
-              </Link>
-            </div>
+        {/*      <Link*/}
+        {/*          href="/buy"*/}
+        {/*          className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-primary shadow-sm transition hover:border-primary hover:bg-teal-50"*/}
+        {/*      >*/}
+        {/*        Browse all properties*/}
+        {/*        <ArrowRight size={17} aria-hidden="true" />*/}
+        {/*      </Link>*/}
+        {/*    </div>*/}
 
-            {/* Bento grid */}
-            <div className="mt-12 grid gap-5 lg:grid-cols-12 lg:grid-rows-2">
-              {/* Apartments — primary category */}
-              <button
-                  type="button"
-                  onClick={() => searchByCategory("Apartment")}
-                  className="group relative min-h-[420px] overflow-hidden rounded-[2rem] text-left shadow-[0_24px_65px_rgba(15,23,42,0.14)] lg:col-span-5 lg:row-span-2"
-              >
-                <Image
-                    src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&q=86&w=1100"
-                    alt="Modern apartment interior"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 42vw"
-                    className="object-cover transition duration-700 group-hover:scale-105"
-                />
+        {/*    /!* Bento grid *!/*/}
+        {/*    <div className="mt-12 grid gap-5 lg:grid-cols-12 lg:grid-rows-2">*/}
+        {/*      /!* Apartments — primary category *!/*/}
+        {/*      <button*/}
+        {/*          type="button"*/}
+        {/*          onClick={() => searchByCategory("Apartment")}*/}
+        {/*          className="group relative min-h-[420px] overflow-hidden rounded-[2rem] text-left shadow-[0_24px_65px_rgba(15,23,42,0.14)] lg:col-span-5 lg:row-span-2"*/}
+        {/*      >*/}
+        {/*        <Image*/}
+        {/*            src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&q=86&w=1100"*/}
+        {/*            alt="Modern apartment interior"*/}
+        {/*            fill*/}
+        {/*            sizes="(max-width: 1024px) 100vw, 42vw"*/}
+        {/*            className="object-cover transition duration-700 group-hover:scale-105"*/}
+        {/*        />*/}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-transparent" />
+        {/*        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-transparent" />*/}
 
-                <div className="absolute left-6 top-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-white backdrop-blur">
-                  <Building2 size={23} aria-hidden="true" />
-                </div>
+        {/*        <div className="absolute left-6 top-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-white backdrop-blur">*/}
+        {/*          <Building2 size={23} aria-hidden="true" />*/}
+        {/*        </div>*/}
 
-                <div className="absolute inset-x-0 bottom-0 p-7 text-white sm:p-8">
-          <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold backdrop-blur">
-            Popular choice
-          </span>
+        {/*        <div className="absolute inset-x-0 bottom-0 p-7 text-white sm:p-8">*/}
+        {/*  <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold backdrop-blur">*/}
+        {/*    Popular choice*/}
+        {/*  </span>*/}
 
-                  <h3 className="mt-4 text-3xl font-black tracking-tight">
-                    Apartments
-                  </h3>
+        {/*          <h3 className="mt-4 text-3xl font-black tracking-tight">*/}
+        {/*            Apartments*/}
+        {/*          </h3>*/}
 
-                  <p className="mt-3 max-w-sm text-sm leading-6 text-slate-200">
-                    Explore flats, studios, gated communities and newly launched
-                    projects across Tamil Nadu.
-                  </p>
+        {/*          <p className="mt-3 max-w-sm text-sm leading-6 text-slate-200">*/}
+        {/*            Explore flats, studios, gated communities and newly launched*/}
+        {/*            projects across Tamil Nadu.*/}
+        {/*          </p>*/}
 
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-primary">
-            Explore apartments
-            <ArrowRight
-                size={17}
-                className="transition group-hover:translate-x-1"
-                aria-hidden="true"
-            />
-          </span>
-                </div>
-              </button>
+        {/*          <span className="mt-6 inline-flex items-center gap-2 text-sm font-black text-primary">*/}
+        {/*    Explore apartments*/}
+        {/*    <ArrowRight*/}
+        {/*        size={17}*/}
+        {/*        className="transition group-hover:translate-x-1"*/}
+        {/*        aria-hidden="true"*/}
+        {/*    />*/}
+        {/*  </span>*/}
+        {/*        </div>*/}
+        {/*      </button>*/}
 
-              {/* Independent homes */}
-              <button
-                  type="button"
-                  onClick={() => searchByCategory("Independent House")}
-                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#f0fdfa_0%,#ffffff_68%)] p-7 text-left transition hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"
-              >
-                <div className="flex items-start justify-between gap-5">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
-            <Home size={23} aria-hidden="true" />
-          </span>
+        {/*      /!* Independent homes *!/*/}
+        {/*      <button*/}
+        {/*          type="button"*/}
+        {/*          onClick={() => searchByCategory("Independent House")}*/}
+        {/*          className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#f0fdfa_0%,#ffffff_68%)] p-7 text-left transition hover:-translate-y-1 hover:border-teal-200 hover:shadow-xl lg:col-span-4"*/}
+        {/*      >*/}
+        {/*        <div className="flex items-start justify-between gap-5">*/}
+        {/*  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">*/}
+        {/*    <Home size={23} aria-hidden="true" />*/}
+        {/*  </span>*/}
 
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition group-hover:border-primary group-hover:text-primary">
-            <ArrowRight
-                size={18}
-                className="transition group-hover:translate-x-0.5"
-                aria-hidden="true"
-            />
-          </span>
-                </div>
+        {/*          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition group-hover:border-primary group-hover:text-primary">*/}
+        {/*    <ArrowRight*/}
+        {/*        size={18}*/}
+        {/*        className="transition group-hover:translate-x-0.5"*/}
+        {/*        aria-hidden="true"*/}
+        {/*    />*/}
+        {/*  </span>*/}
+        {/*        </div>*/}
 
-                <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">
-                  Independent homes
-                </h3>
+        {/*        <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">*/}
+        {/*          Independent homes*/}
+        {/*        </h3>*/}
 
-                <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
-                  Houses, villas, duplexes and independent floors for families
-                  who want more space and privacy.
-                </p>
+        {/*        <p className="mt-3 max-w-sm text-sm leading-6 text-slate-600">*/}
+        {/*          Houses, villas, duplexes and independent floors for families*/}
+        {/*          who want more space and privacy.*/}
+        {/*        </p>*/}
 
-                <div className="mt-7 flex flex-wrap gap-2">
-                  {["Villas", "Duplexes", "Independent floors"].map((item) => (
-                      <span
-                          key={item}
-                          className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
-                      >
-              {item}
-            </span>
-                  ))}
-                </div>
-              </button>
+        {/*        <div className="mt-7 flex flex-wrap gap-2">*/}
+        {/*          {["Villas", "Duplexes", "Independent floors"].map((item) => (*/}
+        {/*              <span*/}
+        {/*                  key={item}*/}
+        {/*                  className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"*/}
+        {/*              >*/}
+        {/*      {item}*/}
+        {/*    </span>*/}
+        {/*          ))}*/}
+        {/*        </div>*/}
+        {/*      </button>*/}
 
-              {/* Plots and land */}
-              <button
-                  type="button"
-                  onClick={() => searchByCategory("Plot")}
-                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#fffbeb_0%,#ffffff_70%)] p-7 text-left transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl lg:col-span-3"
-              >
-                <div className="flex items-start justify-between gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-            <Trees size={23} aria-hidden="true" />
-          </span>
+        {/*      /!* Plots and land *!/*/}
+        {/*      <button*/}
+        {/*          type="button"*/}
+        {/*          onClick={() => searchByCategory("Plot")}*/}
+        {/*          className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,#fffbeb_0%,#ffffff_70%)] p-7 text-left transition hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl lg:col-span-3"*/}
+        {/*      >*/}
+        {/*        <div className="flex items-start justify-between gap-4">*/}
+        {/*  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">*/}
+        {/*    <Trees size={23} aria-hidden="true" />*/}
+        {/*  </span>*/}
 
-                  <ArrowRight
-                      size={18}
-                      className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-amber-600"
-                      aria-hidden="true"
-                  />
-                </div>
+        {/*          <ArrowRight*/}
+        {/*              size={18}*/}
+        {/*              className="text-slate-300 transition group-hover:translate-x-1 group-hover:text-amber-600"*/}
+        {/*              aria-hidden="true"*/}
+        {/*          />*/}
+        {/*        </div>*/}
 
-                <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">
-                  Plots & land
-                </h3>
+        {/*        <h3 className="mt-8 text-2xl font-black tracking-tight text-slate-950">*/}
+        {/*          Plots & land*/}
+        {/*        </h3>*/}
 
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  Residential plots, agricultural land and farm land for your
-                  next investment or build.
-                </p>
+        {/*        <p className="mt-3 text-sm leading-6 text-slate-600">*/}
+        {/*          Residential plots, agricultural land and farm land for your*/}
+        {/*          next investment or build.*/}
+        {/*        </p>*/}
 
-                <span className="mt-7 inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
-          Build or invest
-        </span>
-              </button>
+        {/*        <span className="mt-7 inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">*/}
+        {/*  Build or invest*/}
+        {/*</span>*/}
+        {/*      </button>*/}
 
-              {/* Commercial */}
-              <button
-                  type="button"
-                  onClick={() => searchByCategory("Commercial")}
-                  className="group relative overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-left text-white transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.25)] lg:col-span-7"
-              >
-                <div
-                    className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-teal-500/20 blur-3xl"
-                    aria-hidden="true"
-                />
+        {/*      /!* Commercial *!/*/}
+        {/*      <button*/}
+        {/*          type="button"*/}
+        {/*          onClick={() => searchByCategory("Commercial")}*/}
+        {/*          className="group relative overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-left text-white transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.25)] lg:col-span-7"*/}
+        {/*      >*/}
+        {/*        <div*/}
+        {/*            className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-teal-500/20 blur-3xl"*/}
+        {/*            aria-hidden="true"*/}
+        {/*        />*/}
 
-                <div className="relative flex h-full flex-col justify-between gap-8 sm:flex-row sm:items-end">
-                  <div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300">
-              <Store size={23} aria-hidden="true" />
-            </span>
+        {/*        <div className="relative flex h-full flex-col justify-between gap-8 sm:flex-row sm:items-end">*/}
+        {/*          <div>*/}
+        {/*    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-teal-300">*/}
+        {/*      <Store size={23} aria-hidden="true" />*/}
+        {/*    </span>*/}
 
-                    <h3 className="mt-6 text-2xl font-black tracking-tight">
-                      Commercial property
-                    </h3>
+        {/*            <h3 className="mt-6 text-2xl font-black tracking-tight">*/}
+        {/*              Commercial property*/}
+        {/*            </h3>*/}
 
-                    <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300">
-                      Find shops, offices, showrooms and business spaces in
-                      locations that support your next move.
-                    </p>
-                  </div>
+        {/*            <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300">*/}
+        {/*              Find shops, offices, showrooms and business spaces in*/}
+        {/*              locations that support your next move.*/}
+        {/*            </p>*/}
+        {/*          </div>*/}
 
-                  <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition group-hover:bg-teal-300">
-            Explore commercial
-            <ArrowRight size={17} aria-hidden="true" />
-          </span>
-                </div>
-              </button>
-            </div>
+        {/*          <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition group-hover:bg-teal-300">*/}
+        {/*    Explore commercial*/}
+        {/*    <ArrowRight size={17} aria-hidden="true" />*/}
+        {/*  </span>*/}
+        {/*        </div>*/}
+        {/*      </button>*/}
+        {/*    </div>*/}
 
-            {/* Guidance strip */}
-            <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-          <Search size={19} aria-hidden="true" />
-        </span>
+        {/*    /!* Guidance strip *!/*/}
+        {/*    <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">*/}
+        {/*      <div className="flex items-start gap-3">*/}
+        {/*<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">*/}
+        {/*  <Search size={19} aria-hidden="true" />*/}
+        {/*</span>*/}
 
-                <div>
-                  <p className="font-black text-slate-900">
-                    Not sure which category to choose?
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Start with a city or locality and view every available
-                    property type in that area.
-                  </p>
-                </div>
-              </div>
+        {/*        <div>*/}
+        {/*          <p className="font-black text-slate-900">*/}
+        {/*            Not sure which category to choose?*/}
+        {/*          </p>*/}
+        {/*          <p className="mt-1 text-sm text-slate-500">*/}
+        {/*            Start with a city or locality and view every available*/}
+        {/*            property type in that area.*/}
+        {/*          </p>*/}
+        {/*        </div>*/}
+        {/*      </div>*/}
 
-              <Link
-                  href="/buy"
-                  className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-primary hover:text-primary-dark"
-              >
-                Search by location
-                <ArrowRight size={17} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
+        {/*      <Link*/}
+        {/*          href="/buy"*/}
+        {/*          className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-primary hover:text-primary-dark"*/}
+        {/*      >*/}
+        {/*        Search by location*/}
+        {/*        <ArrowRight size={17} aria-hidden="true" />*/}
+        {/*      </Link>*/}
+        {/*    </div>*/}
+        {/*  </div>*/}
         </section>
 
         <section className="relative overflow-hidden border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f7faf9_100%)]">
