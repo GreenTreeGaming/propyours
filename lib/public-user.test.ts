@@ -30,6 +30,7 @@ describe("public user DTO", () => {
             bio: "Bio",
             company: "Company",
             city: "Chennai",
+            reraNumber: "",
             builderPlan: {
                 tier: "builder-elite",
                 isActive: true,
