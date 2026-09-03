@@ -57,6 +57,15 @@ export interface PropertyEditorProperty {
     landmark?: string;
     developerName?: string;
     uds?: number | null;
+
+    unitConfigurations?: Array<{
+        _id?: string;
+        bedrooms: number;
+        size: number;
+        sizeUnit: string;
+        price: number;
+    }>;
+
     size: number;
     sizeUnit?: string;
     dimensions?: string;
@@ -80,6 +89,7 @@ interface FullPropertyEditorModalProps {
     isOpen: boolean;
     property: PropertyEditorProperty | null;
     plan: PlanDefinition;
+    canUploadBrochure: boolean;
     onClose: () => void;
     onSaved: (
         property: PropertyEditorProperty,
@@ -110,6 +120,14 @@ interface EditorUploadedFileDescriptor {
     fileName?: string;
 }
 
+interface UnitConfigurationForm {
+    id: string;
+    bedrooms: string;
+    size: string;
+    sizeUnit: string;
+    price: string;
+}
+
 interface EditorForm {
     purpose: string;
     propertyType: string;
@@ -121,6 +139,7 @@ interface EditorForm {
     landmark: string;
     developerName: string;
     uds: string;
+    unitConfigurations: UnitConfigurationForm[];
     size: string;
     sizeUnit: string;
     dimensions: string;
@@ -221,6 +240,28 @@ function createEditorForm(
             property.uds === undefined
                 ? ""
                 : String(property.uds),
+
+        unitConfigurations:
+            property.unitConfigurations?.map(
+                (configuration, index) => ({
+                    id:
+                        configuration._id ??
+                        `unit-${index}`,
+                    bedrooms: String(
+                        configuration.bedrooms,
+                    ),
+                    size: String(
+                        configuration.size,
+                    ),
+                    sizeUnit:
+                        configuration.sizeUnit ||
+                        "sqft",
+                    price: String(
+                        configuration.price,
+                    ),
+                }),
+            ) ?? [],
+
         size:
             property.size === undefined
                 ? ""
@@ -442,6 +483,7 @@ export default function FullPropertyEditorModal({
                                                     isOpen,
                                                     property,
                                                     plan,
+                                                    canUploadBrochure,
                                                     onClose,
                                                     onSaved,
                                                 }: FullPropertyEditorModalProps) {
@@ -572,6 +614,77 @@ export default function FullPropertyEditorModal({
                 }
                 : current,
         );
+    }
+
+    function addUnitConfiguration() {
+        setForm((current) => {
+            if (!current) {
+                return current;
+            }
+
+            return {
+                ...current,
+                unitConfigurations: [
+                    ...current.unitConfigurations,
+                    {
+                        id:
+                            typeof crypto !==
+                            "undefined" &&
+                            "randomUUID" in crypto
+                                ? crypto.randomUUID()
+                                : `${Date.now()}-${Math.random()}`,
+                        bedrooms: "",
+                        size: "",
+                        sizeUnit: "sqft",
+                        price: "",
+                    },
+                ],
+            };
+        });
+    }
+
+    function updateUnitConfiguration(
+        id: string,
+        patch: Partial<UnitConfigurationForm>,
+    ) {
+        setForm((current) => {
+            if (!current) {
+                return current;
+            }
+
+            return {
+                ...current,
+                unitConfigurations:
+                    current.unitConfigurations.map(
+                        (configuration) =>
+                            configuration.id === id
+                                ? {
+                                    ...configuration,
+                                    ...patch,
+                                }
+                                : configuration,
+                    ),
+            };
+        });
+    }
+
+    function removeUnitConfiguration(
+        id: string,
+    ) {
+        setForm((current) => {
+            if (!current) {
+                return current;
+            }
+
+            return {
+                ...current,
+                unitConfigurations:
+                    current.unitConfigurations.filter(
+                        (configuration) =>
+                            configuration.id !== id,
+                    ),
+            };
+        });
     }
 
     function getPendingUploadFiles(
@@ -809,6 +922,49 @@ export default function FullPropertyEditorModal({
                     "Enter a valid asking price.";
             }
 
+            if (form.unitConfigurations.length > 50) {
+                nextErrors.unitConfigurations =
+                    "A property can have at most 50 unit configurations.";
+            } else {
+                const invalidUnitConfiguration =
+                    form.unitConfigurations.some(
+                        (configuration) => {
+                            if (
+                                !configuration.bedrooms.trim() ||
+                                !configuration.size.trim() ||
+                                !configuration.price.trim()
+                            ) {
+                                return true;
+                            }
+
+                            const bedrooms = Number(
+                                configuration.bedrooms,
+                            );
+                            const size = Number(
+                                configuration.size,
+                            );
+                            const price = Number(
+                                configuration.price,
+                            );
+
+                            return (
+                                !Number.isInteger(bedrooms) ||
+                                bedrooms < 1 ||
+                                bedrooms > 20 ||
+                                !Number.isFinite(size) ||
+                                size <= 0 ||
+                                !Number.isFinite(price) ||
+                                price <= 0
+                            );
+                        },
+                    );
+
+                if (invalidUnitConfiguration) {
+                    nextErrors.unitConfigurations =
+                        "Complete the BHK, size and price for every unit configuration.";
+                }
+            }
+
             for (const [key, value] of [
                 ["bedrooms", form.bedrooms],
                 ["bathrooms", form.bathrooms],
@@ -972,6 +1128,27 @@ export default function FullPropertyEditorModal({
                 uds: toOptionalNumber(form.uds),
                 size: Number(form.size),
                 sizeUnit: form.sizeUnit,
+
+                unitConfigurations:
+                    isLand ||
+                    form.propertyType === "Commercial"
+                        ? []
+                        : form.unitConfigurations.map(
+                            (configuration) => ({
+                                bedrooms: Number(
+                                    configuration.bedrooms,
+                                ),
+                                size: Number(
+                                    configuration.size,
+                                ),
+                                sizeUnit:
+                                configuration.sizeUnit,
+                                price: Number(
+                                    configuration.price,
+                                ),
+                            }),
+                        ),
+
                 dimensions:
                     form.dimensions.trim(),
                 ownershipType:
@@ -1005,8 +1182,10 @@ export default function FullPropertyEditorModal({
                         .filter(Boolean),
             };
 
-            payload.brochure =
-                form.brochure;
+            if (canUploadBrochure) {
+                payload.brochure =
+                    form.brochure;
+            }
 
             const response = await fetch(
                 `/api/property/${property._id}`,
@@ -1357,16 +1536,17 @@ export default function FullPropertyEditorModal({
                                                                             propertyType,
                                                                         );
 
+                                                                    const nextIsCommercial =
+                                                                        propertyType === "Commercial";
+
                                                                     updateForm({
                                                                         propertyType,
-                                                                        ...(nextIsLand
+                                                                        ...(nextIsLand || nextIsCommercial
                                                                             ? {
-                                                                                bedrooms:
-                                                                                    "",
-                                                                                bathrooms:
-                                                                                    "",
-                                                                                floors:
-                                                                                    "",
+                                                                                bedrooms: "",
+                                                                                bathrooms: "",
+                                                                                floors: "",
+                                                                                unitConfigurations: [],
                                                                             }
                                                                             : {}),
                                                                     });
@@ -1752,7 +1932,7 @@ export default function FullPropertyEditorModal({
                                                                 <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
                                                                     <input
                                                                         type="number"
-                                                                        min="0"
+                                                                        min="0.01"
                                                                         step="any"
                                                                         value={
                                                                             form.size
@@ -1828,8 +2008,7 @@ export default function FullPropertyEditorModal({
                                                                         step="0.01"
                                                                         value={form.uds}
                                                                         onChange={(event) => {
-                                                                            const value =
-                                                                                event.target.value;
+                                                                            const value = event.target.value;
 
                                                                             if (
                                                                                 value !== "" &&
@@ -1852,9 +2031,7 @@ export default function FullPropertyEditorModal({
                                                                 </div>
 
                                                                 {errors.uds ? (
-                                                                    <ErrorText>
-                                                                        {errors.uds}
-                                                                    </ErrorText>
+                                                                    <ErrorText>{errors.uds}</ErrorText>
                                                                 ) : null}
                                                             </label>
 
@@ -2067,6 +2244,213 @@ export default function FullPropertyEditorModal({
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {!isLand &&
+                                                form.propertyType !== "Commercial" ? (
+                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div>
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
+                                                                    Available configurations
+                                                                </p>
+
+                                                                <h3 className="mt-2 text-lg font-black text-slate-950">
+                                                                    BHK unit options
+                                                                </h3>
+
+                                                                <p className="mt-1 text-sm leading-6 text-slate-500">
+                                                                    Add the different unit sizes and
+                                                                    prices available in this project.
+                                                                </p>
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={addUnitConfiguration}
+                                                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white"
+                                                            >
+                                                                <Plus
+                                                                    size={15}
+                                                                    aria-hidden="true"
+                                                                />
+                                                                Add unit
+                                                            </button>
+                                                        </div>
+
+                                                        {form.unitConfigurations.length >
+                                                        0 ? (
+                                                            <div className="mt-5 space-y-4">
+                                                                {form.unitConfigurations.map(
+                                                                    (configuration, index) => (
+                                                                        <div
+                                                                            key={configuration.id}
+                                                                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                                                        >
+                                                                            <div className="mb-4 flex items-center justify-between">
+                                                                                <p className="text-xs font-black text-slate-950">
+                                                                                    Unit {index + 1}
+                                                                                </p>
+
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() =>
+                                                                                        removeUnitConfiguration(
+                                                                                            configuration.id,
+                                                                                        )
+                                                                                    }
+                                                                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-600"
+                                                                                    aria-label={`Remove unit ${index + 1}`}
+                                                                                >
+                                                                                    <Trash2
+                                                                                        size={15}
+                                                                                        aria-hidden="true"
+                                                                                    />
+                                                                                </button>
+                                                                            </div>
+
+                                                                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        BHK
+                                                                                    </FieldLabel>
+
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="1"
+                                                                                        max="20"
+                                                                                        step="1"
+                                                                                        value={
+                                                                                            configuration.bedrooms
+                                                                                        }
+                                                                                        onChange={(event) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                {
+                                                                                                    bedrooms:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                },
+                                                                                            )
+                                                                                        }
+                                                                                        placeholder="e.g. 2"
+                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                    />
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        Built-up size
+                                                                                    </FieldLabel>
+
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="0.01"
+                                                                                        step="any"
+                                                                                        value={
+                                                                                            configuration.size
+                                                                                        }
+                                                                                        onChange={(event) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                {
+                                                                                                    size:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                },
+                                                                                            )
+                                                                                        }
+                                                                                        placeholder="e.g. 1200"
+                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                    />
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        Size unit
+                                                                                    </FieldLabel>
+
+                                                                                    <SelectField
+                                                                                        value={
+                                                                                            configuration.sizeUnit
+                                                                                        }
+                                                                                        ariaLabel={`Unit ${index + 1} size unit`}
+                                                                                        onChange={(
+                                                                                            sizeUnit,
+                                                                                        ) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                {
+                                                                                                    sizeUnit,
+                                                                                                },
+                                                                                            )
+                                                                                        }
+                                                                                    >
+                                                                                        {SIZE_UNITS.map(
+                                                                                            (unit) => (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        unit.value
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        unit.value
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        unit.label
+                                                                                                    }
+                                                                                                </option>
+                                                                                            ),
+                                                                                        )}
+                                                                                    </SelectField>
+                                                                                </label>
+
+                                                                                <label>
+                                                                                    <FieldLabel required>
+                                                                                        Price
+                                                                                    </FieldLabel>
+
+                                                                                    <input
+                                                                                        type="number"
+                                                                                        min="1"
+                                                                                        value={
+                                                                                            configuration.price
+                                                                                        }
+                                                                                        onChange={(event) =>
+                                                                                            updateUnitConfiguration(
+                                                                                                configuration.id,
+                                                                                                {
+                                                                                                    price:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                },
+                                                                                            )
+                                                                                        }
+                                                                                        placeholder="e.g. 6500000"
+                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                    />
+                                                                                </label>
+                                                                            </div>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
+                                                                No separate BHK configurations have
+                                                                been added.
+                                                            </div>
+                                                        )}
+
+                                                        {errors.unitConfigurations ? (
+                                                            <ErrorText>
+                                                                {errors.unitConfigurations}
+                                                            </ErrorText>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
 
                                                 {!isLand ? (
                                                     <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -2988,6 +3372,22 @@ export default function FullPropertyEditorModal({
                                                                     form.ownershipType
                                                                 }
                                                             />
+                                                            <ReviewRow
+                                                                label="Developer / Builder"
+                                                                value={
+                                                                    form.developerName ||
+                                                                    "Not provided"
+                                                                }
+                                                            />
+
+                                                            <ReviewRow
+                                                                label="UDS"
+                                                                value={
+                                                                    form.uds
+                                                                        ? `${form.uds}%`
+                                                                        : "Not provided"
+                                                                }
+                                                            />
                                                         </ReviewCard>
 
                                                         <ReviewCard
@@ -3010,6 +3410,17 @@ export default function FullPropertyEditorModal({
                                                                         : "Fixed price"
                                                                 }
                                                             />
+                                                            {form.unitConfigurations.length > 0 ? (
+                                                                <ReviewRow
+                                                                    label="Unit configurations"
+                                                                    value={form.unitConfigurations
+                                                                        .map(
+                                                                            (configuration) =>
+                                                                                `${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(configuration.price)}`,
+                                                                        )
+                                                                        .join("\n")}
+                                                                />
+                                                            ) : null}
                                                             {!isLand ? (
                                                                 <ReviewRow
                                                                     label="Residential specs"
