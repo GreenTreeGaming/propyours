@@ -28,7 +28,28 @@ import {
 import PhoneOtp from "@/models/PhoneOtp";
 import User from "@/models/User";
 
+// function generateOtp(): string {
+//     if (
+//         process.env.NODE_ENV !==
+//         "production"
+//     ) {
+//         return "123456";
+//     }
+//
+//     return randomInt(
+//         100_000,
+//         1_000_000,
+//     ).toString();
+// }
+
 function generateOtp(): string {
+    const testOtp =
+        process.env.TEST_PHONE_OTP?.trim();
+
+    if (testOtp) {
+        return testOtp;
+    }
+
     if (
         process.env.NODE_ENV !==
         "production"
