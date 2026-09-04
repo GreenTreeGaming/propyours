@@ -118,16 +118,38 @@ const POPULAR_SEARCHES: Array<{
   },
 ];
 
-function formatPrice(price: number): string {
+function formatCompactNumber(
+    value: number,
+    maximumFractionDigits: number,
+): string {
+  return new Intl.NumberFormat(
+      "en-IN",
+      {
+        maximumFractionDigits,
+      },
+  ).format(value);
+}
+
+function formatPrice(
+    price: number,
+): string {
   if (price >= 10_000_000) {
-    return `₹${(price / 10_000_000).toFixed(price % 10_000_000 === 0 ? 0 : 2)} Cr`;
+    return `₹${formatCompactNumber(
+        price / 10_000_000,
+        2,
+    )} Cr`;
   }
 
   if (price >= 100_000) {
-    return `₹${(price / 100_000).toFixed(price % 100_000 === 0 ? 0 : 1)} L`;
+    return `₹${formatCompactNumber(
+        price / 100_000,
+        2,
+    )} L`;
   }
 
-  return `₹${price.toLocaleString("en-IN")}`;
+  return `₹${price.toLocaleString(
+      "en-IN",
+  )}`;
 }
 
 function getPropertyBadge(property: Property): string | null {

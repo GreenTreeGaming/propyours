@@ -92,6 +92,193 @@ function isValidUploadThingUrl(
     }
 }
 
+const ALLOWED_SIZE_UNITS = [
+    "sqft",
+    "sqyd",
+    "sqm",
+    "acre",
+    "kanal",
+    "marla",
+] as const;
+
+interface SanitizedUnitConfiguration {
+    bedrooms: number;
+    size: number;
+    sizeUnit:
+        (typeof ALLOWED_SIZE_UNITS)[number];
+    uds: number | null;
+    price: number;
+}
+
+function parseUnitConfigurations(
+    value: unknown,
+):
+    | {
+    success: true;
+    units: SanitizedUnitConfiguration[];
+}
+    | {
+    success: false;
+    error: string;
+} {
+    if (!Array.isArray(value)) {
+        return {
+            success: false,
+            error:
+                "Unit configurations must be an array.",
+        };
+    }
+
+    if (value.length > 50) {
+        return {
+            success: false,
+            error:
+                "A property can have at most 50 unit configurations.",
+        };
+    }
+
+    const units:
+        SanitizedUnitConfiguration[] =
+        [];
+
+    for (const configuration of value) {
+        if (
+            typeof configuration !==
+            "object" ||
+            configuration === null
+        ) {
+            return {
+                success: false,
+                error:
+                    "One or more unit configurations are invalid.",
+            };
+        }
+
+        const record =
+            configuration as Record<
+                string,
+                unknown
+            >;
+
+        const bedrooms =
+            record.bedrooms;
+
+        const size =
+            record.size;
+
+        const sizeUnit =
+            record.sizeUnit;
+
+        const uds =
+            record.uds;
+
+        const price =
+            record.price;
+
+        if (
+            typeof bedrooms !== "number" ||
+            !Number.isFinite(
+                bedrooms,
+            ) ||
+            !Number.isInteger(
+                bedrooms,
+            ) ||
+            bedrooms < 0 ||
+            bedrooms > 20
+        ) {
+            return {
+                success: false,
+                error:
+                    "BHK must be a whole number between 0 and 20.",
+            };
+        }
+
+        if (
+            typeof size !== "number" ||
+            !Number.isFinite(size) ||
+            size <= 0
+        ) {
+            return {
+                success: false,
+                error:
+                    "Every unit must have a valid built-up size.",
+            };
+        }
+
+        if (
+            typeof sizeUnit !==
+            "string" ||
+            !(
+                ALLOWED_SIZE_UNITS as readonly string[]
+            ).includes(sizeUnit)
+        ) {
+            return {
+                success: false,
+                error:
+                    "Every unit must have a valid size unit.",
+            };
+        }
+
+        const normalizedUds =
+            uds === null ||
+            uds === undefined ||
+            uds === ""
+                ? null
+                : uds;
+
+        if (
+            normalizedUds !== null &&
+            (
+                typeof normalizedUds !==
+                "number" ||
+                !Number.isFinite(
+                    normalizedUds,
+                ) ||
+                normalizedUds < 0 ||
+                normalizedUds > 100
+            )
+        ) {
+            return {
+                success: false,
+                error:
+                    "Unit UDS must be between 0% and 100%.",
+            };
+        }
+
+        if (
+            typeof price !== "number" ||
+            !Number.isFinite(price) ||
+            price <= 0
+        ) {
+            return {
+                success: false,
+                error:
+                    "Every unit must have a valid asking price.",
+            };
+        }
+
+        units.push({
+            bedrooms,
+            size,
+
+            sizeUnit:
+                sizeUnit as SanitizedUnitConfiguration["sizeUnit"],
+
+            uds:
+                normalizedUds === null
+                    ? null
+                    : normalizedUds,
+
+            price,
+        });
+    }
+
+    return {
+        success: true,
+        units,
+    };
+}
+
 
 async function getUnreferencedMediaUrls(
     values: Array<
@@ -519,6 +706,70 @@ export async function PUT(
             );
         }
 
+        const isCommercial =
+            nextPropertyType ===
+            "Commercial";
+
+        let unitConfigurations:
+            | SanitizedUnitConfiguration[]
+            | undefined;
+
+        if (isLand || isCommercial) {
+            /*
+             * Residential-only data must not
+             * survive after changing the property
+             * to land or commercial.
+             */
+            unitConfigurations = [];
+        } else if (
+            "unitConfigurations" in body
+        ) {
+            const parsedUnits =
+                parseUnitConfigurations(
+                    body.unitConfigurations,
+                );
+
+            if (!parsedUnits.success) {
+                return NextResponse.json(
+                    {
+                        error:
+                        parsedUnits.error,
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            unitConfigurations =
+                parsedUnits.units;
+        }
+
+        if ("uds" in body) {
+            const uds = body.uds;
+
+            if (
+                uds !== null &&
+                uds !== undefined &&
+                (
+                    typeof uds !== "number" ||
+                    !Number.isFinite(uds) ||
+                    uds < 0 ||
+                    uds > 100
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "UDS must be between 0% and 100%.",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+        }
+
         if (
             "negotiable" in body &&
             typeof body.negotiable !==
@@ -715,8 +966,14 @@ export async function PUT(
                     : undefined,
 
             uds: body.uds,
+
             size: body.size,
-            sizeUnit: body.sizeUnit,
+
+            sizeUnit:
+            body.sizeUnit,
+
+            unitConfigurations,
+
             dimensions:
             body.dimensions,
             ownershipType:

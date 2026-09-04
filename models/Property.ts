@@ -6,7 +6,7 @@ const UnitConfigurationSchema =
             bedrooms: {
                 type: Number,
                 required: true,
-                min: 1,
+                min: 0,
                 max: 20,
             },
 
@@ -27,6 +27,13 @@ const UnitConfigurationSchema =
                     "marla",
                 ],
                 default: "sqft",
+            },
+
+            uds: {
+                type: Number,
+                min: 0,
+                max: 100,
+                default: null,
             },
 
             price: {

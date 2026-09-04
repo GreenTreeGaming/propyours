@@ -548,16 +548,30 @@ export async function POST(
             };
         }
 
-        const unitConfigurations =
+        const rawUnitConfigurations =
             !isLand &&
             !isCommercial &&
-            Array.isArray(body.unitConfigurations)
+            Array.isArray(
+                body.unitConfigurations,
+            )
                 ? body.unitConfigurations
                 : [];
 
-        for (const configuration of unitConfigurations) {
+        const unitConfigurations: Array<{
+            bedrooms: number;
+            size: number;
+            sizeUnit: string;
+            uds: number | null;
+            price: number;
+        }> = [];
+
+        for (
+            const configuration of
+            rawUnitConfigurations
+            ) {
             if (
-                typeof configuration !== "object" ||
+                typeof configuration !==
+                "object" ||
                 configuration === null
             ) {
                 return NextResponse.json(
@@ -586,10 +600,25 @@ export async function POST(
                     ? configuration.sizeUnit
                     : undefined;
 
+            const uds =
+                "uds" in configuration
+                    ? configuration.uds
+                    : null;
+
             const price =
                 "price" in configuration
                     ? configuration.price
                     : undefined;
+
+            const validUds =
+                uds === null ||
+                uds === undefined ||
+                (
+                    typeof uds === "number" &&
+                    Number.isFinite(uds) &&
+                    uds >= 0 &&
+                    uds <= 100
+                );
 
             if (
                 typeof bedrooms !== "number" ||
@@ -597,9 +626,11 @@ export async function POST(
                 !Number.isInteger(bedrooms) ||
                 bedrooms < 0 ||
                 bedrooms > 20 ||
+
                 typeof size !== "number" ||
                 !Number.isFinite(size) ||
                 size <= 0 ||
+
                 typeof sizeUnit !== "string" ||
                 ![
                     "sqft",
@@ -609,6 +640,9 @@ export async function POST(
                     "kanal",
                     "marla",
                 ].includes(sizeUnit) ||
+
+                !validUds ||
+
                 typeof price !== "number" ||
                 !Number.isFinite(price) ||
                 price <= 0
@@ -616,13 +650,24 @@ export async function POST(
                 return NextResponse.json(
                     {
                         error:
-                            "Complete the BHK, size, unit and price for every unit configuration.",
+                            "Complete the BHK, built-up size, unit and price for every unit configuration. UDS must be between 0% and 100% when provided.",
                     },
                     {
                         status: 400,
                     },
                 );
             }
+
+            unitConfigurations.push({
+                bedrooms,
+                size,
+                sizeUnit,
+                uds:
+                    typeof uds === "number"
+                        ? uds
+                        : null,
+                price,
+            });
         }
 
         const listingExpiresAt =

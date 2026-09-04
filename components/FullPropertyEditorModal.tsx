@@ -63,6 +63,7 @@ export interface PropertyEditorProperty {
         bedrooms: number;
         size: number;
         sizeUnit: string;
+        uds?: number | null;
         price: number;
     }>;
 
@@ -119,12 +120,19 @@ interface EditorUploadedFileDescriptor {
     fileName?: string;
 }
 
+type UnitPriceUnit =
+    | "rupee"
+    | "lakh"
+    | "crore";
+
 interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
     size: string;
     sizeUnit: string;
+    uds: string;
     price: string;
+    priceUnit: UnitPriceUnit;
 }
 
 interface EditorForm {
@@ -216,6 +224,121 @@ const STEPS: EditorStep[] = [
     },
 ];
 
+const UNIT_PRICE_MULTIPLIERS: Record<
+    UnitPriceUnit,
+    number
+> = {
+    rupee: 1,
+    lakh: 100_000,
+    crore: 10_000_000,
+};
+
+function unitPriceToRupees(
+    value: string,
+    unit: UnitPriceUnit,
+): number {
+    const amount = Number(value);
+
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ) {
+        return Number.NaN;
+    }
+
+    return (
+        amount *
+        UNIT_PRICE_MULTIPLIERS[unit]
+    );
+}
+
+function getUnitPriceInput(
+    price: number,
+): {
+    value: string;
+    unit: UnitPriceUnit;
+} {
+    if (
+        !Number.isFinite(price) ||
+        price <= 0
+    ) {
+        return {
+            value: "",
+            unit: "lakh",
+        };
+    }
+
+    if (price >= 10_000_000) {
+        return {
+            value: String(
+                Number(
+                    (
+                        price /
+                        10_000_000
+                    ).toFixed(2),
+                ),
+            ),
+            unit: "crore",
+        };
+    }
+
+    if (price >= 100_000) {
+        return {
+            value: String(
+                Number(
+                    (
+                        price /
+                        100_000
+                    ).toFixed(2),
+                ),
+            ),
+            unit: "lakh",
+        };
+    }
+
+    return {
+        value: String(price),
+        unit: "rupee",
+    };
+}
+
+function formatCompactPrice(
+    price: number,
+): string {
+    if (
+        !Number.isFinite(price) ||
+        price <= 0
+    ) {
+        return "Not set";
+    }
+
+    if (price >= 10_000_000) {
+        return `₹${new Intl.NumberFormat(
+            "en-IN",
+            {
+                maximumFractionDigits: 2,
+            },
+        ).format(
+            price / 10_000_000,
+        )} Cr`;
+    }
+
+    if (price >= 100_000) {
+        return `₹${new Intl.NumberFormat(
+            "en-IN",
+            {
+                maximumFractionDigits: 2,
+            },
+        ).format(
+            price / 100_000,
+        )} L`;
+    }
+
+    return `₹${price.toLocaleString(
+        "en-IN",
+    )}`;
+}
+
 function createEditorForm(
     property: PropertyEditorProperty,
 ): EditorForm {
@@ -242,23 +365,46 @@ function createEditorForm(
 
         unitConfigurations:
             property.unitConfigurations?.map(
-                (configuration, index) => ({
-                    id:
-                        configuration._id ??
-                        `unit-${index}`,
-                    bedrooms: String(
-                        configuration.bedrooms,
-                    ),
-                    size: String(
-                        configuration.size,
-                    ),
-                    sizeUnit:
-                        configuration.sizeUnit ||
-                        "sqft",
-                    price: String(
-                        configuration.price,
-                    ),
-                }),
+                (configuration, index) => {
+                    const displayPrice =
+                        getUnitPriceInput(
+                            configuration.price,
+                        );
+
+                    return {
+                        id:
+                            configuration._id ??
+                            `unit-${index}`,
+
+                        bedrooms: String(
+                            configuration.bedrooms,
+                        ),
+
+                        size: String(
+                            configuration.size,
+                        ),
+
+                        sizeUnit:
+                            configuration.sizeUnit ||
+                            "sqft",
+
+                        uds:
+                            configuration.uds ===
+                            null ||
+                            configuration.uds ===
+                            undefined
+                                ? ""
+                                : String(
+                                    configuration.uds,
+                                ),
+
+                        price:
+                        displayPrice.value,
+
+                        priceUnit:
+                        displayPrice.unit,
+                    };
+                },
             ) ?? [],
 
         size:
@@ -626,15 +772,16 @@ export default function FullPropertyEditorModal({
                     ...current.unitConfigurations,
                     {
                         id:
-                            typeof crypto !==
-                            "undefined" &&
+                            typeof crypto !== "undefined" &&
                             "randomUUID" in crypto
                                 ? crypto.randomUUID()
                                 : `${Date.now()}-${Math.random()}`,
                         bedrooms: "",
                         size: "",
                         sizeUnit: "sqft",
+                        uds: "",
                         price: "",
+                        priceUnit: "lakh",
                     },
                 ],
             };
@@ -920,7 +1067,10 @@ export default function FullPropertyEditorModal({
                     "Enter a valid asking price.";
             }
 
-            if (form.unitConfigurations.length > 50) {
+            if (
+                form.unitConfigurations.length >
+                50
+            ) {
                 nextErrors.unitConfigurations =
                     "A property can have at most 50 unit configurations.";
             } else {
@@ -935,31 +1085,68 @@ export default function FullPropertyEditorModal({
                                 return true;
                             }
 
-                            const bedrooms = Number(
-                                configuration.bedrooms,
-                            );
-                            const size = Number(
-                                configuration.size,
-                            );
-                            const price = Number(
-                                configuration.price,
-                            );
+                            const bedrooms =
+                                Number(
+                                    configuration.bedrooms,
+                                );
+
+                            const size =
+                                Number(
+                                    configuration.size,
+                                );
+
+                            const uds =
+                                configuration.uds.trim()
+                                    ? Number(
+                                        configuration.uds,
+                                    )
+                                    : null;
+
+                            const price =
+                                unitPriceToRupees(
+                                    configuration.price,
+                                    configuration.priceUnit,
+                                );
 
                             return (
-                                !Number.isInteger(bedrooms) ||
-                                bedrooms < 1 ||
+                                !Number.isFinite(
+                                    bedrooms,
+                                ) ||
+                                !Number.isInteger(
+                                    bedrooms,
+                                ) ||
+                                bedrooms < 0 ||
                                 bedrooms > 20 ||
-                                !Number.isFinite(size) ||
+
+                                !Number.isFinite(
+                                    size,
+                                ) ||
                                 size <= 0 ||
-                                !Number.isFinite(price) ||
+
+                                (
+                                    uds !== null &&
+                                    (
+                                        !Number.isFinite(
+                                            uds,
+                                        ) ||
+                                        uds < 0 ||
+                                        uds > 100
+                                    )
+                                ) ||
+
+                                !Number.isFinite(
+                                    price,
+                                ) ||
                                 price <= 0
                             );
                         },
                     );
 
-                if (invalidUnitConfiguration) {
+                if (
+                    invalidUnitConfiguration
+                ) {
                     nextErrors.unitConfigurations =
-                        "Complete the BHK, size and price for every unit configuration.";
+                        "Complete the BHK, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
                 }
             }
 
@@ -1133,17 +1320,29 @@ export default function FullPropertyEditorModal({
                         ? []
                         : form.unitConfigurations.map(
                             (configuration) => ({
-                                bedrooms: Number(
-                                    configuration.bedrooms,
-                                ),
-                                size: Number(
-                                    configuration.size,
-                                ),
+                                bedrooms:
+                                    Number(
+                                        configuration.bedrooms,
+                                    ),
+
+                                size:
+                                    Number(
+                                        configuration.size,
+                                    ),
+
                                 sizeUnit:
                                 configuration.sizeUnit,
-                                price: Number(
-                                    configuration.price,
-                                ),
+
+                                uds:
+                                    toOptionalNumber(
+                                        configuration.uds,
+                                    ),
+
+                                price:
+                                    unitPriceToRupees(
+                                        configuration.price,
+                                        configuration.priceUnit,
+                                    ),
                             }),
                         ),
 
@@ -1906,23 +2105,17 @@ export default function FullPropertyEditorModal({
                                                                 <h3 className="font-black text-slate-950">
                                                                     Property area
                                                                 </h3>
+
                                                                 <p className="mt-0.5 text-xs text-slate-500">
-                                                                    Enter the
-                                                                    numeric size and
-                                                                    select the unit.
+                                                                    Enter the total area of the property.
                                                                 </p>
                                                             </div>
                                                         </div>
 
                                                         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                                                             <label className="lg:col-span-2">
-                                                                <FieldLabel
-                                                                    required
-                                                                >
-                                                                    {form.propertyType ===
-                                                                    "Apartment"
-                                                                        ? "Built-up size"
-                                                                        : "Total size"}
+                                                                <FieldLabel required>
+                                                                    Total area
                                                                 </FieldLabel>
 
                                                                 <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
@@ -2247,23 +2440,26 @@ export default function FullPropertyEditorModal({
                                                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                                             <div>
                                                                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-primary">
-                                                                    Available configurations
+                                                                    Unit configuration
                                                                 </p>
 
                                                                 <h3 className="mt-2 text-lg font-black text-slate-950">
-                                                                    BHK unit options
+                                                                    Available unit options
                                                                 </h3>
 
                                                                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                                                                    Add the different unit sizes and
-                                                                    prices available in this project.
+                                                                    Add each available BHK with
+                                                                    its built-up size, optional
+                                                                    UDS and asking price.
                                                                 </p>
                                                             </div>
 
                                                             <button
                                                                 type="button"
-                                                                onClick={addUnitConfiguration}
-                                                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white"
+                                                                onClick={
+                                                                    addUnitConfiguration
+                                                                }
+                                                                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white transition hover:bg-primary-dark"
                                                             >
                                                                 <Plus
                                                                     size={15}
@@ -2273,176 +2469,340 @@ export default function FullPropertyEditorModal({
                                                             </button>
                                                         </div>
 
-                                                        {form.unitConfigurations.length >
-                                                        0 ? (
+                                                        {form.unitConfigurations
+                                                            .length > 0 ? (
                                                             <div className="mt-5 space-y-4">
                                                                 {form.unitConfigurations.map(
-                                                                    (configuration, index) => (
-                                                                        <div
-                                                                            key={configuration.id}
-                                                                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                                                                        >
-                                                                            <div className="mb-4 flex items-center justify-between">
-                                                                                <p className="text-xs font-black text-slate-950">
-                                                                                    Unit {index + 1}
-                                                                                </p>
+                                                                    (
+                                                                        configuration,
+                                                                        index,
+                                                                    ) => {
+                                                                        const unitPrice =
+                                                                            unitPriceToRupees(
+                                                                                configuration.price,
+                                                                                configuration.priceUnit,
+                                                                            );
 
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() =>
-                                                                                        removeUnitConfiguration(
-                                                                                            configuration.id,
-                                                                                        )
-                                                                                    }
-                                                                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-600"
-                                                                                    aria-label={`Remove unit ${index + 1}`}
-                                                                                >
-                                                                                    <Trash2
-                                                                                        size={15}
-                                                                                        aria-hidden="true"
-                                                                                    />
-                                                                                </button>
-                                                                            </div>
+                                                                        return (
+                                                                            <div
+                                                                                key={
+                                                                                    configuration.id
+                                                                                }
+                                                                                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                                                            >
+                                                                                <div className="mb-4 flex items-center justify-between">
+                                                                                    <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+                                                                                        Unit{" "}
+                                                                                        {index +
+                                                                                            1}
+                                                                                    </p>
 
-                                                                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        BHK
-                                                                                    </FieldLabel>
-
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="1"
-                                                                                        max="20"
-                                                                                        step="1"
-                                                                                        value={
-                                                                                            configuration.bedrooms
-                                                                                        }
-                                                                                        onChange={(event) =>
-                                                                                            updateUnitConfiguration(
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            removeUnitConfiguration(
                                                                                                 configuration.id,
-                                                                                                {
-                                                                                                    bedrooms:
-                                                                                                    event
-                                                                                                        .target
-                                                                                                        .value,
-                                                                                                },
                                                                                             )
                                                                                         }
-                                                                                        placeholder="e.g. 2"
-                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                                                    />
-                                                                                </label>
-
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        Built-up size
-                                                                                    </FieldLabel>
-
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0.01"
-                                                                                        step="any"
-                                                                                        value={
-                                                                                            configuration.size
-                                                                                        }
-                                                                                        onChange={(event) =>
-                                                                                            updateUnitConfiguration(
-                                                                                                configuration.id,
-                                                                                                {
-                                                                                                    size:
-                                                                                                    event
-                                                                                                        .target
-                                                                                                        .value,
-                                                                                                },
-                                                                                            )
-                                                                                        }
-                                                                                        placeholder="e.g. 1200"
-                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                                                    />
-                                                                                </label>
-
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        Size unit
-                                                                                    </FieldLabel>
-
-                                                                                    <SelectField
-                                                                                        value={
-                                                                                            configuration.sizeUnit
-                                                                                        }
-                                                                                        ariaLabel={`Unit ${index + 1} size unit`}
-                                                                                        onChange={(
-                                                                                            sizeUnit,
-                                                                                        ) =>
-                                                                                            updateUnitConfiguration(
-                                                                                                configuration.id,
-                                                                                                {
-                                                                                                    sizeUnit,
-                                                                                                },
-                                                                                            )
-                                                                                        }
+                                                                                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
+                                                                                        aria-label={`Remove unit ${
+                                                                                            index +
+                                                                                            1
+                                                                                        }`}
                                                                                     >
-                                                                                        {SIZE_UNITS.map(
-                                                                                            (unit) => (
-                                                                                                <option
-                                                                                                    key={
-                                                                                                        unit.value
-                                                                                                    }
-                                                                                                    value={
-                                                                                                        unit.value
-                                                                                                    }
-                                                                                                >
+                                                                                        <Trash2
+                                                                                            size={
+                                                                                                15
+                                                                                            }
+                                                                                            aria-hidden="true"
+                                                                                        />
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[110px_minmax(150px,1fr)_130px_140px_minmax(250px,1.25fr)]">
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            BHK
+                                                                                        </FieldLabel>
+
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            max="20"
+                                                                                            step="1"
+                                                                                            value={
+                                                                                                configuration.bedrooms
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                event,
+                                                                                            ) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
                                                                                                     {
-                                                                                                        unit.label
+                                                                                                        bedrooms:
+                                                                                                        event
+                                                                                                            .target
+                                                                                                            .value,
+                                                                                                    },
+                                                                                                )
+                                                                                            }
+                                                                                            placeholder="2"
+                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                        />
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            Built-up
+                                                                                            size
+                                                                                        </FieldLabel>
+
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="0.01"
+                                                                                            step="any"
+                                                                                            value={
+                                                                                                configuration.size
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                event,
+                                                                                            ) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
+                                                                                                    {
+                                                                                                        size:
+                                                                                                        event
+                                                                                                            .target
+                                                                                                            .value,
+                                                                                                    },
+                                                                                                )
+                                                                                            }
+                                                                                            placeholder="978"
+                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                        />
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel>
+                                                                                            Unit
+                                                                                        </FieldLabel>
+
+                                                                                        <SelectField
+                                                                                            value={
+                                                                                                configuration.sizeUnit
+                                                                                            }
+                                                                                            ariaLabel={`Unit ${
+                                                                                                index +
+                                                                                                1
+                                                                                            } size unit`}
+                                                                                            onChange={(
+                                                                                                sizeUnit,
+                                                                                            ) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
+                                                                                                    {
+                                                                                                        sizeUnit,
+                                                                                                    },
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            {SIZE_UNITS.map(
+                                                                                                (
+                                                                                                    unit,
+                                                                                                ) => (
+                                                                                                    <option
+                                                                                                        key={
+                                                                                                            unit.value
+                                                                                                        }
+                                                                                                        value={
+                                                                                                            unit.value
+                                                                                                        }
+                                                                                                    >
+                                                                                                        {
+                                                                                                            unit.label
+                                                                                                        }
+                                                                                                    </option>
+                                                                                                ),
+                                                                                            )}
+                                                                                        </SelectField>
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel hint="Optional">
+                                                                                            UDS
+                                                                                        </FieldLabel>
+
+                                                                                        <div className="relative">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                max="100"
+                                                                                                step="0.01"
+                                                                                                value={
+                                                                                                    configuration.uds
+                                                                                                }
+                                                                                                onChange={(
+                                                                                                    event,
+                                                                                                ) => {
+                                                                                                    const value =
+                                                                                                        event
+                                                                                                            .target
+                                                                                                            .value;
+
+                                                                                                    if (
+                                                                                                        value !==
+                                                                                                        "" &&
+                                                                                                        Number(
+                                                                                                            value,
+                                                                                                        ) >
+                                                                                                        100
+                                                                                                    ) {
+                                                                                                        return;
                                                                                                     }
+
+                                                                                                    updateUnitConfiguration(
+                                                                                                        configuration.id,
+                                                                                                        {
+                                                                                                            uds: value,
+                                                                                                        },
+                                                                                                    );
+                                                                                                }}
+                                                                                                placeholder="Optional"
+                                                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-9 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                            />
+
+                                                                                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">
+                                                %
+                                            </span>
+                                                                                        </div>
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            Price
+                                                                                        </FieldLabel>
+
+                                                                                        <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-2">
+                                                                                            <div className="relative">
+                                                                                                <IndianRupee
+                                                                                                    size={
+                                                                                                        15
+                                                                                                    }
+                                                                                                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                                                                                    aria-hidden="true"
+                                                                                                />
+
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    min="0"
+                                                                                                    step="any"
+                                                                                                    value={
+                                                                                                        configuration.price
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        event,
+                                                                                                    ) =>
+                                                                                                        updateUnitConfiguration(
+                                                                                                            configuration.id,
+                                                                                                            {
+                                                                                                                price:
+                                                                                                                event
+                                                                                                                    .target
+                                                                                                                    .value,
+                                                                                                            },
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder={
+                                                                                                        configuration.priceUnit ===
+                                                                                                        "crore"
+                                                                                                            ? "1.2"
+                                                                                                            : configuration.priceUnit ===
+                                                                                                            "lakh"
+                                                                                                                ? "65"
+                                                                                                                : "6500000"
+                                                                                                    }
+                                                                                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <SelectField
+                                                                                                value={
+                                                                                                    configuration.priceUnit
+                                                                                                }
+                                                                                                ariaLabel={`Unit ${
+                                                                                                    index +
+                                                                                                    1
+                                                                                                } price unit`}
+                                                                                                onChange={(
+                                                                                                    value,
+                                                                                                ) =>
+                                                                                                    updateUnitConfiguration(
+                                                                                                        configuration.id,
+                                                                                                        {
+                                                                                                            priceUnit:
+                                                                                                                value as UnitPriceUnit,
+                                                                                                        },
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                <option value="lakh">
+                                                                                                    Lakh
                                                                                                 </option>
-                                                                                            ),
-                                                                                        )}
-                                                                                    </SelectField>
-                                                                                </label>
 
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        Price
-                                                                                    </FieldLabel>
+                                                                                                <option value="crore">
+                                                                                                    Crore
+                                                                                                </option>
 
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="1"
-                                                                                        value={
-                                                                                            configuration.price
-                                                                                        }
-                                                                                        onChange={(event) =>
-                                                                                            updateUnitConfiguration(
-                                                                                                configuration.id,
-                                                                                                {
-                                                                                                    price:
-                                                                                                    event
-                                                                                                        .target
-                                                                                                        .value,
-                                                                                                },
-                                                                                            )
-                                                                                        }
-                                                                                        placeholder="e.g. 6500000"
-                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                                                    />
-                                                                                </label>
+                                                                                                <option value="rupee">
+                                                                                                    ₹
+                                                                                                </option>
+                                                                                            </SelectField>
+                                                                                        </div>
+
+                                                                                        {Number.isFinite(
+                                                                                            unitPrice,
+                                                                                        ) &&
+                                                                                        unitPrice >
+                                                                                        0 ? (
+                                                                                            <p className="mt-2 text-[11px] font-semibold text-slate-400">
+                                                                                                {formatCompactPrice(
+                                                                                                    unitPrice,
+                                                                                                )}
+                                                                                            </p>
+                                                                                        ) : null}
+                                                                                    </label>
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    ),
+                                                                        );
+                                                                    },
                                                                 )}
                                                             </div>
                                                         ) : (
-                                                            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-                                                                No separate BHK configurations have
-                                                                been added.
+                                                            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+                                                                <p className="text-sm font-bold text-slate-600">
+                                                                    No unit configurations
+                                                                    added yet.
+                                                                </p>
+
+                                                                <p className="mt-1 text-xs text-slate-400">
+                                                                    Use Add unit if this
+                                                                    property has multiple BHK
+                                                                    options.
+                                                                </p>
                                                             </div>
                                                         )}
 
                                                         {errors.unitConfigurations ? (
                                                             <ErrorText>
-                                                                {errors.unitConfigurations}
+                                                                {
+                                                                    errors.unitConfigurations
+                                                                }
                                                             </ErrorText>
                                                         ) : null}
                                                     </div>

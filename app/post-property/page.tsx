@@ -104,12 +104,19 @@ interface UploadDeleteGrant {
     deleteToken: string;
 }
 
+type UnitPriceUnit =
+    | "rupee"
+    | "lakh"
+    | "crore";
+
 interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
     size: string;
     sizeUnit: string;
+    uds: string;
     price: string;
+    priceUnit: UnitPriceUnit;
 }
 
 interface PropertyForm {
@@ -156,8 +163,7 @@ function createUnitConfiguration():
     UnitConfigurationForm {
     return {
         id:
-            typeof crypto !==
-            "undefined" &&
+            typeof crypto !== "undefined" &&
             "randomUUID" in crypto
                 ? crypto.randomUUID()
                 : `${Date.now()}-${Math.random()}`,
@@ -165,8 +171,38 @@ function createUnitConfiguration():
         bedrooms: "",
         size: "",
         sizeUnit: "sqft",
+        uds: "",
         price: "",
+        priceUnit: "lakh",
     };
+}
+
+const UNIT_PRICE_MULTIPLIERS: Record<
+    UnitPriceUnit,
+    number
+> = {
+    rupee: 1,
+    lakh: 100_000,
+    crore: 10_000_000,
+};
+
+function unitPriceToRupees(
+    value: string,
+    unit: UnitPriceUnit,
+): number {
+    const amount = Number(value);
+
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ) {
+        return Number.NaN;
+    }
+
+    return (
+        amount *
+        UNIT_PRICE_MULTIPLIERS[unit]
+    );
 }
 
 interface UploadFile {
@@ -197,9 +233,9 @@ interface StepDefinition {
 }
 
 const FORM_STORAGE_KEY =
-    "post-property-form-v3";
+    "post-property-form-v4";
 const STEP_STORAGE_KEY =
-    "post-property-step-v3";
+    "post-property-step-v4";
 
 const STEPS: StepDefinition[] = [
     {
@@ -366,7 +402,44 @@ function loadInitialForm(): PropertyForm {
                 Array.isArray(
                     parsed.unitConfigurations,
                 )
-                    ? parsed.unitConfigurations
+                    ? parsed.unitConfigurations.map(
+                        (
+                            configuration:
+                            Partial<UnitConfigurationForm>,
+                        ) => ({
+                            id:
+                                configuration.id ||
+                                (typeof crypto !==
+                                "undefined" &&
+                                "randomUUID" in crypto
+                                    ? crypto.randomUUID()
+                                    : `${Date.now()}-${Math.random()}`),
+
+                            bedrooms:
+                                configuration.bedrooms ??
+                                "",
+
+                            size:
+                                configuration.size ??
+                                "",
+
+                            sizeUnit:
+                                configuration.sizeUnit ??
+                                "sqft",
+
+                            uds:
+                                configuration.uds ??
+                                "",
+
+                            price:
+                                configuration.price ??
+                                "",
+
+                            priceUnit:
+                                configuration.priceUnit ??
+                                "lakh",
+                        }),
+                    )
                     : [],
             uploadDeleteGrants:
                 typeof parsed.uploadDeleteGrants === "object" &&
@@ -737,7 +810,9 @@ export default function PostPropertyPage() {
             | "bedrooms"
             | "size"
             | "sizeUnit"
-            | "price",
+            | "uds"
+            | "price"
+            | "priceUnit",
         value: string,
     ) {
         setForm((current) => ({
@@ -889,9 +964,17 @@ export default function PostPropertyPage() {
                                     configuration.size,
                                 );
 
+                            const uds =
+                                configuration.uds.trim()
+                                    ? Number(
+                                        configuration.uds,
+                                    )
+                                    : null;
+
                             const price =
-                                Number(
+                                unitPriceToRupees(
                                     configuration.price,
+                                    configuration.priceUnit,
                                 );
 
                             return (
@@ -903,10 +986,23 @@ export default function PostPropertyPage() {
                                 ) ||
                                 bedrooms < 0 ||
                                 bedrooms > 20 ||
+
                                 !Number.isFinite(
                                     size,
                                 ) ||
                                 size <= 0 ||
+
+                                (
+                                    uds !== null &&
+                                    (
+                                        !Number.isFinite(
+                                            uds,
+                                        ) ||
+                                        uds < 0 ||
+                                        uds > 100
+                                    )
+                                ) ||
+
                                 !Number.isFinite(
                                     price,
                                 ) ||
@@ -917,7 +1013,7 @@ export default function PostPropertyPage() {
 
                 if (invalidConfiguration) {
                     nextErrors.unitConfigurations =
-                        "Complete the BHK, size and price for every unit configuration.";
+                        "Complete the BHK, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
                 }
             }
         }
@@ -1286,9 +1382,15 @@ export default function PostPropertyPage() {
                                     sizeUnit:
                                     configuration.sizeUnit,
 
+                                    uds:
+                                        optionalNumber(
+                                            configuration.uds,
+                                        ),
+
                                     price:
-                                        Number(
+                                        unitPriceToRupees(
                                             configuration.price,
+                                            configuration.priceUnit,
                                         ),
                                 }),
                             ),
@@ -2065,45 +2167,31 @@ export default function PostPropertyPage() {
                                                 </div>
 
                                                 <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                                        <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
-                <Ruler size={19} aria-hidden="true" />
-            </span>
+                                                    <div className="flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+            <Ruler
+                size={19}
+                aria-hidden="true"
+            />
+        </span>
 
-                                                            <div>
-                                                                <h3 className="font-black text-slate-950">
-                                                                    Property area
-                                                                </h3>
+                                                        <div>
+                                                            <h3 className="font-black text-slate-950">
+                                                                Property area
+                                                            </h3>
 
-                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                    Enter the primary area or add multiple
-                                                                    BHK configurations with different sizes
-                                                                    and prices.
-                                                                </p>
-                                                            </div>
+                                                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                Enter the total area of the property.
+                                                                Residential projects can also include
+                                                                individual unit configurations below.
+                                                            </p>
                                                         </div>
-
-                                                        {!isLand && !isCommercial ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={addUnitConfiguration}
-                                                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary transition hover:bg-primary/10"
-                                                            >
-                                                                <Plus size={15} aria-hidden="true" />
-                                                                Add unit
-                                                            </button>
-                                                        ) : null}
                                                     </div>
 
                                                     <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
                                                         <label className="lg:col-span-2">
                                                             <FieldLabel required>
-                                                                {form.propertyType === "Apartment"
-                                                                    ? "Built-up size"
-                                                                    : isCommercial
-                                                                        ? "Commercial area"
-                                                                        : "Total size"}
+                                                                Total area
                                                             </FieldLabel>
 
                                                             <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
@@ -2114,33 +2202,47 @@ export default function PostPropertyPage() {
                                                                     value={form.size}
                                                                     onChange={(event) =>
                                                                         updateForm({
-                                                                            size: event.target.value,
+                                                                            size:
+                                                                            event.target
+                                                                                .value,
                                                                         })
                                                                     }
-                                                                    placeholder="Enter size"
+                                                                    placeholder="Enter total area"
                                                                     className="h-12 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                                                                 />
 
                                                                 <SelectField
                                                                     value={form.sizeUnit}
-                                                                    ariaLabel="Size unit"
+                                                                    ariaLabel="Total area unit"
                                                                     onChange={(sizeUnit) =>
-                                                                        updateForm({ sizeUnit })
+                                                                        updateForm({
+                                                                            sizeUnit,
+                                                                        })
                                                                     }
                                                                 >
-                                                                    {SIZE_UNITS.map((unit) => (
-                                                                        <option
-                                                                            key={unit.value}
-                                                                            value={unit.value}
-                                                                        >
-                                                                            {unit.label}
-                                                                        </option>
-                                                                    ))}
+                                                                    {SIZE_UNITS.map(
+                                                                        (unit) => (
+                                                                            <option
+                                                                                key={
+                                                                                    unit.value
+                                                                                }
+                                                                                value={
+                                                                                    unit.value
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    unit.label
+                                                                                }
+                                                                            </option>
+                                                                        ),
+                                                                    )}
                                                                 </SelectField>
                                                             </div>
 
                                                             {errors.size ? (
-                                                                <ErrorText>{errors.size}</ErrorText>
+                                                                <ErrorText>
+                                                                    {errors.size}
+                                                                </ErrorText>
                                                             ) : null}
                                                         </label>
 
@@ -2156,13 +2258,19 @@ export default function PostPropertyPage() {
                                                                     max="100"
                                                                     step="0.01"
                                                                     value={form.uds}
-                                                                    onChange={(event) => {
+                                                                    onChange={(
+                                                                        event,
+                                                                    ) => {
                                                                         const value =
-                                                                            event.target.value;
+                                                                            event.target
+                                                                                .value;
 
                                                                         if (
-                                                                            value !== "" &&
-                                                                            Number(value) > 100
+                                                                            value !==
+                                                                            "" &&
+                                                                            Number(
+                                                                                value,
+                                                                            ) > 100
                                                                         ) {
                                                                             return;
                                                                         }
@@ -2181,7 +2289,9 @@ export default function PostPropertyPage() {
                                                             </div>
 
                                                             {errors.uds ? (
-                                                                <ErrorText>{errors.uds}</ErrorText>
+                                                                <ErrorText>
+                                                                    {errors.uds}
+                                                                </ErrorText>
                                                             ) : null}
                                                         </label>
 
@@ -2197,11 +2307,14 @@ export default function PostPropertyPage() {
                                                             </FieldLabel>
 
                                                             <input
-                                                                value={form.dimensions}
+                                                                value={
+                                                                    form.dimensions
+                                                                }
                                                                 onChange={(event) =>
                                                                     updateForm({
                                                                         dimensions:
-                                                                        event.target.value,
+                                                                        event.target
+                                                                            .value,
                                                                     })
                                                                 }
                                                                 placeholder="Optional"
@@ -2210,173 +2323,359 @@ export default function PostPropertyPage() {
                                                         </label>
                                                     </div>
 
-                                                    {!isLand &&
-                                                    !isCommercial &&
-                                                    form.unitConfigurations.length > 0 ? (
-                                                        <div className="mt-6 border-t border-slate-100 pt-6">
-                                                            <div className="mb-4">
-                                                                <h4 className="text-sm font-black text-slate-950">
-                                                                    Available unit configurations
-                                                                </h4>
+                                                    {!isLand && !isCommercial ? (
+                                                        <div className="mt-8 border-t border-slate-100 pt-6">
+                                                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                                <div>
+                                                                    <h4 className="text-sm font-black text-slate-950">
+                                                                        Unit configuration
+                                                                    </h4>
 
-                                                                <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                    Add each BHK, built-up area and asking
-                                                                    price offered within this project.
-                                                                </p>
+                                                                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                        Add each available BHK with its
+                                                                        built-up size, optional UDS and
+                                                                        asking price.
+                                                                    </p>
+                                                                </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={
+                                                                        addUnitConfiguration
+                                                                    }
+                                                                    className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary transition hover:bg-primary/10"
+                                                                >
+                                                                    <Plus
+                                                                        size={15}
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    Add unit
+                                                                </button>
                                                             </div>
 
-                                                            <div className="space-y-3">
-                                                                {form.unitConfigurations.map(
-                                                                    (configuration, index) => (
-                                                                        <div
-                                                                            key={configuration.id}
-                                                                            className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
-                                                                        >
-                                                                            <div className="mb-4 flex items-center justify-between">
-                                                                                <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">
-                                                                                    Unit {index + 1}
-                                                                                </p>
+                                                            {form.unitConfigurations
+                                                                .length === 0 ? (
+                                                                <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-6 text-center">
+                                                                    <p className="text-sm font-bold text-slate-600">
+                                                                        No unit configurations
+                                                                        added yet.
+                                                                    </p>
 
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() =>
-                                                                                        removeUnitConfiguration(
-                                                                                            configuration.id,
-                                                                                        )
-                                                                                    }
-                                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                                                                                    aria-label={`Remove unit ${index + 1}`}
-                                                                                >
-                                                                                    <Trash2 size={15} />
-                                                                                </button>
-                                                                            </div>
+                                                                    <p className="mt-1 text-xs text-slate-400">
+                                                                        Use Add unit if this
+                                                                        property has multiple BHK
+                                                                        options.
+                                                                    </p>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="mt-5 space-y-4">
+                                                                    {form.unitConfigurations.map(
+                                                                        (
+                                                                            configuration,
+                                                                            index,
+                                                                        ) => (
+                                                                            <div
+                                                                                key={
+                                                                                    configuration.id
+                                                                                }
+                                                                                className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4"
+                                                                            >
+                                                                                <div className="mb-4 flex items-center justify-between">
+                                                                                    <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+                                                                                        Unit{" "}
+                                                                                        {index +
+                                                                                            1}
+                                                                                    </p>
 
-                                                                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[130px_minmax(0,1fr)_145px_minmax(0,1fr)]">
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        BHK
-                                                                                    </FieldLabel>
-
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0"
-                                                                                        max="20"
-                                                                                        step="1"
-                                                                                        value={
-                                                                                            configuration.bedrooms
-                                                                                        }
-                                                                                        onChange={(event) =>
-                                                                                            updateUnitConfiguration(
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() =>
+                                                                                            removeUnitConfiguration(
                                                                                                 configuration.id,
-                                                                                                "bedrooms",
-                                                                                                event.target.value,
                                                                                             )
                                                                                         }
-                                                                                        placeholder="2"
-                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                                                    />
-                                                                                </label>
-
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        Built-up size
-                                                                                    </FieldLabel>
-
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0"
-                                                                                        step="any"
-                                                                                        value={
-                                                                                            configuration.size
-                                                                                        }
-                                                                                        onChange={(event) =>
-                                                                                            updateUnitConfiguration(
-                                                                                                configuration.id,
-                                                                                                "size",
-                                                                                                event.target.value,
-                                                                                            )
-                                                                                        }
-                                                                                        placeholder="978"
-                                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                                                                    />
-                                                                                </label>
-
-                                                                                <label>
-                                                                                    <FieldLabel>
-                                                                                        Unit
-                                                                                    </FieldLabel>
-
-                                                                                    <SelectField
-                                                                                        value={
-                                                                                            configuration.sizeUnit
-                                                                                        }
-                                                                                        onChange={(value) =>
-                                                                                            updateUnitConfiguration(
-                                                                                                configuration.id,
-                                                                                                "sizeUnit",
-                                                                                                value,
-                                                                                            )
-                                                                                        }
-                                                                                        ariaLabel={`Unit ${index + 1} area unit`}
+                                                                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                                                                                        aria-label={`Remove unit ${
+                                                                                            index +
+                                                                                            1
+                                                                                        }`}
                                                                                     >
-                                                                                        {SIZE_UNITS.map(
-                                                                                            (unit) => (
-                                                                                                <option
-                                                                                                    key={
-                                                                                                        unit.value
-                                                                                                    }
-                                                                                                    value={
-                                                                                                        unit.value
-                                                                                                    }
-                                                                                                >
-                                                                                                    {
-                                                                                                        unit.label
-                                                                                                    }
-                                                                                                </option>
-                                                                                            ),
-                                                                                        )}
-                                                                                    </SelectField>
-                                                                                </label>
-
-                                                                                <label>
-                                                                                    <FieldLabel required>
-                                                                                        Price
-                                                                                    </FieldLabel>
-
-                                                                                    <div className="relative">
-                                                                                        <IndianRupee
-                                                                                            size={15}
-                                                                                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                                                                        <Trash2
+                                                                                            size={
+                                                                                                15
+                                                                                            }
+                                                                                            aria-hidden="true"
                                                                                         />
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[110px_minmax(150px,1fr)_130px_140px_minmax(240px,1.2fr)]">
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            BHK
+                                                                                        </FieldLabel>
 
                                                                                         <input
                                                                                             type="number"
-                                                                                            min="1"
+                                                                                            min="0"
+                                                                                            max="20"
                                                                                             step="1"
                                                                                             value={
-                                                                                                configuration.price
+                                                                                                configuration.bedrooms
                                                                                             }
-                                                                                            onChange={(event) =>
+                                                                                            onChange={(
+                                                                                                event,
+                                                                                            ) =>
                                                                                                 updateUnitConfiguration(
                                                                                                     configuration.id,
-                                                                                                    "price",
-                                                                                                    event.target.value,
+                                                                                                    "bedrooms",
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
                                                                                                 )
                                                                                             }
-                                                                                            placeholder="6500000"
-                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                            placeholder="2"
+                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                                                                                         />
-                                                                                    </div>
-                                                                                </label>
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            Built-up
+                                                                                            size
+                                                                                        </FieldLabel>
+
+                                                                                        <input
+                                                                                            type="number"
+                                                                                            min="0"
+                                                                                            step="any"
+                                                                                            value={
+                                                                                                configuration.size
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                event,
+                                                                                            ) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
+                                                                                                    "size",
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                )
+                                                                                            }
+                                                                                            placeholder="978"
+                                                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                        />
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel>
+                                                                                            Unit
+                                                                                        </FieldLabel>
+
+                                                                                        <SelectField
+                                                                                            value={
+                                                                                                configuration.sizeUnit
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                value,
+                                                                                            ) =>
+                                                                                                updateUnitConfiguration(
+                                                                                                    configuration.id,
+                                                                                                    "sizeUnit",
+                                                                                                    value,
+                                                                                                )
+                                                                                            }
+                                                                                            ariaLabel={`Unit ${
+                                                                                                index +
+                                                                                                1
+                                                                                            } area unit`}
+                                                                                        >
+                                                                                            {SIZE_UNITS.map(
+                                                                                                (
+                                                                                                    unit,
+                                                                                                ) => (
+                                                                                                    <option
+                                                                                                        key={
+                                                                                                            unit.value
+                                                                                                        }
+                                                                                                        value={
+                                                                                                            unit.value
+                                                                                                        }
+                                                                                                    >
+                                                                                                        {
+                                                                                                            unit.label
+                                                                                                        }
+                                                                                                    </option>
+                                                                                                ),
+                                                                                            )}
+                                                                                        </SelectField>
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel hint="Optional">
+                                                                                            UDS
+                                                                                        </FieldLabel>
+
+                                                                                        <div className="relative">
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                max="100"
+                                                                                                step="0.01"
+                                                                                                value={
+                                                                                                    configuration.uds
+                                                                                                }
+                                                                                                onChange={(
+                                                                                                    event,
+                                                                                                ) => {
+                                                                                                    const value =
+                                                                                                        event
+                                                                                                            .target
+                                                                                                            .value;
+
+                                                                                                    if (
+                                                                                                        value !==
+                                                                                                        "" &&
+                                                                                                        Number(
+                                                                                                            value,
+                                                                                                        ) >
+                                                                                                        100
+                                                                                                    ) {
+                                                                                                        return;
+                                                                                                    }
+
+                                                                                                    updateUnitConfiguration(
+                                                                                                        configuration.id,
+                                                                                                        "uds",
+                                                                                                        value,
+                                                                                                    );
+                                                                                                }}
+                                                                                                placeholder="Optional"
+                                                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                            />
+
+                                                                                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">
+                                                %
+                                            </span>
+                                                                                        </div>
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel
+                                                                                            required
+                                                                                        >
+                                                                                            Price
+                                                                                        </FieldLabel>
+
+                                                                                        <div className="grid grid-cols-[minmax(0,1fr)_110px] gap-2">
+                                                                                            <div className="relative">
+                                                                                                <IndianRupee
+                                                                                                    size={
+                                                                                                        15
+                                                                                                    }
+                                                                                                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                                                                                                    aria-hidden="true"
+                                                                                                />
+
+                                                                                                <input
+                                                                                                    type="number"
+                                                                                                    min="0"
+                                                                                                    step="any"
+                                                                                                    value={
+                                                                                                        configuration.price
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        event,
+                                                                                                    ) =>
+                                                                                                        updateUnitConfiguration(
+                                                                                                            configuration.id,
+                                                                                                            "price",
+                                                                                                            event
+                                                                                                                .target
+                                                                                                                .value,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder={
+                                                                                                        configuration.priceUnit ===
+                                                                                                        "crore"
+                                                                                                            ? "1.2"
+                                                                                                            : configuration.priceUnit ===
+                                                                                                            "lakh"
+                                                                                                                ? "65"
+                                                                                                                : "6500000"
+                                                                                                    }
+                                                                                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                                                                />
+                                                                                            </div>
+
+                                                                                            <SelectField
+                                                                                                value={
+                                                                                                    configuration.priceUnit
+                                                                                                }
+                                                                                                onChange={(
+                                                                                                    value,
+                                                                                                ) =>
+                                                                                                    updateUnitConfiguration(
+                                                                                                        configuration.id,
+                                                                                                        "priceUnit",
+                                                                                                        value,
+                                                                                                    )
+                                                                                                }
+                                                                                                ariaLabel={`Unit ${
+                                                                                                    index +
+                                                                                                    1
+                                                                                                } price unit`}
+                                                                                            >
+                                                                                                <option value="lakh">
+                                                                                                    Lakh
+                                                                                                </option>
+
+                                                                                                <option value="crore">
+                                                                                                    Crore
+                                                                                                </option>
+
+                                                                                                <option value="rupee">
+                                                                                                    ₹
+                                                                                                </option>
+                                                                                            </SelectField>
+                                                                                        </div>
+
+                                                                                        {configuration.price &&
+                                                                                        Number.isFinite(
+                                                                                            unitPriceToRupees(
+                                                                                                configuration.price,
+                                                                                                configuration.priceUnit,
+                                                                                            ),
+                                                                                        ) ? (
+                                                                                            <p className="mt-2 text-[11px] font-semibold text-slate-400">
+                                                                                                {formatPrice(
+                                                                                                    String(
+                                                                                                        unitPriceToRupees(
+                                                                                                            configuration.price,
+                                                                                                            configuration.priceUnit,
+                                                                                                        ),
+                                                                                                    ),
+                                                                                                )}
+                                                                                            </p>
+                                                                                        ) : null}
+                                                                                    </label>
+                                                                                </div>
                                                                             </div>
-                                                                        </div>
-                                                                    ),
-                                                                )}
-                                                            </div>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+                                                            )}
 
                                                             {errors.unitConfigurations ? (
                                                                 <ErrorText>
-                                                                    {errors.unitConfigurations}
+                                                                    {
+                                                                        errors.unitConfigurations
+                                                                    }
                                                                 </ErrorText>
                                                             ) : null}
                                                         </div>

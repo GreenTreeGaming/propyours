@@ -117,6 +117,7 @@ interface PropertyRecord {
         bedrooms: number;
         size: number;
         sizeUnit: string;
+        uds?: number | null;
         price: number;
     }>;
     bedrooms?: number | null;
