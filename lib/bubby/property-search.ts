@@ -165,20 +165,24 @@ function addTextFilters(
     }
 
     if (filters.locality) {
-        const localityRegex = createSafeRegex(
-            filters.locality,
-        );
+        const localityRegex =
+            createSafeRegex(
+                filters.locality,
+            );
 
         clauses.push({
             $or: [
                 {
-                    projectName: searchRegex,
+                    projectName:
+                    localityRegex,
                 },
                 {
-                    address: searchRegex,
+                    address:
+                    localityRegex,
                 },
                 {
-                    locality: searchRegex,
+                    locality:
+                    localityRegex,
                 },
             ],
         });
@@ -192,16 +196,24 @@ function addTextFilters(
         clauses.push({
             $or: [
                 {
-                    address: searchRegex,
+                    projectName:
+                    searchRegex,
                 },
                 {
-                    locality: searchRegex,
+                    address:
+                    searchRegex,
                 },
                 {
-                    city: searchRegex,
+                    locality:
+                    searchRegex,
                 },
                 {
-                    state: searchRegex,
+                    city:
+                    searchRegex,
+                },
+                {
+                    state:
+                    searchRegex,
                 },
                 {
                     landmark: searchRegex,

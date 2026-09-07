@@ -44,6 +44,9 @@ import {
     isLandPropertyType,
 } from "@/lib/property-form-options";
 import type { PlanDefinition } from "@/lib/plan-catalog";
+import {
+    getPropertyDisplayTitle,
+} from "@/lib/property-display";
 
 export interface PropertyEditorProperty {
     _id: string;
@@ -1309,8 +1312,13 @@ export default function FullPropertyEditorModal({
                     form.description.trim(),
                 address: form.address.trim(),
                 locality: form.locality,
+
                 developerName:
                     form.developerName.trim(),
+
+                projectName:
+                    form.projectName.trim(),
+
                 city: form.city,
                 state: "Tamil Nadu",
                 landmark:
@@ -1513,7 +1521,9 @@ export default function FullPropertyEditorModal({
                                     id="full-property-editor-title"
                                     className="mt-4 line-clamp-2 text-2xl font-black tracking-[-0.03em] sm:text-3xl"
                                 >
-                                    Edit {property.address}
+                                    Edit {getPropertyDisplayTitle(
+                                    property,
+                                )}
                                 </h2>
 
                                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">

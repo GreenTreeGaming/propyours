@@ -705,7 +705,9 @@ function PropertyCard({
                     className="mt-2 block"
                 >
                     <h2 className="line-clamp-2 font-heading text-xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
-                        {property.address}
+                        {getPropertyDisplayTitle(
+                            property,
+                        )}
                     </h2>
                 </Link>
 
