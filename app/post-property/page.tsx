@@ -1019,6 +1019,48 @@ export default function PostPropertyPage() {
                 nextErrors.commercialType =
                     "Select the commercial property type.";
             }
+
+            if (
+                form.category ===
+                "residential" &&
+                form.condition ===
+                "under_construction"
+            ) {
+                const month = Number(
+                    form.expectedCompletionMonth,
+                );
+
+                const year = Number(
+                    form.expectedCompletionYear,
+                );
+
+                if (
+                    !Number.isInteger(month) ||
+                    month < 1 ||
+                    month > 12 ||
+                    !Number.isInteger(year)
+                ) {
+                    nextErrors.expectedCompletionDate =
+                        "Select the expected completion month and year.";
+                } else {
+                    const now = new Date();
+
+                    const currentYear =
+                        now.getFullYear();
+
+                    const currentMonth =
+                        now.getMonth() + 1;
+
+                    if (
+                        year < currentYear ||
+                        (year === currentYear &&
+                            month < currentMonth)
+                    ) {
+                        nextErrors.expectedCompletionDate =
+                            "Expected completion cannot be in the past.";
+                    }
+                }
+            }
         }
 
         if (step === "location") {
@@ -1159,48 +1201,6 @@ export default function PostPropertyPage() {
                 ) {
                     nextErrors.price =
                         "Enter a valid asking price.";
-                }
-            }
-
-            if (
-                form.category ===
-                "residential" &&
-                form.condition ===
-                "under_construction"
-            ) {
-                const month = Number(
-                    form.expectedCompletionMonth,
-                );
-
-                const year = Number(
-                    form.expectedCompletionYear,
-                );
-
-                if (
-                    !Number.isInteger(month) ||
-                    month < 1 ||
-                    month > 12 ||
-                    !Number.isInteger(year)
-                ) {
-                    nextErrors.expectedCompletionDate =
-                        "Select the expected completion month and year.";
-                } else {
-                    const now = new Date();
-
-                    const currentYear =
-                        now.getFullYear();
-
-                    const currentMonth =
-                        now.getMonth() + 1;
-
-                    if (
-                        year < currentYear ||
-                        (year === currentYear &&
-                            month < currentMonth)
-                    ) {
-                        nextErrors.expectedCompletionDate =
-                            "Expected completion cannot be in the past.";
-                    }
                 }
             }
         }
@@ -2008,6 +2008,83 @@ export default function PostPropertyPage() {
                                                         <ErrorText>{errors.purpose}</ErrorText>
                                                     ) : null}
                                                 </fieldset>
+
+                                                {form.category === "residential" ? (
+                                                    <div>
+                                                        <h3 className="text-sm font-black text-slate-950">
+                                                            Residential type
+                                                        </h3>
+
+                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                            {RESIDENTIAL_PROPERTY_TYPES.map(
+                                                                (type) => {
+                                                                    const Icon =
+                                                                        PROPERTY_ICONS[
+                                                                            type
+                                                                            ] ?? Home;
+
+                                                                    const selected =
+                                                                        form.propertyType ===
+                                                                        type;
+
+                                                                    return (
+                                                                        <button
+                                                                            key={type}
+                                                                            type="button"
+                                                                            aria-pressed={
+                                                                                selected
+                                                                            }
+                                                                            onClick={() =>
+                                                                                updateForm({
+                                                                                    propertyType:
+                                                                                    type,
+                                                                                })
+                                                                            }
+                                                                            className={`flex items-start gap-4 rounded-2xl border p-5 text-left transition ${
+                                                                                selected
+                                                                                    ? "border-primary bg-teal-50 text-primary ring-2 ring-primary/10"
+                                                                                    : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
+                                                                            }`}
+                                                                        >
+                            <span
+                                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
+                                    selected
+                                        ? "bg-primary text-white"
+                                        : "bg-slate-50 text-slate-400"
+                                }`}
+                            >
+                                <Icon
+                                    size={20}
+                                    aria-hidden="true"
+                                />
+                            </span>
+
+                                                                            <span className="min-w-0">
+                                <span className="block text-sm font-black">
+                                    {type}
+                                </span>
+
+                                <span
+                                    className={`mt-1 block text-xs leading-5 ${
+                                        selected
+                                            ? "text-slate-600"
+                                            : "text-slate-500"
+                                    }`}
+                                >
+                                    {
+                                        RESIDENTIAL_TYPE_DESCRIPTIONS[
+                                            type
+                                            ]
+                                    }
+                                </span>
+                            </span>
+                                                                        </button>
+                                                                    );
+                                                                },
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
 
                                                 {form.category ===
                                                 "residential" ? (
@@ -4112,6 +4189,44 @@ export default function PostPropertyPage() {
                                                                 label="Property type"
                                                                 value={displayType}
                                                             />
+                                                            {form.category === "residential" ? (
+                                                                <>
+                                                                    <ReviewRow
+                                                                        label="Condition"
+                                                                        value={
+                                                                            form.condition ===
+                                                                            "under_construction"
+                                                                                ? "Under Construction"
+                                                                                : "Ready To Occupy"
+                                                                        }
+                                                                    />
+
+                                                                    {form.condition ===
+                                                                    "under_construction" ? (
+                                                                        <ReviewRow
+                                                                            label="Expected completion"
+                                                                            value={
+                                                                                COMPLETION_MONTHS.find(
+                                                                                    (month) =>
+                                                                                        month.value ===
+                                                                                        form.expectedCompletionMonth,
+                                                                                )?.label &&
+                                                                                form.expectedCompletionYear
+                                                                                    ? `${
+                                                                                        COMPLETION_MONTHS.find(
+                                                                                            (month) =>
+                                                                                                month.value ===
+                                                                                                form.expectedCompletionMonth,
+                                                                                        )?.label
+                                                                                    } ${
+                                                                                        form.expectedCompletionYear
+                                                                                    }`
+                                                                                    : "Not selected"
+                                                                            }
+                                                                        />
+                                                                    ) : null}
+                                                                </>
+                                                            ) : null}
                                                             <ReviewRow
                                                                 label="Description"
                                                                 value={
@@ -4217,9 +4332,19 @@ export default function PostPropertyPage() {
                                                         >
                                                             <ReviewRow
                                                                 label="Price"
-                                                                value={`${formatPrice(
-                                                                    form.price,
-                                                                )} · ${form.priceType}`}
+                                                                value={
+                                                                    projectStartingPrice !== null
+                                                                        ? `${formatPrice(
+                                                                            String(
+                                                                                projectStartingPrice,
+                                                                            ),
+                                                                        )} onwards · ${
+                                                                            form.priceType
+                                                                        }`
+                                                                        : `${formatPrice(
+                                                                            form.price,
+                                                                        )} · ${form.priceType}`
+                                                                }
                                                             />
                                                             <ReviewRow
                                                                 label="Negotiability"
