@@ -67,6 +67,9 @@ import {
     useCompare,
 } from "@/components/CompareContext";
 import {
+    getPropertyDisplayTitle,
+} from "@/lib/property-display";
+import {
     getStoredUser,
     updateStoredUserFavorites,
     type StoredUser,
@@ -142,6 +145,7 @@ interface PropertyRecord {
     userId?: PropertyOwner;
     amenities?: string[];
     promotedUntil?: string;
+    projectName?: string;
     listingExpiresAt?: string;
     featured?: boolean;
     zeroCommission?: boolean;
@@ -780,11 +784,37 @@ function getPrimaryDetails(
     if (
         category === "residential"
     ) {
+        const configuredBedrooms =
+            Array.from(
+                new Set(
+                    (
+                        property.unitConfigurations ??
+                        []
+                    ).map(
+                        (configuration) =>
+                            configuration.bedrooms,
+                    ),
+                ),
+            ).sort((a, b) => a - b);
+
         if (
-            property.bedrooms !==
-            null &&
-            property.bedrooms !==
-            undefined
+            configuredBedrooms.length > 0
+        ) {
+            details.push({
+                label: "Configurations",
+                value:
+                    configuredBedrooms
+                        .map((bedrooms) =>
+                            bedrooms === 0
+                                ? "Studio"
+                                : `${bedrooms} BHK`,
+                        )
+                        .join(", "),
+                icon: BedDouble,
+            });
+        } else if (
+            property.bedrooms !== null &&
+            property.bedrooms !== undefined
         ) {
             details.push({
                 label: "Bedrooms",
@@ -911,6 +941,13 @@ function getFactRows(
                 ),
         },
     ];
+
+    if (property.projectName) {
+        rows.push({
+            label: "Project name",
+            value: property.projectName,
+        });
+    }
 
     if (property.developerName) {
         rows.push({
@@ -1510,6 +1547,33 @@ export default function PropertyDetailsPage() {
             ? Math.min(...unitPrices)
             : null;
 
+    const availableBHKs =
+        useMemo(() => {
+            if (
+                !property?.unitConfigurations
+                    ?.length
+            ) {
+                return [];
+            }
+
+            return Array.from(
+                new Set(
+                    property.unitConfigurations.map(
+                        (configuration) =>
+                            configuration.bedrooms,
+                    ),
+                ),
+            ).sort((a, b) => a - b);
+        }, [property?.unitConfigurations]);
+
+    const propertyDisplayTitle =
+        property
+            ? getPropertyDisplayTitle({
+                ...property,
+                availableBHKs,
+            })
+            : "Property";
+
     const locationLabel = property
         ? getLocationLabel(property)
         : "";
@@ -1807,12 +1871,31 @@ export default function PropertyDetailsPage() {
 
         addToCompare({
             _id: property._id,
+
             address:
             property.address,
+
+            projectName:
+            property.projectName,
+
             images:
                 property.images ?? [],
+
             price:
                 property.price ?? 0,
+
+            startingPrice:
+                minimumUnitPrice ??
+                property.price ??
+                undefined,
+
+            hasUnitConfigurations:
+                Boolean(
+                    property.unitConfigurations
+                        ?.length,
+                ),
+
+            availableBHKs,
             negotiable:
             property.negotiable,
             size:
@@ -2186,34 +2269,14 @@ export default function PropertyDetailsPage() {
                                 </div>
 
                                 <h1 className="mt-5 max-w-4xl font-heading text-3xl font-black leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-5xl">
-                                    {property.address}
+                                    {propertyDisplayTitle}
                                 </h1>
 
                                 <p className="mt-3 text-lg font-bold text-slate-500 sm:text-xl">
-                                    {category === "residential" &&
-                                    property.unitConfigurations &&
-                                    property.unitConfigurations.length > 0
-                                        ? `${typeLabel} · ${property.unitConfigurations
-                                            .map((unit) =>
-                                                unit.bedrooms === 0
-                                                    ? "Studio"
-                                                    : `${unit.bedrooms} BHK`,
-                                            )
-                                            .filter(
-                                                (value, index, values) =>
-                                                    values.indexOf(value) === index,
-                                            )
-                                            .join(" / ")}`
-                                        : category === "residential" &&
-                                        property.bedrooms !== null &&
-                                        property.bedrooms !== undefined
-                                            ? property.bedrooms === 0
-                                                ? `Studio ${typeLabel}`
-                                                : `${property.bedrooms} BHK ${typeLabel}`
-                                            : typeLabel}
+                                    {typeLabel}
 
                                     {locationLabel
-                                        ? ` in ${locationLabel}`
+                                        ? ` · ${locationLabel}`
                                         : ""}
                                 </p>
 
@@ -2957,7 +3020,7 @@ export default function PropertyDetailsPage() {
                     setShareOpen(false)
                 }
                 propertyTitle={
-                    property.address
+                    propertyDisplayTitle
                 }
                 shareUrl={shareUrl}
             />

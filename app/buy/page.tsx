@@ -50,6 +50,7 @@ import {
 import {
   getPropertyBHKLabel,
   getPropertyDisplayPrice,
+  getPropertyDisplayTitle
 } from "@/lib/property-display";
 
 interface Property {
@@ -64,6 +65,7 @@ interface Property {
   startingPrice?: number | null;
   hasUnitConfigurations?: boolean;
   priceLocked?: boolean;
+  projectName?: string;
   priceType?: "Total" | "Per Sq Ft";
   negotiable?: boolean;
   bedrooms?: number;
@@ -577,7 +579,9 @@ function PropertyCard({
                     isList ? "text-xl sm:text-2xl" : "text-lg"
                 }`}
             >
-              {property.address}
+              {getPropertyDisplayTitle(
+                  property,
+              )}
             </h2>
 
             {isList && property.description ? (

@@ -63,6 +63,7 @@ import {
 } from "@/lib/browser-user";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 type DashboardTab = "overview" | "profile" | "plan" | "security";
@@ -94,6 +95,7 @@ interface DashboardUser {
 interface DashboardProperty {
     _id: string;
     address: string;
+    projectName?: string;
     locality?: string;
     city: string;
     propertyType: string;
@@ -452,7 +454,9 @@ function PropertyRow({
                 </div>
 
                 <h3 className="mt-2 line-clamp-1 text-base font-black text-slate-950 transition group-hover:text-primary">
-                    {property.address}
+                    {getPropertyDisplayTitle(
+                        property,
+                    )}
                 </h3>
 
                 <p className="mt-1 text-xs font-semibold text-slate-500">

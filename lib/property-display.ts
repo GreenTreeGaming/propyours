@@ -5,6 +5,10 @@ export interface PropertyDisplayData {
 
     bedrooms?: number | null;
     availableBHKs?: number[];
+
+    projectName?: string | null;
+    locality?: string | null;
+    propertyType?: string | null;
 }
 
 export function getPropertyDisplayPrice(
@@ -96,4 +100,42 @@ export function getPropertyBHKLabel(
     }
 
     return null;
+}
+
+export function getPropertyDisplayTitle(
+    property: PropertyDisplayData,
+): string {
+    const projectName =
+        property.projectName?.trim();
+
+    if (projectName) {
+        return projectName;
+    }
+
+    const bhkLabel =
+        getPropertyBHKLabel(
+            property,
+        );
+
+    const locality =
+        property.locality?.trim();
+
+    if (bhkLabel && locality) {
+        return `${bhkLabel} in ${locality}`;
+    }
+
+    if (bhkLabel) {
+        return bhkLabel;
+    }
+
+    if (locality) {
+        return property.propertyType
+            ? `${property.propertyType} in ${locality}`
+            : locality;
+    }
+
+    return (
+        property.propertyType ??
+        "Property"
+    );
 }

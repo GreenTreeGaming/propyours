@@ -65,6 +65,7 @@ import {
 } from "@/lib/browser-user";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 type PropertyCategory =
@@ -97,6 +98,7 @@ interface PropertyListing {
     locality?: string;
     city?: string;
     state?: string;
+    projectName?: string;
     landmark?: string;
     price?: number;
     startingPrice?: number;
@@ -562,6 +564,7 @@ function matchesSearch(
     }
 
     const haystack = [
+        property.projectName,
         property.address,
         property.locality,
         property.city,

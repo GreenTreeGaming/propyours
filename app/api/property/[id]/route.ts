@@ -1049,8 +1049,17 @@ export async function PUT(
             landmark: body.landmark,
 
             developerName:
-                typeof body.developerName === "string"
+                typeof body.developerName ===
+                "string"
                     ? body.developerName
+                        .trim()
+                        .slice(0, 150)
+                    : undefined,
+
+            projectName:
+                typeof body.projectName ===
+                "string"
+                    ? body.projectName
                         .trim()
                         .slice(0, 150)
                     : undefined,

@@ -63,6 +63,7 @@ import {
 } from "@/lib/browser-user";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 type ViewMode = "grid" | "list";
@@ -122,6 +123,7 @@ interface ManagedProperty extends PropertyEditorProperty {
     startingPrice?: number;
     hasUnitConfigurations?: boolean;
     availableBHKs?: number[];
+    projectName?: string;
 
     status?: "active" | "sold" | "inactive";
     featured?: boolean;
@@ -788,7 +790,9 @@ function PropertyCard({
                                 : "text-lg"
                         }`}
                     >
-                        {property.address}
+                        {getPropertyDisplayTitle(
+                            property,
+                        )}
                     </h2>
 
                     {isList &&
@@ -1001,7 +1005,9 @@ function PropertyCard({
                         <button
                             type="button"
                             onClick={() => onEdit(property)}
-                            aria-label={`Edit ${property.address}`}
+                            aria-label={`Edit ${getPropertyDisplayTitle(
+                                property,
+                            )}`}
                             className="inline-flex h-11 min-w-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-slate-200 bg-white px-2 text-xs font-black text-slate-700 transition hover:border-primary hover:bg-teal-50 hover:text-primary"
                         >
                             <Edit3

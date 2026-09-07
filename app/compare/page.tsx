@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 function formatPrice(
@@ -187,7 +188,9 @@ export default function ComparePage() {
 
                                                     <div>
                                                         <h3 className="font-black text-gray-900 text-lg leading-tight truncate pr-6">
-                                                            {property.address}
+                                                            {getPropertyDisplayTitle(
+                                                                property,
+                                                            )}
                                                         </h3>
                                                         <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">
                                                             {(() => {

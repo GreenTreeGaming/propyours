@@ -41,6 +41,7 @@ import {
 } from "@/lib/browser-user";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 type PropertyCategory =
@@ -70,6 +71,7 @@ type ViewMode = "grid" | "list";
 interface FavoriteProperty {
     _id: string;
     address: string;
+    projectName?: string;
     city: string;
     state?: string;
     locality?: string;
@@ -331,6 +333,7 @@ function matchesSearch(
     }
 
     const haystack = [
+        property.projectName,
         property.address,
         property.locality,
         property.city,
@@ -525,7 +528,9 @@ function PropertyCard({
                                     className="mt-2 block"
                                 >
                                     <h2 className="line-clamp-2 font-heading text-2xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
-                                        {property.address}
+                                        {getPropertyDisplayTitle(
+                                            property,
+                                        )}
                                     </h2>
                                 </Link>
 

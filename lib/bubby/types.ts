@@ -100,6 +100,9 @@ export interface BubbyPropertyResult {
     id: string;
     propertyType: string;
     commercialType?: string;
+
+    projectName?: string;
+
     address: string;
     locality?: string;
     city: string;

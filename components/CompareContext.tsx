@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 type CompareProperty = {
     _id: string;
     address: string;
+    projectName?: string;
     images?: string[];
 
     price: number;

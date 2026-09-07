@@ -42,6 +42,7 @@ import {
 } from "@/lib/bubby/types";
 import {
     getPropertyDisplayPrice,
+    getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 interface UiMessage {
@@ -775,7 +776,9 @@ function PropertyMiniCard({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                         <p className="line-clamp-2 text-xs font-black leading-5 text-slate-950 transition group-hover:text-primary">
-                            {property.address}
+                            {getPropertyDisplayTitle(
+                                property,
+                            )}
                         </p>
 
                         {property.featured ? (

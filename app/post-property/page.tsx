@@ -130,6 +130,7 @@ interface PropertyForm {
     state: "Tamil Nadu";
     landmark: string;
     developerName: string;
+    projectName: string;
     uds: string;
     size: string;
     sizeUnit: string;
@@ -286,6 +287,7 @@ const DEFAULT_FORM: PropertyForm = {
     state: "Tamil Nadu",
     landmark: "",
     developerName: "",
+    projectName: "",
     uds: "",
     unitConfigurations: [],
     size: "",
@@ -789,6 +791,24 @@ export default function PostPropertyPage() {
         () => getAmenityCategories(form.category),
         [form.category],
     );
+
+    const allAvailableAmenities = useMemo(
+        () =>
+            amenityCategories.flatMap(
+                (category) =>
+                    category.amenities,
+            ),
+        [amenityCategories],
+    );
+
+    const allAmenitiesSelected =
+        allAvailableAmenities.length > 0 &&
+        allAvailableAmenities.every(
+            (amenity) =>
+                form.amenities.includes(
+                    amenity,
+                ),
+        );
 
     function updateForm(patch: Partial<PropertyForm>) {
         setForm((current) => ({
@@ -1410,6 +1430,9 @@ export default function PostPropertyPage() {
 
                         developerName:
                             form.developerName.trim(),
+
+                        projectName:
+                            form.projectName.trim(),
 
                         uds: optionalNumber(form.uds),
 
@@ -2159,7 +2182,7 @@ export default function PostPropertyPage() {
                                                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                                                         <label className="sm:col-span-2">
                                                             <FieldLabel required>
-                                                                Street address / property name
+                                                                Address
                                                             </FieldLabel>
                                                             <input
                                                                 value={form.address}
@@ -2180,6 +2203,44 @@ export default function PostPropertyPage() {
                                                                     {errors.address}
                                                                 </ErrorText>
                                                             ) : null}
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel hint="Optional">
+                                                                Project name
+                                                            </FieldLabel>
+
+                                                            <input
+                                                                value={form.projectName}
+                                                                maxLength={150}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        projectName:
+                                                                        event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="e.g. Ivy Towers"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                        </label>
+
+                                                        <label>
+                                                            <FieldLabel hint="Optional">
+                                                                Developer name
+                                                            </FieldLabel>
+
+                                                            <input
+                                                                value={form.developerName}
+                                                                maxLength={150}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        developerName:
+                                                                        event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="e.g. ABC Developers"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
                                                         </label>
 
                                                         <label>
@@ -2847,28 +2908,6 @@ export default function PostPropertyPage() {
                                                                         </p>
                                                                     </div>
                                                                 )}
-                                                                <span className="relative block">
-                                  <IndianRupee
-                                      size={17}
-                                      className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                      aria-hidden="true"
-                                  />
-                                  <input
-                                      type="number"
-                                      min="1"
-                                      value={form.price}
-                                      onChange={(event) =>
-                                          updateForm({
-                                              price: event.target.value,
-                                          })
-                                      }
-                                      placeholder="Enter amount"
-                                      className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                                  />
-                                </span>
-                                                                {errors.price ? (
-                                                                    <ErrorText>{errors.price}</ErrorText>
-                                                                ) : null}
                                                             </label>
 
                                                             <label>
@@ -3147,21 +3186,62 @@ export default function PostPropertyPage() {
                                                                     ? "Commercial facilities"
                                                                     : "Amenities"}
                                                             </h3>
+
                                                             <p className="mt-1 text-xs text-slate-500">
                                                                 {form.amenities.length} selected
                                                             </p>
                                                         </div>
-                                                        {form.amenities.length > 0 ? (
+
+                                                        <div className="flex flex-wrap items-center gap-3">
                                                             <button
                                                                 type="button"
-                                                                onClick={() =>
-                                                                    updateForm({ amenities: [] })
+                                                                aria-pressed={
+                                                                    allAmenitiesSelected
                                                                 }
-                                                                className="text-xs font-black text-red-600"
+                                                                onClick={() =>
+                                                                    updateForm({
+                                                                        amenities:
+                                                                            allAmenitiesSelected
+                                                                                ? []
+                                                                                : [
+                                                                                    ...allAvailableAmenities,
+                                                                                ],
+                                                                    })
+                                                                }
+                                                                className="inline-flex items-center gap-2 text-xs font-black text-primary"
                                                             >
-                                                                Clear all
+            <span
+                className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
+                    allAmenitiesSelected
+                        ? "border-primary bg-primary text-white"
+                        : "border-slate-300 bg-white text-transparent"
+                }`}
+            >
+                <Check
+                    size={13}
+                    strokeWidth={3}
+                    aria-hidden="true"
+                />
+            </span>
+
+                                                                Select all
                                                             </button>
-                                                        ) : null}
+
+                                                            {form.amenities.length >
+                                                            0 ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        updateForm({
+                                                                            amenities: [],
+                                                                        })
+                                                                    }
+                                                                    className="text-xs font-black text-red-600"
+                                                                >
+                                                                    Clear all
+                                                                </button>
+                                                            ) : null}
+                                                        </div>
                                                     </div>
 
                                                     <div className="mt-6 space-y-8">

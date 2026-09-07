@@ -56,6 +56,7 @@ export interface PropertyEditorProperty {
     state?: string;
     landmark?: string;
     developerName?: string;
+    projectName?: string;
     uds?: number | null;
 
     unitConfigurations?: Array<{
@@ -145,6 +146,7 @@ interface EditorForm {
     state: "Tamil Nadu";
     landmark: string;
     developerName: string;
+    projectName: string;
     uds: string;
     unitConfigurations: UnitConfigurationForm[];
     size: string;
@@ -356,6 +358,9 @@ function createEditorForm(
 
         developerName:
             property.developerName || "",
+
+        projectName:
+            property.projectName || "",
 
         uds:
             property.uds === null ||

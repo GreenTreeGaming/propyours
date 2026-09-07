@@ -17,6 +17,7 @@ interface RawProperty {
     _id?: unknown;
     propertyType?: unknown;
     commercialType?: unknown;
+    projectName?: unknown;
     address?: unknown;
     locality?: unknown;
     city?: unknown;
@@ -87,6 +88,7 @@ export async function searchProperties(
             _id: 1,
             propertyType: 1,
             commercialType: 1,
+            projectName: 1,
             address: 1,
             locality: 1,
             city: 1,
@@ -170,13 +172,13 @@ function addTextFilters(
         clauses.push({
             $or: [
                 {
-                    locality: localityRegex,
+                    projectName: searchRegex,
                 },
                 {
-                    address: localityRegex,
+                    address: searchRegex,
                 },
                 {
-                    landmark: localityRegex,
+                    locality: searchRegex,
                 },
             ],
         });
@@ -436,6 +438,12 @@ function toPropertyMatch(
         commercialType: toOptionalString(
             raw.commercialType,
         ),
+
+        projectName:
+            toOptionalString(
+                raw.projectName,
+            ),
+
         address,
         locality: toOptionalString(raw.locality),
         city,

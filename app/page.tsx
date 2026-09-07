@@ -33,6 +33,7 @@ import AuthorisedPartners from "@/components/AuthorisedPartners";
 import {
   getPropertyBHKLabel,
   getPropertyDisplayPrice,
+  getPropertyDisplayTitle,
 } from "@/lib/property-display";
 
 interface Property {
@@ -41,6 +42,7 @@ interface Property {
   address: string;
   city: string;
   locality?: string;
+  projectName?: string;
 
   price: number;
   startingPrice?: number;
@@ -1462,7 +1464,9 @@ export default function HomePage() {
                         </div>
 
                         <h3 className="mt-3 max-w-xl text-2xl font-black leading-tight tracking-tight sm:text-3xl">
-                          {spotlightProperty.address}
+                          {getPropertyDisplayTitle(
+                              spotlightProperty,
+                          )}
                         </h3>
 
                         <div className="mt-6 flex flex-col gap-5 border-t border-white/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
@@ -1558,7 +1562,9 @@ export default function HomePage() {
                                   </div>
 
                                   <h3 className="mt-3 line-clamp-2 text-sm font-black leading-5 text-slate-950 transition group-hover:text-primary sm:text-base">
-                                    {property.address}
+                                    {getPropertyDisplayTitle(
+                                        property,
+                                    )}
                                   </h3>
 
                                   <div className="mt-auto flex items-end justify-between gap-3 pt-5">

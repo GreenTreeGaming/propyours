@@ -739,6 +739,11 @@ export async function POST(
                         150,
                     ),
 
+                    projectName: cleanText(
+                        body.projectName,
+                        150,
+                    ),
+
                     uds: body.uds,
                     size: body.size,
                     sizeUnit: body.sizeUnit,

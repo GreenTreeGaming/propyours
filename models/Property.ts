@@ -140,6 +140,12 @@ const PropertySchema =
                 maxlength: 150,
             },
 
+            projectName: {
+                type: String,
+                trim: true,
+                maxlength: 150,
+            },
+
             size: {
                 type: Number,
                 required: true,
