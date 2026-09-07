@@ -63,6 +63,9 @@ import {
     getStoredUser,
     type StoredUser,
 } from "@/lib/browser-user";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 type PropertyCategory =
     | "residential"
@@ -2057,9 +2060,24 @@ function ProfilePropertyCard({
                                 </p>
 
                                 <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">
-                                    {formatPrice(
-                                        property.price,
-                                    )}
+                                    {(() => {
+                                        const displayPrice =
+                                            getPropertyDisplayPrice(
+                                                property,
+                                            );
+
+                                        return displayPrice !== null
+                                            ? formatPrice(
+                                                displayPrice,
+                                            )
+                                            : "Price unavailable";
+                                    })()}
+
+                                    {property.hasUnitConfigurations ? (
+                                        <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+                                    ) : null}
                                 </p>
 
                                 <PriceNegotiabilityBadge
@@ -2192,9 +2210,24 @@ function ProfilePropertyCard({
                             </p>
 
                             <p className="mt-1 truncate text-2xl font-black tracking-tight text-slate-950">
-                                {formatPrice(
-                                    property.price,
-                                )}
+                                {(() => {
+                                    const displayPrice =
+                                        getPropertyDisplayPrice(
+                                            property,
+                                        );
+
+                                    return displayPrice !== null
+                                        ? formatPrice(
+                                            displayPrice,
+                                        )
+                                        : "Price unavailable";
+                                })()}
+
+                                {property.hasUnitConfigurations ? (
+                                    <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+                                ) : null}
                             </p>
 
                             <PriceNegotiabilityBadge

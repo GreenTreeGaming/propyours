@@ -47,6 +47,10 @@ import {
   TAMIL_NADU_CITIES,
   TAMIL_NADU_LOCATIONS,
 } from "@/lib/locations";
+import {
+  getPropertyBHKLabel,
+  getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 interface Property {
   _id: string;
@@ -298,67 +302,6 @@ function formatPrice(price: number): string {
   return `₹${price.toLocaleString("en-IN")}`;
 }
 
-function getDisplayPrice(
-    property: Property,
-): number | null {
-  if (
-      property.hasUnitConfigurations &&
-      typeof property.startingPrice ===
-      "number"
-  ) {
-    return property.startingPrice;
-  }
-
-  return property.price;
-}
-
-function getAvailableBHKLabel(
-    property: Property,
-): string | null {
-  const values = [
-    ...new Set(
-        property.availableBHKs ??
-        [],
-    ),
-  ]
-      .filter(
-          (value) =>
-              Number.isInteger(value) &&
-              value >= 0,
-      )
-      .sort(
-          (first, second) =>
-              first - second,
-      );
-
-  if (values.length === 0) {
-    return null;
-  }
-
-  const labels =
-      values.map((value) =>
-          value === 0
-              ? "Studio"
-              : String(value),
-      );
-
-  if (labels.length === 1) {
-    return labels[0] === "Studio"
-        ? "Studio"
-        : `${labels[0]} BHK`;
-  }
-
-  if (labels.length === 2) {
-    return `${labels[0]} & ${labels[1]} BHK`;
-  }
-
-  return `${labels
-      .slice(0, -1)
-      .join(", ")} & ${
-      labels[labels.length - 1]
-  } BHK`;
-}
-
 function formatSize(size?: number, unit?: string): string | null {
   if (!size || size <= 0) {
     return null;
@@ -426,7 +369,9 @@ function getPropertySpecs(
   }> = [];
 
   const availableBHKs =
-      getAvailableBHKLabel(property);
+      getPropertyBHKLabel(
+          property,
+      );
 
   if (availableBHKs) {
     specs.push({
@@ -717,7 +662,9 @@ function PropertyCard({
                       >
                         {(() => {
                           const displayPrice =
-                              getDisplayPrice(property);
+                              getPropertyDisplayPrice(
+                                  property,
+                              );
 
                           if (
                               property.priceLocked ||

@@ -17,6 +17,10 @@ import {
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
+
 
 export default function ComparePage() {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
@@ -157,7 +161,24 @@ export default function ComparePage() {
                                                             {property.address}
                                                         </h3>
                                                         <p className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">
-                                                            ₹{property.price.toLocaleString()}
+                                                            {(() => {
+                                                                const displayPrice =
+                                                                    getPropertyDisplayPrice(
+                                                                        property,
+                                                                    );
+
+                                                                return displayPrice !== null
+                                                                    ? formatPrice(
+                                                                        displayPrice,
+                                                                    )
+                                                                    : "Price unavailable";
+                                                            })()}
+
+                                                            {property.hasUnitConfigurations ? (
+                                                                <span className="ml-1">
+        onwards
+    </span>
+                                                            ) : null}
                                                         </p>
                                                     </div>
                                                 </div>

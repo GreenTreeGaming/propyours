@@ -39,6 +39,9 @@ import {
     updateStoredUserFavorites,
     type StoredUser,
 } from "@/lib/browser-user";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 type PropertyCategory =
     | "residential"
@@ -80,6 +83,9 @@ interface FavoriteProperty {
     negotiable?: boolean;
     bedrooms?: number | null;
     bathrooms?: number | null;
+    startingPrice?: number | null;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
     floors?: number | null;
     size: number;
     sizeUnit?: string;
@@ -580,9 +586,24 @@ function PropertyCard({
                                     Asking price
                                 </p>
                                 <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">
-                                    {formatPrice(
-                                        property.price,
-                                    )}
+                                    {(() => {
+                                        const displayPrice =
+                                            getPropertyDisplayPrice(
+                                                property,
+                                            );
+
+                                        return displayPrice !== null
+                                            ? formatPrice(
+                                                displayPrice,
+                                            )
+                                            : "Price unavailable";
+                                    })()}
+
+                                    {property.hasUnitConfigurations ? (
+                                        <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+                                    ) : null}
                                 </p>
                                 <PriceNegotiabilityBadge
                                     negotiable={

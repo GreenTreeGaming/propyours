@@ -61,6 +61,9 @@ import {
     clearStoredUser,
     getStoredUser,
 } from "@/lib/browser-user";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 type DashboardTab = "overview" | "profile" | "plan" | "security";
 type ToastState = { type: "success" | "error"; message: string };
@@ -456,7 +459,24 @@ function PropertyRow({
 
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
           <span className="text-base font-black text-slate-950">
-            {formatPrice(property.price)}
+            {(() => {
+                const displayPrice =
+                    getPropertyDisplayPrice(
+                        property,
+                    );
+
+                return displayPrice !== null
+                    ? formatPrice(
+                        displayPrice,
+                    )
+                    : "Price unavailable";
+            })()}
+
+              {property.hasUnitConfigurations ? (
+                  <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+              ) : null}
           </span>
 
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">

@@ -745,6 +745,28 @@ export default function PostPropertyPage() {
         isCommercialPropertyType(form.propertyType);
     const displayType = getDisplayType(form);
 
+    const residentialUnitPrices =
+        form.unitConfigurations
+            .map((configuration) =>
+                unitPriceToRupees(
+                    configuration.price,
+                    configuration.priceUnit,
+                ),
+            )
+            .filter(
+                (price) =>
+                    Number.isFinite(price) &&
+                    price > 0,
+            );
+
+    const projectStartingPrice =
+        residentialUnitPrices.length >
+        0
+            ? Math.min(
+                ...residentialUnitPrices,
+            )
+            : null;
+
     const localityOptions = useMemo(
         () =>
             form.city
@@ -1027,11 +1049,23 @@ export default function PostPropertyPage() {
         }
 
         if (step === "pricing") {
-            const price = Number(form.price);
+            const hasResidentialUnits =
+                form.category ===
+                "residential" &&
+                form.unitConfigurations.length >
+                0;
 
-            if (!Number.isFinite(price) || price <= 0) {
-                nextErrors.price =
-                    "Enter a valid asking price.";
+            if (!hasResidentialUnits) {
+                const price =
+                    Number(form.price);
+
+                if (
+                    !Number.isFinite(price) ||
+                    price <= 0
+                ) {
+                    nextErrors.price =
+                        "Enter a valid asking price.";
+                }
             }
         }
 
@@ -1330,6 +1364,27 @@ export default function PostPropertyPage() {
         setSubmitting(true);
         setSubmitError("");
 
+        const unitPrices =
+            form.unitConfigurations
+                .map((configuration) =>
+                    unitPriceToRupees(
+                        configuration.price,
+                        configuration.priceUnit,
+                    ),
+                )
+                .filter(
+                    (price) =>
+                        Number.isFinite(price) &&
+                        price > 0,
+                );
+
+        const derivedPrice =
+            form.category ===
+            "residential" &&
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : Number(form.price);
+
         try {
             const response = await fetch(
                 "/api/property/create",
@@ -1395,7 +1450,7 @@ export default function PostPropertyPage() {
                         dimensions:
                             form.dimensions.trim(),
                         ownershipType: form.ownershipType,
-                        price: Number(form.price),
+                        price: derivedPrice,
                         priceType: form.priceType,
                         negotiable: form.negotiable,
                         gstApplicable: form.gstApplicable,
@@ -2719,9 +2774,79 @@ export default function PostPropertyPage() {
                                                     <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
                                                         <div className="grid gap-5 sm:grid-cols-2">
                                                             <label className="sm:col-span-2">
-                                                                <FieldLabel required>
-                                                                    Asking price
-                                                                </FieldLabel>
+                                                                {!(
+                                                                    form.category ===
+                                                                    "residential" &&
+                                                                    form.unitConfigurations.length >
+                                                                    0
+                                                                ) ? (
+                                                                    <label className="sm:col-span-2">
+                                                                        <FieldLabel required>
+                                                                            Asking price
+                                                                        </FieldLabel>
+
+                                                                        <span className="relative block">
+            <IndianRupee
+                size={17}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+            />
+
+            <input
+                type="number"
+                min="1"
+                value={form.price}
+                onChange={(event) =>
+                    updateForm({
+                        price:
+                        event.target
+                            .value,
+                    })
+                }
+                placeholder="Enter amount"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+            />
+        </span>
+
+                                                                        {errors.price ? (
+                                                                            <ErrorText>
+                                                                                {errors.price}
+                                                                            </ErrorText>
+                                                                        ) : null}
+                                                                    </label>
+                                                                ) : (
+                                                                    <div className="sm:col-span-2 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                                                        <p className="text-sm font-black text-slate-950">
+                                                                            Project starting price
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                                            The starting price is
+                                                                            calculated automatically from
+                                                                            the lowest-priced unit you
+                                                                            added.
+                                                                        </p>
+
+                                                                        <p className="mt-3 text-xl font-black text-primary">
+                                                                            {formatPrice(
+                                                                                String(
+                                                                                    Math.min(
+                                                                                        ...form.unitConfigurations.map(
+                                                                                            (
+                                                                                                configuration,
+                                                                                            ) =>
+                                                                                                unitPriceToRupees(
+                                                                                                    configuration.price,
+                                                                                                    configuration.priceUnit,
+                                                                                                ),
+                                                                                        ),
+                                                                                    ),
+                                                                                ),
+                                                                            )}{" "}
+                                                                            onwards
+                                                                        </p>
+                                                                    </div>
+                                                                )}
                                                                 <span className="relative block">
                                   <IndianRupee
                                       size={17}
@@ -2950,7 +3075,21 @@ export default function PostPropertyPage() {
                                                                 Public price preview
                                                             </p>
                                                             <p className="mt-4 text-4xl font-black tracking-tight">
-                                                                {formatPrice(form.price)}
+                                                                {projectStartingPrice !== null
+                                                                    ? formatPrice(
+                                                                        String(
+                                                                            projectStartingPrice,
+                                                                        ),
+                                                                    )
+                                                                    : formatPrice(
+                                                                        form.price,
+                                                                    )}
+
+                                                                {projectStartingPrice !== null ? (
+                                                                    <span className="ml-2 text-base font-bold text-teal-100">
+            onwards
+        </span>
+                                                                ) : null}
                                                             </p>
                                                             <p className="mt-2 text-sm text-teal-50/80">
                                                                 {form.priceType}
@@ -3662,22 +3801,35 @@ export default function PostPropertyPage() {
                                                                 <ReviewRow
                                                                     label="Unit configurations"
                                                                     value={form.unitConfigurations
-                                                                        .map((configuration, index) => {
-                                                                            const price =
-                                                                                unitPriceToRupees(
-                                                                                    configuration.price,
-                                                                                    configuration.priceUnit,
-                                                                                );
+                                                                        .map(
+                                                                            (
+                                                                                configuration,
+                                                                                index,
+                                                                            ) => {
+                                                                                const price =
+                                                                                    unitPriceToRupees(
+                                                                                        configuration.price,
+                                                                                        configuration.priceUnit,
+                                                                                    );
 
-                                                                            const uds =
-                                                                                configuration.uds
-                                                                                    ? ` · UDS ${configuration.uds}%`
-                                                                                    : "";
+                                                                                const uds =
+                                                                                    configuration.uds
+                                                                                        ? ` · UDS ${configuration.uds}%`
+                                                                                        : "";
 
-                                                                            return `Unit ${index + 1}: ${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit}${uds} · ${formatPrice(
-                                                                                String(price),
-                                                                            )}`;
-                                                                        })
+                                                                                return `Unit ${
+                                                                                    index + 1
+                                                                                }: ${
+                                                                                    configuration.bedrooms
+                                                                                } BHK · ${
+                                                                                    configuration.size
+                                                                                } ${
+                                                                                    configuration.sizeUnit
+                                                                                }${uds} · ${formatPrice(
+                                                                                    String(price),
+                                                                                )}`;
+                                                                            },
+                                                                        )
                                                                         .join("\n")}
                                                                 />
                                                             ) : null}

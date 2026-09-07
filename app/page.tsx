@@ -30,6 +30,10 @@ import {
 } from "@/lib/locations";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import AuthorisedPartners from "@/components/AuthorisedPartners";
+import {
+  getPropertyBHKLabel,
+  getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 interface Property {
   _id: string;
@@ -157,80 +161,6 @@ function formatPrice(
   return `₹${price.toLocaleString(
       "en-IN",
   )}`;
-}
-
-function getDisplayPrice(
-    property: Property,
-): number {
-  if (
-      property.hasUnitConfigurations &&
-      typeof property.startingPrice ===
-      "number"
-  ) {
-    return property.startingPrice;
-  }
-
-  return property.price;
-}
-
-function getBHKLabel(
-    property: Property,
-): string {
-  const bhks = [
-    ...new Set(
-        property.availableBHKs ??
-        [],
-    ),
-  ]
-      .filter(
-          (value) =>
-              Number.isInteger(value) &&
-              value >= 0,
-      )
-      .sort(
-          (first, second) =>
-              first - second,
-      );
-
-  if (bhks.length > 0) {
-    const labels =
-        bhks.map((value) =>
-            value === 0
-                ? "Studio"
-                : String(value),
-        );
-
-    if (labels.length === 1) {
-      return labels[0] === "Studio"
-          ? "Studio"
-          : `${labels[0]} BHK`;
-    }
-
-    if (labels.length === 2) {
-      return `${labels[0]} & ${labels[1]} BHK`;
-    }
-
-    return `${labels
-        .slice(0, -1)
-        .join(", ")} & ${
-        labels[labels.length - 1]
-    } BHK`;
-  }
-
-  if (
-      property.bedrooms !==
-      undefined
-  ) {
-    if (property.bedrooms === 0) {
-      return "Studio";
-    }
-
-    if (property.bedrooms > 0) {
-      return `${property.bedrooms} BHK`;
-    }
-  }
-
-  return property.propertyType;
 }
 
 function getPropertyBadge(property: Property): string | null {
@@ -1541,7 +1471,17 @@ export default function HomePage() {
                         <div className="mt-6 flex flex-col gap-5 border-t border-white/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
                           <div>
                             <p className="text-3xl font-black">
-                              {formatPrice(spotlightProperty.price)}
+                              {formatPrice(
+                                  getPropertyDisplayPrice(
+                                      spotlightProperty,
+                                  ),
+                              )}
+
+                              {spotlightProperty.hasUnitConfigurations ? (
+                                  <span className="ml-2 text-base font-bold text-slate-300">
+            onwards
+        </span>
+                              ) : null}
                             </p>
 
                             <PriceNegotiabilityBadge
@@ -1553,6 +1493,12 @@ export default function HomePage() {
                               {spotlightProperty.bedrooms === 0
                                   ? spotlightProperty.propertyType
                                   : `${spotlightProperty.bedrooms} BHK ${spotlightProperty.propertyType}`}
+                            </p>
+
+                            <p className="mt-2 text-sm text-slate-300">
+                              {getPropertyBHKLabel(
+                                  spotlightProperty,
+                              )}
                             </p>
                           </div>
 
@@ -1629,7 +1575,7 @@ export default function HomePage() {
                                       <p className="text-lg font-black text-slate-950">
                                         <>
                                           {formatPrice(
-                                              getDisplayPrice(property),
+                                              getPropertyDisplayPrice(property),
                                           )}
 
                                           {property.hasUnitConfigurations ? (
@@ -1646,7 +1592,7 @@ export default function HomePage() {
                                       />
 
                                       <p className="mt-1 truncate text-xs text-slate-500">
-                                        {getBHKLabel(property)}
+                                        {getPropertyBHKLabel(property)}
                                       </p>
                                     </div>
 

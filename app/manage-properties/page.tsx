@@ -61,6 +61,9 @@ import {
     clearStoredUser,
     getStoredUser,
 } from "@/lib/browser-user";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 type ViewMode = "grid" | "list";
 type StatusFilter =
@@ -800,9 +803,24 @@ function PropertyCard({
                                         : "text-xl"
                                 }`}
                             >
-                                {formatPrice(
-                                    property.price,
-                                )}
+                                {(() => {
+                                    const displayPrice =
+                                        getPropertyDisplayPrice(
+                                            property,
+                                        );
+
+                                    return displayPrice !== null
+                                        ? formatPrice(
+                                            displayPrice,
+                                        )
+                                        : "Price unavailable";
+                                })()}
+
+                                {property.hasUnitConfigurations ? (
+                                    <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+                                ) : null}
                             </p>
                             <PriceNegotiabilityBadge
                                 negotiable={

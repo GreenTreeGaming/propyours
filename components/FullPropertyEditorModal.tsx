@@ -3751,7 +3751,14 @@ export default function FullPropertyEditorModal({
                                                                     value={form.unitConfigurations
                                                                         .map(
                                                                             (configuration) =>
-                                                                                `${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(configuration.price)}`,
+                                                                                `${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(
+                                                                                    String(
+                                                                                        unitPriceToRupees(
+                                                                                            configuration.price,
+                                                                                            configuration.priceUnit,
+                                                                                        ),
+                                                                                    ),
+                                                                                )}`,
                                                                         )
                                                                         .join("\n")}
                                                                 />

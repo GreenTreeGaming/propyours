@@ -40,6 +40,9 @@ import {
     BUBBY_PROPERTY_TYPES,
     BUBBY_SORT_OPTIONS,
 } from "@/lib/bubby/types";
+import {
+    getPropertyDisplayPrice,
+} from "@/lib/property-display";
 
 interface UiMessage {
     id: string;
@@ -795,7 +798,24 @@ function PropertyMiniCard({
 
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-black text-slate-950">
-              {formatPrice(property.price)}
+              {(() => {
+                  const displayPrice =
+                      getPropertyDisplayPrice(
+                          property,
+                      );
+
+                  return displayPrice !== null
+                      ? formatPrice(
+                          displayPrice,
+                      )
+                      : "Price unavailable";
+              })()}
+
+                {property.hasUnitConfigurations ? (
+                    <span className="ml-1 text-xs font-bold text-slate-500">
+        onwards
+    </span>
+                ) : null}
             </span>
 
                         <span className="text-[10px] font-bold text-slate-500">

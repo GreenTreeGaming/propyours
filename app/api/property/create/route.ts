@@ -320,20 +320,6 @@ export async function POST(
             );
         }
 
-        if (
-            !isPositiveNumber(body.price)
-        ) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Enter a valid asking price.",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
         for (const [
             field,
             value,
@@ -670,6 +656,41 @@ export async function POST(
             });
         }
 
+        const unitPrices =
+            unitConfigurations
+                .map(
+                    (configuration) =>
+                        configuration.price,
+                )
+                .filter(
+                    (price) =>
+                        Number.isFinite(price) &&
+                        price > 0,
+                );
+
+        const effectivePrice =
+            !isLand &&
+            !isCommercial &&
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : body.price;
+
+        if (
+            !isPositiveNumber(
+                effectivePrice,
+            )
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Enter a valid asking price.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
         const listingExpiresAt =
             new Date();
         listingExpiresAt.setDate(
@@ -716,7 +737,7 @@ export async function POST(
                 ),
                 ownershipType:
                 body.ownershipType,
-                    price: body.price,
+                    price: effectivePrice,
                     priceType: body.priceType,
 
                     negotiable:
