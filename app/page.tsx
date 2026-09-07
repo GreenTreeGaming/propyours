@@ -444,15 +444,6 @@ export default function HomePage() {
     });
   }
 
-  function searchByCategory(type: string) {
-    if (type === "Commercial") {
-      navigateToResults({ purpose: "commercial", city });
-      return;
-    }
-
-    navigateToResults({ type, city });
-  }
-
   const curatedProperties = useMemo(
       () => curateHomepageProperties(featuredProperties, 5),
       [featuredProperties],
@@ -1494,12 +1485,6 @@ export default function HomePage() {
                                 negotiable={spotlightProperty.negotiable}
                                 className="mt-2"
                             />
-
-                            <p className="mt-2 text-sm text-slate-300">
-                              {spotlightProperty.bedrooms === 0
-                                  ? spotlightProperty.propertyType
-                                  : `${spotlightProperty.bedrooms} BHK ${spotlightProperty.propertyType}`}
-                            </p>
 
                             <p className="mt-2 text-sm text-slate-300">
                               {getPropertyBHKLabel(
