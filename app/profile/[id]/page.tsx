@@ -99,6 +99,10 @@ interface PropertyListing {
     state?: string;
     landmark?: string;
     price?: number;
+    startingPrice?: number;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
+
     priceType?: string;
     negotiable?: boolean;
     bedrooms?: number | null;

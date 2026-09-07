@@ -107,7 +107,7 @@ interface SanitizedUnitConfiguration {
     sizeUnit:
         (typeof ALLOWED_SIZE_UNITS)[number];
     uds: number | null;
-    price: number;
+    price: number | null;
 }
 
 function parseUnitConfigurations(
@@ -423,16 +423,33 @@ export async function GET(
             property.toObject();
 
         if (!canViewPrice) {
-            responseProperty.price =
-                null;
+            responseProperty.price = null;
+
+            if (
+                Array.isArray(
+                    responseProperty.unitConfigurations,
+                )
+            ) {
+                responseProperty.unitConfigurations =
+                    responseProperty.unitConfigurations.map(
+                        (
+                            unit: Record<
+                                string,
+                                unknown
+                            >,
+                        ) => ({
+                            ...unit,
+                            price: null,
+                        }),
+                    );
+            }
 
             (
                 responseProperty as Record<
                     string,
                     unknown
                 >
-            ).priceLocked =
-                true;
+            ).priceLocked = true;
         } else {
             (
                 responseProperty as Record<
@@ -714,6 +731,80 @@ export async function PUT(
             | SanitizedUnitConfiguration[]
             | undefined;
 
+        const finalUnitConfigurations:
+            SanitizedUnitConfiguration[] =
+            isLand || isCommercial
+                ? []
+                : unitConfigurations ??
+                (
+                    property.unitConfigurations ??
+                    []
+                ).map(
+                    (unit: {
+                        bedrooms: number;
+                        size: number;
+                        sizeUnit: string;
+                        uds?: number | null;
+                        price: number;
+                    }) => ({
+                        bedrooms:
+                        unit.bedrooms,
+                        size:
+                        unit.size,
+                        sizeUnit:
+                            unit.sizeUnit as SanitizedUnitConfiguration["sizeUnit"],
+                        uds:
+                            unit.uds ?? null,
+                        price:
+                        unit.price,
+                    }),
+                );
+
+        const unitPrices =
+            finalUnitConfigurations
+                .map(
+                    (
+                        unit:
+                        SanitizedUnitConfiguration,
+                    ) => unit.price,
+                )
+                .filter(
+                    (
+                        price,
+                    ): price is number =>
+                        typeof price === "number" &&
+                        Number.isFinite(price) &&
+                        price > 0,
+                );
+
+        const requestedPrice =
+            typeof body.price === "number"
+                ? body.price
+                : property.price;
+
+        const effectivePrice =
+            !isLand &&
+            !isCommercial &&
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : requestedPrice;
+
+        if (
+            typeof effectivePrice !== "number" ||
+            !Number.isFinite(effectivePrice) ||
+            effectivePrice <= 0
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Enter a valid asking price.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
         if (isLand || isCommercial) {
             /*
              * Residential-only data must not
@@ -978,7 +1069,7 @@ export async function PUT(
             body.dimensions,
             ownershipType:
             body.ownershipType,
-            price: body.price,
+            price: effectivePrice,
             priceType:
             body.priceType,
             negotiable:

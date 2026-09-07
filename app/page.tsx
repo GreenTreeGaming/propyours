@@ -142,8 +142,14 @@ function formatCompactNumber(
 }
 
 function formatPrice(
-    price: number,
+    price: number | null | undefined,
 ): string {
+  if (
+      typeof price !== "number" ||
+      !Number.isFinite(price)
+  ) {
+    return "Price unavailable";
+  }
   if (price >= 10_000_000) {
     return `₹${formatCompactNumber(
         price / 10_000_000,

@@ -97,7 +97,12 @@ interface DashboardProperty {
     locality?: string;
     city: string;
     propertyType: string;
+
     price: number;
+    startingPrice?: number;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
+
     images?: string[];
     purpose?: string;
     status?: "active" | "sold" | "inactive";

@@ -543,6 +543,20 @@ export async function POST(
                 ? body.unitConfigurations
                 : [];
 
+        if (
+            rawUnitConfigurations.length > 50
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "A property can have at most 50 unit configurations.",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
         const unitConfigurations: Array<{
             bedrooms: number;
             size: number;

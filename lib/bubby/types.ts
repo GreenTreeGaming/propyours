@@ -105,6 +105,10 @@ export interface BubbyPropertyResult {
     city: string;
     state?: string;
     price: number;
+    startingPrice?: number;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
+
     priceType?: string;
     negotiable?: boolean;
     bedrooms?: number;

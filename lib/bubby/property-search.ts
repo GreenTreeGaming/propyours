@@ -21,6 +21,7 @@ interface RawProperty {
     locality?: unknown;
     city?: unknown;
     state?: unknown;
+    unitConfigurations?: unknown;
     description?: unknown;
     price?: unknown;
     priceType?: unknown;
@@ -98,6 +99,7 @@ export async function searchProperties(
             bathrooms: 1,
             size: 1,
             sizeUnit: 1,
+            unitConfigurations: 1,
             purpose: 1,
             featured: 1,
             images: 1,
@@ -360,6 +362,72 @@ function toPropertyMatch(
         raw.amenities,
     ).slice(0, 12);
 
+    const unitConfigurations =
+        Array.isArray(
+            raw.unitConfigurations,
+        )
+            ? raw.unitConfigurations
+            : [];
+
+    const unitPrices =
+        unitConfigurations
+            .map((unit) => {
+                if (
+                    typeof unit !== "object" ||
+                    unit === null ||
+                    !("price" in unit)
+                ) {
+                    return null;
+                }
+
+                return toNumber(
+                    unit.price,
+                );
+            })
+            .filter(
+                (
+                    price,
+                ): price is number =>
+                    typeof price === "number" &&
+                    Number.isFinite(price) &&
+                    price > 0,
+            );
+
+    const availableBHKs =
+        Array.from(
+            new Set(
+                unitConfigurations
+                    .map((unit) => {
+                        if (
+                            typeof unit !==
+                            "object" ||
+                            unit === null ||
+                            !(
+                                "bedrooms" in
+                                unit
+                            )
+                        ) {
+                            return null;
+                        }
+
+                        return toNumber(
+                            unit.bedrooms,
+                        );
+                    })
+                    .filter(
+                        (
+                            bedrooms,
+                        ): bedrooms is number =>
+                            typeof bedrooms ===
+                            "number" &&
+                            Number.isInteger(
+                                bedrooms,
+                            ) &&
+                            bedrooms >= 0,
+                    ),
+            ),
+        );
+
     return {
         id,
         propertyType:
@@ -376,7 +444,20 @@ function toPropertyMatch(
             toOptionalString(raw.description),
             500,
         ),
-        price: toNumber(raw.price) ?? 0,
+        price:
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : toNumber(raw.price) ?? 0,
+
+        startingPrice:
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : undefined,
+
+        hasUnitConfigurations:
+            unitConfigurations.length > 0,
+
+        availableBHKs,
         priceType: toOptionalString(raw.priceType),
         negotiable: toBoolean(raw.negotiable),
         bedrooms: toNumber(raw.bedrooms),

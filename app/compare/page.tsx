@@ -21,6 +21,35 @@ import {
     getPropertyDisplayPrice,
 } from "@/lib/property-display";
 
+function formatPrice(
+    price: number,
+): string {
+    if (price >= 10_000_000) {
+        const crores =
+            price / 10_000_000;
+
+        return `₹${crores.toFixed(
+            Number.isInteger(crores)
+                ? 0
+                : 2,
+        )} Cr`;
+    }
+
+    if (price >= 100_000) {
+        const lakhs =
+            price / 100_000;
+
+        return `₹${lakhs.toFixed(
+            Number.isInteger(lakhs)
+                ? 0
+                : 2,
+        )} L`;
+    }
+
+    return `₹${price.toLocaleString(
+        "en-IN",
+    )}`;
+}
 
 export default function ComparePage() {
     const { compareList, removeFromCompare, clearCompare } = useCompare();

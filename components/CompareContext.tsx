@@ -6,7 +6,12 @@ type CompareProperty = {
     _id: string;
     address: string;
     images?: string[];
+
     price: number;
+    startingPrice?: number;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
+
     negotiable?: boolean;
     size: number;
     sizeUnit: string;

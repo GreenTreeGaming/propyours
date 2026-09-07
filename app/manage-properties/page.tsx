@@ -119,6 +119,10 @@ interface PropertyPlanSnapshot {
 }
 
 interface ManagedProperty extends PropertyEditorProperty {
+    startingPrice?: number;
+    hasUnitConfigurations?: boolean;
+    availableBHKs?: number[];
+
     status?: "active" | "sold" | "inactive";
     featured?: boolean;
     listingExpiresAt?: string;
