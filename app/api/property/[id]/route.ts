@@ -107,7 +107,7 @@ interface SanitizedUnitConfiguration {
     sizeUnit:
         (typeof ALLOWED_SIZE_UNITS)[number];
     uds: number | null;
-    price: number | null;
+    price: number;
 }
 
 function parseUnitConfigurations(
@@ -731,86 +731,7 @@ export async function PUT(
             | SanitizedUnitConfiguration[]
             | undefined;
 
-        const finalUnitConfigurations:
-            SanitizedUnitConfiguration[] =
-            isLand || isCommercial
-                ? []
-                : unitConfigurations ??
-                (
-                    property.unitConfigurations ??
-                    []
-                ).map(
-                    (unit: {
-                        bedrooms: number;
-                        size: number;
-                        sizeUnit: string;
-                        uds?: number | null;
-                        price: number;
-                    }) => ({
-                        bedrooms:
-                        unit.bedrooms,
-                        size:
-                        unit.size,
-                        sizeUnit:
-                            unit.sizeUnit as SanitizedUnitConfiguration["sizeUnit"],
-                        uds:
-                            unit.uds ?? null,
-                        price:
-                        unit.price,
-                    }),
-                );
-
-        const unitPrices =
-            finalUnitConfigurations
-                .map(
-                    (
-                        unit:
-                        SanitizedUnitConfiguration,
-                    ) => unit.price,
-                )
-                .filter(
-                    (
-                        price,
-                    ): price is number =>
-                        typeof price === "number" &&
-                        Number.isFinite(price) &&
-                        price > 0,
-                );
-
-        const requestedPrice =
-            typeof body.price === "number"
-                ? body.price
-                : property.price;
-
-        const effectivePrice =
-            !isLand &&
-            !isCommercial &&
-            unitPrices.length > 0
-                ? Math.min(...unitPrices)
-                : requestedPrice;
-
-        if (
-            typeof effectivePrice !== "number" ||
-            !Number.isFinite(effectivePrice) ||
-            effectivePrice <= 0
-        ) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Enter a valid asking price.",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
         if (isLand || isCommercial) {
-            /*
-             * Residential-only data must not
-             * survive after changing the property
-             * to land or commercial.
-             */
             unitConfigurations = [];
         } else if (
             "unitConfigurations" in body
@@ -834,6 +755,84 @@ export async function PUT(
 
             unitConfigurations =
                 parsedUnits.units;
+        }
+
+        const finalUnitConfigurations:
+            SanitizedUnitConfiguration[] =
+            isLand || isCommercial
+                ? []
+                : unitConfigurations ??
+                (
+                    property.unitConfigurations ??
+                    []
+                ).map(
+                    (unit: {
+                        bedrooms: number;
+                        size: number;
+                        sizeUnit: string;
+                        uds?: number | null;
+                        price: number;
+                    }) => ({
+                        bedrooms:
+                        unit.bedrooms,
+
+                        size:
+                        unit.size,
+
+                        sizeUnit:
+                            unit.sizeUnit as SanitizedUnitConfiguration["sizeUnit"],
+
+                        uds:
+                            unit.uds ?? null,
+
+                        price:
+                        unit.price,
+                    }),
+                );
+
+        const unitPrices =
+            finalUnitConfigurations
+                .map(
+                    (unit) =>
+                        unit.price,
+                )
+                .filter(
+                    (price) =>
+                        Number.isFinite(
+                            price,
+                        ) &&
+                        price > 0,
+                );
+
+        const requestedPrice =
+            typeof body.price === "number"
+                ? body.price
+                : property.price;
+
+        const effectivePrice =
+            !isLand &&
+            !isCommercial &&
+            unitPrices.length > 0
+                ? Math.min(...unitPrices)
+                : requestedPrice;
+
+        if (
+            typeof effectivePrice !==
+            "number" ||
+            !Number.isFinite(
+                effectivePrice,
+            ) ||
+            effectivePrice <= 0
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Enter a valid asking price.",
+                },
+                {
+                    status: 400,
+                },
+            );
         }
 
         if ("uds" in body) {
