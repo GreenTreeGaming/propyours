@@ -1064,6 +1064,30 @@ export async function PUT(
                         .slice(0, 150)
                     : undefined,
 
+            condition:
+                body.condition ===
+                "ready_to_occupy" ||
+                body.condition ===
+                "under_construction"
+                    ? body.condition
+                    : undefined,
+
+            expectedCompletionMonth:
+                body.condition ===
+                "under_construction"
+                    ? Number(
+                        body.expectedCompletionMonth,
+                    )
+                    : null,
+
+            expectedCompletionYear:
+                body.condition ===
+                "under_construction"
+                    ? Number(
+                        body.expectedCompletionYear,
+                    )
+                    : null,
+
             uds: body.uds,
 
             size: body.size,

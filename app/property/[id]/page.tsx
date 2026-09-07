@@ -133,6 +133,19 @@ interface PropertyRecord {
     negotiable?: boolean;
     gstApplicable?: boolean;
     registrationChargesAdditional?: boolean;
+
+    condition?:
+        | "ready_to_occupy"
+        | "under_construction";
+
+    expectedCompletionMonth?:
+        | number
+        | null;
+
+    expectedCompletionYear?:
+        | number
+        | null;
+
     bathrooms?: number | null;
     size?: number;
     sizeUnit?: string;
@@ -486,6 +499,39 @@ function formatPrice(
             maximumFractionDigits: 0,
         },
     ).format(value);
+}
+
+function formatCompletionDate(
+    month?: number | null,
+    year?: number | null,
+): string | null {
+    if (
+        !month ||
+        !year ||
+        month < 1 ||
+        month > 12
+    ) {
+        return null;
+    }
+
+    const monthName =
+        new Intl.DateTimeFormat(
+            "en-IN",
+            {
+                month: "long",
+                timeZone: "UTC",
+            },
+        ).format(
+            new Date(
+                Date.UTC(
+                    2000,
+                    month - 1,
+                    1,
+                ),
+            ),
+        );
+
+    return `${monthName} ${year}`;
 }
 
 function formatDate(
@@ -954,6 +1000,37 @@ function getFactRows(
             label: "Developer / Builder",
             value: property.developerName,
         });
+    }
+
+    if (property.condition) {
+        rows.push({
+            label: "Condition",
+            value:
+                property.condition ===
+                "under_construction"
+                    ? "Under Construction"
+                    : "Ready To Occupy",
+        });
+    }
+
+    if (
+        property.condition ===
+        "under_construction"
+    ) {
+        const completionDate =
+            formatCompletionDate(
+                property.expectedCompletionMonth,
+                property.expectedCompletionYear,
+            );
+
+        if (completionDate) {
+            rows.push({
+                label:
+                    "Expected completion",
+                value:
+                completionDate,
+            });
+        }
     }
 
     if (property.priceType) {

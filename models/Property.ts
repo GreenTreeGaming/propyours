@@ -187,6 +187,29 @@ const PropertySchema =
             bathrooms: Number,
             floors: Number,
 
+            condition: {
+                type: String,
+                enum: [
+                    "ready_to_occupy",
+                    "under_construction",
+                ],
+                default: "ready_to_occupy",
+            },
+
+            expectedCompletionMonth: {
+                type: Number,
+                min: 1,
+                max: 12,
+                default: null,
+            },
+
+            expectedCompletionYear: {
+                type: Number,
+                min: 2000,
+                max: 2200,
+                default: null,
+            },
+
             unitConfigurations: {
                 type: [UnitConfigurationSchema],
                 default: [],

@@ -98,6 +98,67 @@ interface StoredUser {
     };
 }
 
+const COMPLETION_MONTHS = [
+    {
+        value: "1",
+        label: "January",
+    },
+    {
+        value: "2",
+        label: "February",
+    },
+    {
+        value: "3",
+        label: "March",
+    },
+    {
+        value: "4",
+        label: "April",
+    },
+    {
+        value: "5",
+        label: "May",
+    },
+    {
+        value: "6",
+        label: "June",
+    },
+    {
+        value: "7",
+        label: "July",
+    },
+    {
+        value: "8",
+        label: "August",
+    },
+    {
+        value: "9",
+        label: "September",
+    },
+    {
+        value: "10",
+        label: "October",
+    },
+    {
+        value: "11",
+        label: "November",
+    },
+    {
+        value: "12",
+        label: "December",
+    },
+];
+
+const COMPLETION_YEARS =
+    Array.from(
+        {
+            length: 16,
+        },
+        (_, index) =>
+            new Date().getFullYear() +
+            index,
+    );
+
 interface UploadDeleteGrant {
     fileKey: string;
     deleteToken: string;
@@ -146,6 +207,13 @@ interface PropertyForm {
     gstApplicable: boolean;
     registrationChargesAdditional: boolean;
     floors: string;
+
+    condition:
+        | "ready_to_occupy"
+        | "under_construction";
+
+    expectedCompletionMonth: string;
+    expectedCompletionYear: string;
     amenities: string[];
     images: string[];
     videoLinks: string[];
@@ -303,6 +371,12 @@ const DEFAULT_FORM: PropertyForm = {
     bedrooms: "",
     bathrooms: "",
     floors: "",
+
+    condition: "ready_to_occupy",
+
+    expectedCompletionMonth: "",
+    expectedCompletionYear: "",
+
     amenities: [],
     images: [],
     videoLinks: [],
@@ -1087,6 +1161,48 @@ export default function PostPropertyPage() {
                         "Enter a valid asking price.";
                 }
             }
+
+            if (
+                form.category ===
+                "residential" &&
+                form.condition ===
+                "under_construction"
+            ) {
+                const month = Number(
+                    form.expectedCompletionMonth,
+                );
+
+                const year = Number(
+                    form.expectedCompletionYear,
+                );
+
+                if (
+                    !Number.isInteger(month) ||
+                    month < 1 ||
+                    month > 12 ||
+                    !Number.isInteger(year)
+                ) {
+                    nextErrors.expectedCompletionDate =
+                        "Select the expected completion month and year.";
+                } else {
+                    const now = new Date();
+
+                    const currentYear =
+                        now.getFullYear();
+
+                    const currentMonth =
+                        now.getMonth() + 1;
+
+                    if (
+                        year < currentYear ||
+                        (year === currentYear &&
+                            month < currentMonth)
+                    ) {
+                        nextErrors.expectedCompletionDate =
+                            "Expected completion cannot be in the past.";
+                    }
+                }
+            }
         }
 
         if (step === "media") {
@@ -1492,6 +1608,31 @@ export default function PostPropertyPage() {
                             form.category === "land"
                                 ? null
                                 : optionalNumber(form.floors),
+                        condition:
+                            form.category ===
+                            "residential"
+                                ? form.condition
+                                : undefined,
+
+                        expectedCompletionMonth:
+                            form.category ===
+                            "residential" &&
+                            form.condition ===
+                            "under_construction"
+                                ? Number(
+                                    form.expectedCompletionMonth,
+                                )
+                                : null,
+
+                        expectedCompletionYear:
+                            form.category ===
+                            "residential" &&
+                            form.condition ===
+                            "under_construction"
+                                ? Number(
+                                    form.expectedCompletionYear,
+                                )
+                                : null,
                         amenities: form.amenities,
                         images: form.images,
                         videoLinks: form.videoLinks
@@ -1868,61 +2009,200 @@ export default function PostPropertyPage() {
                                                     ) : null}
                                                 </fieldset>
 
-                                                {form.category === "residential" ? (
-                                                    <div>
-                                                        <h3 className="text-sm font-black text-slate-950">
-                                                            Residential type
-                                                        </h3>
-                                                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                                            {RESIDENTIAL_PROPERTY_TYPES.map((type) => {
-                                                                const Icon =
-                                                                    PROPERTY_ICONS[type] ?? Home;
-                                                                const selected =
-                                                                    form.propertyType === type;
+                                                {form.category ===
+                                                "residential" ? (
+                                                    <div className="sm:col-span-2">
+                                                        <div className="border-t border-slate-100 pt-5">
+                                                            <FieldLabel>
+                                                                Condition
+                                                            </FieldLabel>
 
-                                                                return (
-                                                                    <button
-                                                                        key={type}
-                                                                        type="button"
-                                                                        aria-pressed={selected}
-                                                                        onClick={() =>
-                                                                            updateForm({
-                                                                                propertyType: type,
-                                                                            })
-                                                                        }
-                                                                        className={`flex items-start gap-4 rounded-2xl border p-5 text-left transition ${
-                                                                            selected
-                                                                                ? "border-primary bg-teal-50 text-primary ring-2 ring-primary/10"
-                                                                                : "border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
+                                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        updateForm({
+                                                                            condition:
+                                                                                "ready_to_occupy",
+
+                                                                            expectedCompletionMonth:
+                                                                                "",
+
+                                                                            expectedCompletionYear:
+                                                                                "",
+                                                                        })
+                                                                    }
+                                                                    className={`flex items-center justify-between rounded-xl border p-4 text-left transition ${
+                                                                        form.condition ===
+                                                                        "ready_to_occupy"
+                                                                            ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                                                    }`}
+                                                                >
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-slate-950">
+                                                                            Ready To Occupy
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                            The property is ready
+                                                                            for possession.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <span
+                                                                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                                                            form.condition ===
+                                                                            "ready_to_occupy"
+                                                                                ? "border-primary bg-primary text-white"
+                                                                                : "border-slate-300 bg-white text-transparent"
                                                                         }`}
                                                                     >
-                                    <span
-                                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                                            selected
-                                                ? "bg-primary text-white"
-                                                : "bg-slate-50 text-slate-400"
-                                        }`}
-                                    >
-                                      <Icon size={20} aria-hidden="true" />
-                                    </span>
+                        <Check
+                            size={14}
+                            strokeWidth={3}
+                            aria-hidden="true"
+                        />
+                    </span>
+                                                                </button>
 
-                                                                        <span className="min-w-0">
-                                      <span className="block text-sm font-black">
-                                        {type}
-                                      </span>
-                                      <span
-                                          className={`mt-1 block text-xs leading-5 ${
-                                              selected
-                                                  ? "text-slate-600"
-                                                  : "text-slate-500"
-                                          }`}
-                                      >
-                                        {RESIDENTIAL_TYPE_DESCRIPTIONS[type]}
-                                      </span>
-                                    </span>
-                                                                    </button>
-                                                                );
-                                                            })}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        updateForm({
+                                                                            condition:
+                                                                                "under_construction",
+                                                                        })
+                                                                    }
+                                                                    className={`flex items-center justify-between rounded-xl border p-4 text-left transition ${
+                                                                        form.condition ===
+                                                                        "under_construction"
+                                                                            ? "border-primary bg-teal-50 ring-2 ring-primary/10"
+                                                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                                                    }`}
+                                                                >
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-slate-950">
+                                                                            Under Construction
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                                            Construction is still
+                                                                            in progress.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <span
+                                                                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                                                                            form.condition ===
+                                                                            "under_construction"
+                                                                                ? "border-primary bg-primary text-white"
+                                                                                : "border-slate-300 bg-white text-transparent"
+                                                                        }`}
+                                                                    >
+                        <Check
+                            size={14}
+                            strokeWidth={3}
+                            aria-hidden="true"
+                        />
+                    </span>
+                                                                </button>
+                                                            </div>
+
+                                                            {form.condition ===
+                                                            "under_construction" ? (
+                                                                <div className="mt-5">
+                                                                    <FieldLabel required>
+                                                                        Expected Completion Date
+                                                                    </FieldLabel>
+
+                                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                                        <SelectField
+                                                                            value={
+                                                                                form.expectedCompletionMonth
+                                                                            }
+                                                                            onChange={(
+                                                                                value,
+                                                                            ) =>
+                                                                                updateForm({
+                                                                                    expectedCompletionMonth:
+                                                                                    value,
+                                                                                })
+                                                                            }
+                                                                            ariaLabel="Expected completion month"
+                                                                        >
+                                                                            <option value="">
+                                                                                Select month
+                                                                            </option>
+
+                                                                            {COMPLETION_MONTHS.map(
+                                                                                (
+                                                                                    month,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            month.value
+                                                                                        }
+                                                                                        value={
+                                                                                            month.value
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            month.label
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </SelectField>
+
+                                                                        <SelectField
+                                                                            value={
+                                                                                form.expectedCompletionYear
+                                                                            }
+                                                                            onChange={(
+                                                                                value,
+                                                                            ) =>
+                                                                                updateForm({
+                                                                                    expectedCompletionYear:
+                                                                                    value,
+                                                                                })
+                                                                            }
+                                                                            ariaLabel="Expected completion year"
+                                                                        >
+                                                                            <option value="">
+                                                                                Select year
+                                                                            </option>
+
+                                                                            {COMPLETION_YEARS.map(
+                                                                                (
+                                                                                    year,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            year
+                                                                                        }
+                                                                                        value={
+                                                                                            year
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            year
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </SelectField>
+                                                                    </div>
+
+                                                                    {errors.expectedCompletionDate ? (
+                                                                        <ErrorText>
+                                                                            {
+                                                                                errors.expectedCompletionDate
+                                                                            }
+                                                                        </ErrorText>
+                                                                    ) : null}
+                                                                </div>
+                                                            ) : null}
                                                         </div>
                                                     </div>
                                                 ) : null}

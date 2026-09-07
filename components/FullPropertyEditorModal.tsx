@@ -60,6 +60,19 @@ export interface PropertyEditorProperty {
     landmark?: string;
     developerName?: string;
     projectName?: string;
+
+    condition?:
+        | "ready_to_occupy"
+        | "under_construction";
+
+    expectedCompletionMonth?:
+        | number
+        | null;
+
+    expectedCompletionYear?:
+        | number
+        | null;
+
     uds?: number | null;
 
     unitConfigurations?: Array<{
@@ -162,6 +175,12 @@ interface EditorForm {
     bedrooms: string;
     bathrooms: string;
     floors: string;
+    condition:
+        | "ready_to_occupy"
+        | "under_construction";
+
+    expectedCompletionMonth: string;
+    expectedCompletionYear: string;
     amenities: string[];
     images: string[];
     videoLinks: string[];
@@ -435,6 +454,29 @@ function createEditorForm(
             property.bedrooms === undefined
                 ? ""
                 : String(property.bedrooms),
+        condition:
+            property.condition ??
+            "ready_to_occupy",
+
+        expectedCompletionMonth:
+            property.expectedCompletionMonth ===
+            null ||
+            property.expectedCompletionMonth ===
+            undefined
+                ? ""
+                : String(
+                    property.expectedCompletionMonth,
+                ),
+
+        expectedCompletionYear:
+            property.expectedCompletionYear ===
+            null ||
+            property.expectedCompletionYear ===
+            undefined
+                ? ""
+                : String(
+                    property.expectedCompletionYear,
+                ),
         bathrooms:
             property.bathrooms === null ||
             property.bathrooms === undefined
@@ -1318,6 +1360,25 @@ export default function FullPropertyEditorModal({
 
                 projectName:
                     form.projectName.trim(),
+
+                condition:
+                form.condition,
+
+                expectedCompletionMonth:
+                    form.condition ===
+                    "under_construction"
+                        ? Number(
+                            form.expectedCompletionMonth,
+                        )
+                        : null,
+
+                expectedCompletionYear:
+                    form.condition ===
+                    "under_construction"
+                        ? Number(
+                            form.expectedCompletionYear,
+                        )
+                        : null,
 
                 city: form.city,
                 state: "Tamil Nadu",

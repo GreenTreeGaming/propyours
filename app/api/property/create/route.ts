@@ -744,6 +744,28 @@ export async function POST(
                         150,
                     ),
 
+                    condition:
+                        body.condition ===
+                        "under_construction"
+                            ? "under_construction"
+                            : "ready_to_occupy",
+
+                    expectedCompletionMonth:
+                        body.condition ===
+                        "under_construction"
+                            ? Number(
+                                body.expectedCompletionMonth,
+                            )
+                            : null,
+
+                    expectedCompletionYear:
+                        body.condition ===
+                        "under_construction"
+                            ? Number(
+                                body.expectedCompletionYear,
+                            )
+                            : null,
+
                     uds: body.uds,
                     size: body.size,
                     sizeUnit: body.sizeUnit,

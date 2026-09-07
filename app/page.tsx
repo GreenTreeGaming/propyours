@@ -1517,7 +1517,7 @@ export default function HomePage() {
                                   href={`/property/${property._id}`}
                                   className="group flex min-h-[280px] snap-start flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)]"
                               >
-                                <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[46%]">
+                                <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[42%]">
                                   <Image
                                       src={
                                           property.images?.[0] ??
@@ -1546,7 +1546,7 @@ export default function HomePage() {
                       </span>
                                 </div>
 
-                                <div className="flex min-h-0 flex-1 flex-col p-4">
+                                <div className="flex flex-1 flex-col p-4">
                                   <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                                     <MapPin
                                         size={13}
@@ -1561,7 +1561,7 @@ export default function HomePage() {
                         </span>
                                   </div>
 
-                                  <h3 className="mt-3 line-clamp-2 text-sm font-black leading-5 text-slate-950 transition group-hover:text-primary sm:text-base">
+                                  <h3 className="mt-3 shrink-0 line-clamp-2 text-sm font-black leading-5 text-slate-950 transition group-hover:text-primary sm:text-base">
                                     {getPropertyDisplayTitle(
                                         property,
                                     )}
