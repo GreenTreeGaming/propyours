@@ -81,14 +81,14 @@ function getSortStage(
 
         case "price-low":
             return {
-                price: 1,
+                startingPrice: 1,
                 createdAt: -1,
                 _id: -1,
             };
 
         case "price-high":
             return {
-                price: -1,
+                startingPrice: -1,
                 createdAt: -1,
                 _id: -1,
             };
@@ -102,6 +102,72 @@ function getSortStage(
                 _id: -1,
             };
     }
+}
+
+function getDerivedPropertyFields() {
+    return {
+        availableBHKs: {
+            $setUnion: [
+                {
+                    $map: {
+                        input: {
+                            $ifNull: [
+                                "$unitConfigurations",
+                                [],
+                            ],
+                        },
+                        as: "unit",
+                        in: "$$unit.bedrooms",
+                    },
+                },
+                [],
+            ],
+        },
+
+        startingPrice: {
+            $cond: [
+                {
+                    $gt: [
+                        {
+                            $size: {
+                                $ifNull: [
+                                    "$unitConfigurations",
+                                    [],
+                                ],
+                            },
+                        },
+                        0,
+                    ],
+                },
+
+                {
+                    $min: {
+                        $map: {
+                            input: "$unitConfigurations",
+                            as: "unit",
+                            in: "$$unit.price",
+                        },
+                    },
+                },
+
+                "$price",
+            ],
+        },
+
+        hasUnitConfigurations: {
+            $gt: [
+                {
+                    $size: {
+                        $ifNull: [
+                            "$unitConfigurations",
+                            [],
+                        ],
+                    },
+                },
+                0,
+            ],
+        },
+    };
 }
 
 function buildPropertyMatch(
@@ -192,55 +258,55 @@ function buildPropertyMatch(
 
     if (query.bhk === "Studio") {
         conditions.push({
-            bedrooms: {
-                $in: [
-                    0,
-                    null,
-                ],
-            },
+            $or: [
+                {
+                    bedrooms: {
+                        $in: [
+                            0,
+                            null,
+                        ],
+                    },
+                },
+                {
+                    "unitConfigurations.bedrooms": 0,
+                },
+            ],
         });
     } else if (query.bhk === "4+") {
         conditions.push({
-            bedrooms: {
-                $gte: 4,
-            },
+            $or: [
+                {
+                    bedrooms: {
+                        $gte: 4,
+                    },
+                },
+                {
+                    "unitConfigurations.bedrooms": {
+                        $gte: 4,
+                    },
+                },
+            ],
         });
     } else if (
         query.bhk !== "All"
     ) {
-        conditions.push({
-            bedrooms: Number.parseInt(
+        const requestedBedrooms =
+            Number.parseInt(
                 query.bhk,
                 10,
-            ),
-        });
-    }
-
-    if (
-        query.minPrice !== undefined ||
-        query.maxPrice !== undefined
-    ) {
-        const priceFilter: {
-            $gte?: number;
-            $lte?: number;
-        } = {};
-
-        if (
-            query.minPrice !== undefined
-        ) {
-            priceFilter.$gte =
-                query.minPrice;
-        }
-
-        if (
-            query.maxPrice !== undefined
-        ) {
-            priceFilter.$lte =
-                query.maxPrice;
-        }
+            );
 
         conditions.push({
-            price: priceFilter,
+            $or: [
+                {
+                    bedrooms:
+                    requestedBedrooms,
+                },
+                {
+                    "unitConfigurations.bedrooms":
+                    requestedBedrooms,
+                },
+            ],
         });
     }
 
@@ -360,6 +426,8 @@ export async function GET(
 
                 {
                     $addFields: {
+                        ...getDerivedPropertyFields(),
+
                         isPromoted: {
                             $gt: [
                                 "$promotedUntil",
@@ -423,6 +491,33 @@ export async function GET(
                                 },
                             ],
                         },
+                    },
+                },
+
+                {
+                    $match: {
+                        ...(query.minPrice !== undefined ||
+                        query.maxPrice !== undefined
+                            ? {
+                                startingPrice: {
+                                    ...(query.minPrice !==
+                                    undefined
+                                        ? {
+                                            $gte:
+                                            query.minPrice,
+                                        }
+                                        : {}),
+
+                                    ...(query.maxPrice !==
+                                    undefined
+                                        ? {
+                                            $lte:
+                                            query.maxPrice,
+                                        }
+                                        : {}),
+                                },
+                            }
+                            : {}),
                     },
                 },
 
@@ -491,6 +586,7 @@ export async function GET(
 
                     const {
                         price: _price,
+                        startingPrice: _startingPrice,
                         ...publicProperty
                     } = property;
 

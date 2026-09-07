@@ -37,11 +37,18 @@ interface Property {
   address: string;
   city: string;
   locality?: string;
+
   price: number;
-  bedrooms: number;
+  startingPrice?: number;
+  hasUnitConfigurations?: boolean;
+
+  bedrooms?: number;
+  availableBHKs?: number[];
+
   images?: string[];
   promotedUntil?: string;
   negotiable?: boolean;
+
   planSnapshot?: {
     homepageFeatured?: boolean;
     badgeLevel?: "premium" | "verified" | string;
@@ -150,6 +157,80 @@ function formatPrice(
   return `₹${price.toLocaleString(
       "en-IN",
   )}`;
+}
+
+function getDisplayPrice(
+    property: Property,
+): number {
+  if (
+      property.hasUnitConfigurations &&
+      typeof property.startingPrice ===
+      "number"
+  ) {
+    return property.startingPrice;
+  }
+
+  return property.price;
+}
+
+function getBHKLabel(
+    property: Property,
+): string {
+  const bhks = [
+    ...new Set(
+        property.availableBHKs ??
+        [],
+    ),
+  ]
+      .filter(
+          (value) =>
+              Number.isInteger(value) &&
+              value >= 0,
+      )
+      .sort(
+          (first, second) =>
+              first - second,
+      );
+
+  if (bhks.length > 0) {
+    const labels =
+        bhks.map((value) =>
+            value === 0
+                ? "Studio"
+                : String(value),
+        );
+
+    if (labels.length === 1) {
+      return labels[0] === "Studio"
+          ? "Studio"
+          : `${labels[0]} BHK`;
+    }
+
+    if (labels.length === 2) {
+      return `${labels[0]} & ${labels[1]} BHK`;
+    }
+
+    return `${labels
+        .slice(0, -1)
+        .join(", ")} & ${
+        labels[labels.length - 1]
+    } BHK`;
+  }
+
+  if (
+      property.bedrooms !==
+      undefined
+  ) {
+    if (property.bedrooms === 0) {
+      return "Studio";
+    }
+
+    if (property.bedrooms > 0) {
+      return `${property.bedrooms} BHK`;
+    }
+  }
+
+  return property.propertyType;
 }
 
 function getPropertyBadge(property: Property): string | null {
@@ -1546,7 +1627,17 @@ export default function HomePage() {
                                   <div className="mt-auto flex items-end justify-between gap-3 pt-5">
                                     <div className="min-w-0">
                                       <p className="text-lg font-black text-slate-950">
-                                        {formatPrice(property.price)}
+                                        <>
+                                          {formatPrice(
+                                              getDisplayPrice(property),
+                                          )}
+
+                                          {property.hasUnitConfigurations ? (
+                                              <span className="ml-1 text-sm font-bold text-slate-500">
+        onwards
+      </span>
+                                          ) : null}
+                                        </>
                                       </p>
 
                                       <PriceNegotiabilityBadge
@@ -1555,9 +1646,7 @@ export default function HomePage() {
                                       />
 
                                       <p className="mt-1 truncate text-xs text-slate-500">
-                                        {property.bedrooms === 0
-                                            ? property.propertyType
-                                            : `${property.bedrooms} BHK ${property.propertyType}`}
+                                        {getBHKLabel(property)}
                                       </p>
                                     </div>
 

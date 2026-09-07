@@ -13,6 +13,7 @@ import {
     Building2,
     CheckCircle2,
     Eye,
+    Check,
     EyeOff,
     Heart,
     Home,
@@ -137,6 +138,7 @@ function LoginForm() {
                     "email",
                 ) ?? "",
             password: "",
+            rememberMe: false,
         });
     const [
         showPassword,
@@ -195,6 +197,8 @@ function LoginForm() {
                         email,
                         password:
                         form.password,
+                        rememberMe:
+                        form.rememberMe,
                     }),
                 },
             );
@@ -477,6 +481,47 @@ function LoginForm() {
                   </button>
                 </span>
                             </label>
+
+                            <div className="flex items-center justify-between gap-4">
+                                <label className="group flex cursor-pointer items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            form.rememberMe
+                                        }
+                                        onChange={(event) =>
+                                            setForm(
+                                                (current) => ({
+                                                    ...current,
+                                                    rememberMe:
+                                                    event.target
+                                                        .checked,
+                                                }),
+                                            )
+                                        }
+                                        className="peer sr-only"
+                                    />
+
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 border-slate-300 bg-white text-transparent transition group-hover:border-primary peer-checked:border-primary peer-checked:bg-primary peer-checked:text-white peer-focus-visible:ring-4 peer-focus-visible:ring-primary/15">
+            <Check
+                size={13}
+                strokeWidth={3}
+                aria-hidden={true}
+            />
+        </span>
+
+                                    <span>
+            <span className="block text-sm font-bold text-slate-700">
+                Save this login
+            </span>
+
+            <span className="mt-0.5 block text-[11px] leading-4 text-slate-400">
+                Stay signed in on this
+                device for 30 days
+            </span>
+        </span>
+                                </label>
+                            </div>
 
                             {error ? (
                                 <div

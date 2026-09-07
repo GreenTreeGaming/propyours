@@ -40,6 +40,7 @@ export async function POST(
         const {
             email,
             password,
+            rememberMe,
         } = parsed.data;
 
         await enforceRateLimit(
@@ -138,21 +139,23 @@ export async function POST(
             });
 
         response.cookies.set({
-            name:
-                "auth-token",
+            name: "auth-token",
             value: token,
             httpOnly: true,
             secure:
-                process.env
-                    .NODE_ENV ===
+                process.env.NODE_ENV ===
                 "production",
             sameSite: "lax",
             path: "/",
-            maxAge:
-                60 *
-                60 *
-                24 *
-                7,
+            ...(rememberMe
+                ? {
+                    maxAge:
+                        60 *
+                        60 *
+                        24 *
+                        30,
+                }
+                : {}),
             priority: "high",
         });
 

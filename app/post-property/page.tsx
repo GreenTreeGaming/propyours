@@ -80,7 +80,6 @@ import {
 type StepId =
     | "category"
     | "location"
-    | "details"
     | "pricing"
     | "media"
     | "review";
@@ -251,13 +250,6 @@ const STEPS: StepDefinition[] = [
         shortTitle: "Location",
         description: "Tamil Nadu location and size",
         icon: MapPin,
-    },
-    {
-        id: "details",
-        title: "Property details",
-        shortTitle: "Details",
-        description: "Category-specific specifications",
-        icon: LayoutGrid,
     },
     {
         id: "pricing",
@@ -949,6 +941,22 @@ export default function PostPropertyPage() {
             }
 
             if (
+                form.floors.trim() &&
+                (
+                    !Number.isFinite(
+                        Number(form.floors),
+                    ) ||
+                    !Number.isInteger(
+                        Number(form.floors),
+                    ) ||
+                    Number(form.floors) < 0
+                )
+            ) {
+                nextErrors.floors =
+                    "Enter a valid whole number of floors.";
+            }
+
+            if (
                 form.unitConfigurations.length > 0
             ) {
                 const invalidConfiguration =
@@ -1018,33 +1026,6 @@ export default function PostPropertyPage() {
             }
         }
 
-        if (step === "details") {
-            const numericFields: Array<[string, string]> =
-                form.category === "residential"
-                    ? [
-                        ["bedrooms", form.bedrooms],
-                        ["bathrooms", form.bathrooms],
-                        ["floors", form.floors],
-                    ]
-                    : form.category === "commercial"
-                        ? [
-                            ["bathrooms", form.bathrooms],
-                            ["floors", form.floors],
-                        ]
-                        : [];
-
-            numericFields.forEach(([key, value]) => {
-                if (
-                    value.trim() &&
-                    (!Number.isFinite(Number(value)) ||
-                        Number(value) < 0)
-                ) {
-                    nextErrors[key] =
-                        "Enter a valid non-negative number.";
-                }
-            });
-        }
-
         if (step === "pricing") {
             const price = Number(form.price);
 
@@ -1085,7 +1066,6 @@ export default function PostPropertyPage() {
         const order: StepId[] = [
             "category",
             "location",
-            "details",
             "pricing",
             "media",
         ];
@@ -1292,14 +1272,31 @@ export default function PostPropertyPage() {
         localStorage.removeItem(
             FORM_STORAGE_KEY,
         );
+
         localStorage.removeItem(
             STEP_STORAGE_KEY,
         );
-        setForm(DEFAULT_FORM);
+
+        setForm({
+            ...DEFAULT_FORM,
+            unitConfigurations: [],
+            amenities: [],
+            images: [],
+            videoLinks: [],
+            uploadDeleteGrants: {},
+            brochure: null,
+        });
+
         setActiveStep("category");
         setErrors({});
         setSubmitError("");
         setUploadMessage("");
+        setDraftSaved(false);
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
     }
 
     function handleWizardSubmit(
@@ -1408,10 +1405,7 @@ export default function PostPropertyPage() {
                         zeroCommission:
                         form.zeroCommission,
 
-                        bedrooms:
-                            form.category === "residential"
-                                ? optionalNumber(form.bedrooms)
-                                : null,
+                        bedrooms: null,
                         bathrooms:
                             form.category === "land"
                                 ? null
@@ -1514,7 +1508,7 @@ export default function PostPropertyPage() {
                                     className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-black text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"
                                 >
                                     <Trash2 size={15} aria-hidden="true" />
-                                    Clear draft
+                                    Start new listing
                                 </button>
                             </div>
                         </div>
@@ -2678,120 +2672,17 @@ export default function PostPropertyPage() {
                                                                     }
                                                                 </ErrorText>
                                                             ) : null}
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        ) : null}
 
-                                        {activeStep === "details" ? (
-                                            <div className="space-y-8">
-                                                <SectionHeading
-                                                    eyebrow="Property details"
-                                                    title={
-                                                        isCommercial
-                                                            ? "Add the business-space specifications"
-                                                            : isLand
-                                                                ? "Add the land specifications"
-                                                                : "Add the residential specifications"
-                                                    }
-                                                    description={
-                                                        isCommercial
-                                                            ? "Commercial listings use washrooms, total floors and business facilities instead of bedroom fields."
-                                                            : isLand
-                                                                ? "Land listings focus on dimensions, ownership and access."
-                                                                : "Add bedroom, bathroom and floor information buyers commonly compare."
-                                                    }
-                                                    icon={
-                                                        isCommercial
-                                                            ? Briefcase
-                                                            : isLand
-                                                                ? Map
-                                                                : Home
-                                                    }
-                                                />
+                                                            <div className="mt-6 border-t border-slate-100 pt-6">
+                                                                <label className="block max-w-xs">
+                                                                    <FieldLabel>
+                                                                        Total floors
+                                                                    </FieldLabel>
 
-                                                {form.category === "residential" ? (
-                                                    <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                                                        <div className="grid gap-5 sm:grid-cols-3">
-                                                            {[
-                                                                {
-                                                                    key: "bedrooms",
-                                                                    label:
-                                                                        form.propertyType ===
-                                                                        "Apartment"
-                                                                            ? "BHK / bedrooms"
-                                                                            : "Bedrooms",
-                                                                    value: form.bedrooms,
-                                                                },
-                                                                {
-                                                                    key: "bathrooms",
-                                                                    label: "Bathrooms",
-                                                                    value: form.bathrooms,
-                                                                },
-                                                                {
-                                                                    key: "floors",
-                                                                    label: "Total floors",
-                                                                    value: form.floors,
-                                                                },
-                                                            ].map((field) => (
-                                                                <label key={field.key}>
-                                                                    <FieldLabel>{field.label}</FieldLabel>
                                                                     <input
                                                                         type="number"
                                                                         min="0"
-                                                                        value={field.value}
-                                                                        onChange={(event) =>
-                                                                            updateForm({
-                                                                                [field.key]:
-                                                                                event.target.value,
-                                                                            } as Partial<PropertyForm>)
-                                                                        }
-                                                                        placeholder="Optional"
-                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                                                                    />
-                                                                    {errors[field.key] ? (
-                                                                        <ErrorText>
-                                                                            {errors[field.key]}
-                                                                        </ErrorText>
-                                                                    ) : null}
-                                                                </label>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ) : null}
-
-                                                {form.category === "commercial" ? (
-                                                    <div className="grid gap-6 lg:grid-cols-12">
-                                                        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
-                                                            <div className="grid gap-5 sm:grid-cols-2">
-                                                                <label>
-                                                                    <FieldLabel>Washrooms</FieldLabel>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        value={form.bathrooms}
-                                                                        onChange={(event) =>
-                                                                            updateForm({
-                                                                                bathrooms:
-                                                                                event.target.value,
-                                                                            })
-                                                                        }
-                                                                        placeholder="Optional"
-                                                                        className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                                                                    />
-                                                                    {errors.bathrooms ? (
-                                                                        <ErrorText>
-                                                                            {errors.bathrooms}
-                                                                        </ErrorText>
-                                                                    ) : null}
-                                                                </label>
-
-                                                                <label>
-                                                                    <FieldLabel>Total floors</FieldLabel>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
+                                                                        step="1"
                                                                         value={form.floors}
                                                                         onChange={(event) =>
                                                                             updateForm({
@@ -2801,6 +2692,7 @@ export default function PostPropertyPage() {
                                                                         placeholder="Optional"
                                                                         className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                                                                     />
+
                                                                     {errors.floors ? (
                                                                         <ErrorText>
                                                                             {errors.floors}
@@ -2808,68 +2700,9 @@ export default function PostPropertyPage() {
                                                                     ) : null}
                                                                 </label>
                                                             </div>
-
-                                                            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50 p-4">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-                                  <Info size={18} aria-hidden="true" />
-                                </span>
-                                                                <p className="text-xs leading-6 text-slate-600">
-                                                                    Parking, lifts, loading access,
-                                                                    frontage, fire safety, signage and
-                                                                    fit-out details are selected under
-                                                                    commercial facilities in the next
-                                                                    media step.
-                                                                </p>
-                                                            </div>
                                                         </div>
-
-                                                        <div className="relative overflow-hidden rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-[0_24px_65px_rgba(15,23,42,0.2)] lg:col-span-5">
-                                                            <div
-                                                                className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-teal-500/20 blur-3xl"
-                                                                aria-hidden="true"
-                                                            />
-                                                            <div className="relative">
-                                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-teal-300 ring-1 ring-white/10">
-                                  <Building2
-                                      size={20}
-                                      aria-hidden="true"
-                                  />
-                                </span>
-                                                                <p className="mt-7 text-[10px] font-black uppercase tracking-[0.14em] text-teal-300">
-                                                                    Commercial subtype
-                                                                </p>
-                                                                <h3 className="mt-3 text-2xl font-black">
-                                                                    {form.commercialType}
-                                                                </h3>
-                                                                <p className="mt-3 text-sm leading-6 text-slate-400">
-                                                                    The facility choices shown next are
-                                                                    tailored for offices, retail,
-                                                                    hospitality, industrial and
-                                                                    special-use spaces.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : null}
-
-                                                {form.category === "land" ? (
-                                                    <div className="flex items-start gap-4 rounded-[1.75rem] border border-teal-100 bg-teal-50 p-5">
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-                              <Map size={20} aria-hidden="true" />
-                            </span>
-                                                        <div>
-                                                            <h3 className="font-black text-slate-950">
-                                                                Land details are ready
-                                                            </h3>
-                                                            <p className="mt-2 text-sm leading-6 text-slate-600">
-                                                                Size, dimensions, location and
-                                                                ownership were captured in the
-                                                                previous step. Continue to pricing or
-                                                                return to add more description.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                ) : null}
+                                                    ) : null}
+                                                </div>
                                             </div>
                                         ) : null}
 
@@ -3829,10 +3662,22 @@ export default function PostPropertyPage() {
                                                                 <ReviewRow
                                                                     label="Unit configurations"
                                                                     value={form.unitConfigurations
-                                                                        .map(
-                                                                            (configuration, index) =>
-                                                                                `Unit ${index + 1}: ${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(configuration.price)}`,
-                                                                        )
+                                                                        .map((configuration, index) => {
+                                                                            const price =
+                                                                                unitPriceToRupees(
+                                                                                    configuration.price,
+                                                                                    configuration.priceUnit,
+                                                                                );
+
+                                                                            const uds =
+                                                                                configuration.uds
+                                                                                    ? ` · UDS ${configuration.uds}%`
+                                                                                    : "";
+
+                                                                            return `Unit ${index + 1}: ${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit}${uds} · ${formatPrice(
+                                                                                String(price),
+                                                                            )}`;
+                                                                        })
                                                                         .join("\n")}
                                                                 />
                                                             ) : null}
@@ -3840,6 +3685,16 @@ export default function PostPropertyPage() {
                                                                 label="Ownership"
                                                                 value={form.ownershipType}
                                                             />
+                                                            {form.category !== "land" ? (
+                                                                <ReviewRow
+                                                                    label="Total floors"
+                                                                    value={
+                                                                        form.floors
+                                                                            ? form.floors
+                                                                            : "Not provided"
+                                                                    }
+                                                                />
+                                                            ) : null}
                                                         </ReviewCard>
 
                                                         <ReviewCard
@@ -3879,19 +3734,6 @@ export default function PostPropertyPage() {
                                                                         : "Included / not marked additional"
                                                                 }
                                                             />
-                                                            {form.category ===
-                                                            "residential" ? (
-                                                                <ReviewRow
-                                                                    label="Residential specifications"
-                                                                    value={`${
-                                                                        form.bedrooms || "—"
-                                                                    } beds · ${
-                                                                        form.bathrooms || "—"
-                                                                    } baths · ${
-                                                                        form.floors || "—"
-                                                                    } floors`}
-                                                                />
-                                                            ) : null}
                                                             {form.category ===
                                                             "commercial" ? (
                                                                 <ReviewRow

@@ -48,6 +48,9 @@ export const loginSchema = z.object({
             "Password is required.",
         )
         .max(128),
+
+    rememberMe:
+        z.boolean().default(false),
 });
 
 export const signupSchema = z.object({

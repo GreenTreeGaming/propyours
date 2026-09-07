@@ -57,10 +57,13 @@ interface Property {
   state?: string;
   description?: string;
   price: number | null;
+  startingPrice?: number | null;
+  hasUnitConfigurations?: boolean;
   priceLocked?: boolean;
   priceType?: "Total" | "Per Sq Ft";
   negotiable?: boolean;
   bedrooms?: number;
+  availableBHKs?: number[];
   bathrooms?: number;
   floors?: number;
   size?: number;
@@ -295,6 +298,67 @@ function formatPrice(price: number): string {
   return `₹${price.toLocaleString("en-IN")}`;
 }
 
+function getDisplayPrice(
+    property: Property,
+): number | null {
+  if (
+      property.hasUnitConfigurations &&
+      typeof property.startingPrice ===
+      "number"
+  ) {
+    return property.startingPrice;
+  }
+
+  return property.price;
+}
+
+function getAvailableBHKLabel(
+    property: Property,
+): string | null {
+  const values = [
+    ...new Set(
+        property.availableBHKs ??
+        [],
+    ),
+  ]
+      .filter(
+          (value) =>
+              Number.isInteger(value) &&
+              value >= 0,
+      )
+      .sort(
+          (first, second) =>
+              first - second,
+      );
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  const labels =
+      values.map((value) =>
+          value === 0
+              ? "Studio"
+              : String(value),
+      );
+
+  if (labels.length === 1) {
+    return labels[0] === "Studio"
+        ? "Studio"
+        : `${labels[0]} BHK`;
+  }
+
+  if (labels.length === 2) {
+    return `${labels[0]} & ${labels[1]} BHK`;
+  }
+
+  return `${labels
+      .slice(0, -1)
+      .join(", ")} & ${
+      labels[labels.length - 1]
+  } BHK`;
+}
+
 function formatSize(size?: number, unit?: string): string | null {
   if (!size || size <= 0) {
     return null;
@@ -361,10 +425,23 @@ function getPropertySpecs(
     icon: LucideIcon;
   }> = [];
 
-  if (property.bedrooms !== undefined && property.bedrooms > 0) {
+  const availableBHKs =
+      getAvailableBHKLabel(property);
+
+  if (availableBHKs) {
+    specs.push({
+      label: "Configuration",
+      value: availableBHKs,
+      icon: BedDouble,
+    });
+  } else if (
+      property.bedrooms !==
+      undefined &&
+      property.bedrooms > 0
+  ) {
     specs.push({
       label: "Bedrooms",
-      value: String(property.bedrooms),
+      value: `${property.bedrooms} BHK`,
       icon: BedDouble,
     });
   }
@@ -638,7 +715,29 @@ function PropertyCard({
                               isList ? "text-2xl" : "text-xl"
                           }`}
                       >
-                        {formatPrice(property.price)}
+                        {(() => {
+                          const displayPrice =
+                              getDisplayPrice(property);
+
+                          if (
+                              property.priceLocked ||
+                              displayPrice === null
+                          ) {
+                            return "Sign in to view price";
+                          }
+
+                          return (
+                              <>
+                                {formatPrice(displayPrice)}
+
+                                {property.hasUnitConfigurations ? (
+                                    <span className="ml-1 text-sm font-bold text-slate-500">
+            onwards
+          </span>
+                                ) : null}
+                              </>
+                          );
+                        })()}
                       </p>
 
                       <p className="mt-1 text-xs font-medium text-slate-400">
