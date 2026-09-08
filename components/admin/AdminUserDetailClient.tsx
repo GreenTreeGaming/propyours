@@ -43,6 +43,7 @@ type Plan = {
     expiresAt?: string;
     source?: string;
     boostsRemaining?: number;
+    unlimitedAccess?: boolean;
 };
 
 type PropertyItem = {
@@ -512,6 +513,7 @@ export default function AdminUserDetailClient({
             {activeTab === "plan" && (
                 <PlanTab
                     plan={user.plan}
+                    userEmail={user.email}
                     saving={saving}
                     onSave={(payload) =>
                         manage(payload, "Plan updated successfully.")
@@ -662,10 +664,12 @@ function OverviewTab({
 
 function PlanTab({
                      plan,
+                     userEmail,
                      saving,
                      onSave,
                  }: {
     plan?: Plan;
+    userEmail: string;
     saving: boolean;
     onSave: (payload: Record<string, unknown>) => Promise<void>;
 }) {
@@ -682,6 +686,9 @@ function PlanTab({
     const [boosts, setBoosts] = useState(
         plan?.boostsRemaining ?? 0,
     );
+
+    const isPropyoursInternalAccount =
+        userEmail.toLowerCase() === "reach@propyours.com";
 
     const tiers = useMemo(
         () =>
@@ -727,6 +734,11 @@ function PlanTab({
                 </h2>
                 <div className="mt-4">
                     <StatusBadge value={plan?.status} />
+                    {plan?.unlimitedAccess && (
+                        <span className="ml-2 inline-flex rounded-full bg-violet-400/15 px-3 py-1 text-xs font-black text-violet-200 ring-1 ring-inset ring-violet-300/30">
+        Unlimited
+    </span>
+                    )}
                 </div>
 
                 <dl className="mt-8 space-y-4 text-sm">
@@ -746,6 +758,10 @@ function PlanTab({
                         label="Boosts remaining"
                         value={String(plan?.boostsRemaining ?? 0)}
                     />
+                    <PlanRow
+                        label="Unlimited access"
+                        value={plan?.unlimitedAccess ? "Enabled" : "Disabled"}
+                    />
                 </dl>
             </section>
 
@@ -763,6 +779,62 @@ function PlanTab({
                     Changes are applied immediately and recorded in the
                     audit trail.
                 </p>
+
+                {isPropyoursInternalAccount && (
+                    <div
+                        className={`mt-6 rounded-2xl border p-5 ${
+                            plan?.unlimitedAccess
+                                ? "border-violet-200 bg-violet-50"
+                                : "border-slate-200 bg-slate-50"
+                        }`}
+                    >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Sparkles
+                                        size={18}
+                                        className={
+                                            plan?.unlimitedAccess
+                                                ? "text-violet-600"
+                                                : "text-slate-500"
+                                        }
+                                        aria-hidden="true"
+                                    />
+
+                                    <p className="font-black text-slate-950">
+                                        Unlimited internal access
+                                    </p>
+                                </div>
+
+                                <p className="mt-1 max-w-xl text-sm leading-6 text-slate-600">
+                                    Removes property, image, video and lead
+                                    limits and enables all premium listing
+                                    features for this account.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() =>
+                                    void onSave({
+                                        action: "set-unlimited-access",
+                                        enabled: !plan?.unlimitedAccess,
+                                    })
+                                }
+                                className={`inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl px-5 text-sm font-black transition disabled:cursor-wait disabled:opacity-60 ${
+                                    plan?.unlimitedAccess
+                                        ? "bg-slate-950 text-white hover:bg-slate-800"
+                                        : "bg-violet-600 text-white hover:bg-violet-700"
+                                }`}
+                            >
+                                {plan?.unlimitedAccess
+                                    ? "Disable unlimited"
+                                    : "Enable unlimited"}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-6 grid gap-5 sm:grid-cols-2">
                     <Field label="Plan audience">

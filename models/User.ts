@@ -165,6 +165,11 @@ const UserSchema = new Schema(
                 type: String,
                 required: false,
             },
+
+            unlimitedAccess: {
+                type: Boolean,
+                default: false,
+            },
         },
     },
     { timestamps: true }

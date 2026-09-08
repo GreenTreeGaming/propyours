@@ -43,6 +43,11 @@ const actionSchema = z.discriminatedUnion("action", [
     }).strict(),
 
     z.object({
+        action: z.literal("set-unlimited-access"),
+        enabled: z.boolean(),
+    }).strict(),
+
+    z.object({
         action: z.literal("set-property"),
         propertyId: z.string().min(1),
         status: z.enum(["active", "sold", "inactive"]),
@@ -156,6 +161,67 @@ export async function PATCH(
         return NextResponse.json({
             message:
                 "All active sessions for this account have been revoked.",
+        });
+    }
+
+    if (action.action === "set-unlimited-access") {
+        /*
+         * Intentionally restricted to the internal Propyours account.
+         *
+         * Remove this restriction later if you decide admins should be able
+         * to grant unlimited access to arbitrary customers.
+         */
+        if (target.email.toLowerCase() !== "reach@propyours.com") {
+            return NextResponse.json(
+                {
+                    error:
+                        "Unlimited access can only be assigned to the Propyours internal account.",
+                },
+                { status: 403 },
+            );
+        }
+
+        const previousValue =
+            target.plan?.unlimitedAccess === true;
+
+        if (!target.plan) {
+            target.plan = {
+                audience: "owner",
+                tier: "silver",
+                status: "free",
+            };
+        }
+
+        target.plan.unlimitedAccess = action.enabled;
+
+        /*
+         * Unlimited access must remain usable regardless of the normal
+         * subscription lifecycle.
+         *
+         * Do not modify the user's real tier. That means disabling this
+         * override cleanly returns them to their normal plan.
+         */
+        await target.save();
+
+        await writeAdminAudit({
+            request,
+            actorUserId: admin.userId,
+            actorRole: admin.role,
+            action: action.enabled
+                ? "user.unlimited_access.enable"
+                : "user.unlimited_access.disable",
+            targetUserId: id,
+            metadata: {
+                previousValue,
+                nextValue: action.enabled,
+            },
+        });
+
+        return NextResponse.json({
+            message: action.enabled
+                ? "Unlimited access enabled."
+                : "Unlimited access disabled.",
+            unlimitedAccess: action.enabled,
         });
     }
 

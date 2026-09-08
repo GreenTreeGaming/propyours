@@ -191,6 +191,8 @@ export async function applyPlanChange({
 
             user.plan = {
                 ...user.plan?.toObject?.(),
+                unlimitedAccess:
+                    user.plan?.unlimitedAccess === true,
                 tier,
                 status,
                 audience: resolvedAudience,
@@ -270,18 +272,23 @@ export async function applyPlanChange({
              * Expired/cancelled plans:
              * deactivate all properties and remove promotions.
              */
+            const unlimitedAccess =
+                user.plan?.unlimitedAccess === true;
+
             const {
                 kept: propertiesToKeepActive,
                 deactivated: propertiesToDeactivate,
             } = await setListingCapacity(
                 user,
-                status === "active"
-                    ? limits.activeProperties
-                    : 0,
+                unlimitedAccess
+                    ? Number.MAX_SAFE_INTEGER
+                    : status === "active"
+                        ? limits.activeProperties
+                        : 0,
                 session,
             );
 
-            if (status !== "active") {
+            if (status !== "active" && !unlimitedAccess) {
                 result = {
                     user: user.toObject(),
                     plan: limits,

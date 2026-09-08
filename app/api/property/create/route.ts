@@ -706,11 +706,16 @@ export async function POST(
         }
 
         const listingExpiresAt =
-            new Date();
-        listingExpiresAt.setDate(
-            listingExpiresAt.getDate() +
-            limits.listingDays,
-        );
+            limits.unlimitedAccess
+                ? undefined
+                : new Date();
+
+        if (listingExpiresAt) {
+            listingExpiresAt.setDate(
+                listingExpiresAt.getDate() +
+                limits.listingDays,
+            );
+        }
 
         const property =
             await createActiveListing(
