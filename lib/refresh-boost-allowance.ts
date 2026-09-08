@@ -15,7 +15,7 @@ type RefreshBoostOptions = {
 
 export async function refreshBoostAllowanceIfNeeded(
     user: any,
-    options: RefreshBoostOptions = {}
+    options: RefreshBoostOptions = {},
 ) {
     const {
         now = new Date(),
@@ -23,23 +23,77 @@ export async function refreshBoostAllowanceIfNeeded(
         save = true,
     } = options;
 
-    const limits = getPlanLimits(user);
+    const limits = getPlanLimits(
+        user,
+        now,
+    );
+
     const monthlyAllowance =
         limits.promoteBoostsPerMonth;
+
+    const balanceBefore =
+        user.plan?.boostsRemaining ?? 0;
+
+    /*
+     * Internal unlimited access is independent of the normal
+     * subscription lifecycle.
+     *
+     * Keep the effective balance replenished at the application's
+     * safe integer ceiling and do not establish monthly reset dates.
+     */
+    if (limits.unlimitedAccess) {
+        const targetBalance =
+            monthlyAllowance;
+
+        const changed =
+            balanceBefore !== targetBalance ||
+            Boolean(
+                user.plan?.boostsResetAt,
+            ) ||
+            Boolean(
+                user.plan?.lastBoostResetAt,
+            );
+
+        user.plan.boostsRemaining =
+            targetBalance;
+
+        user.plan.boostsResetAt =
+            undefined;
+
+        user.plan.lastBoostResetAt =
+            undefined;
+
+        if (changed && save) {
+            await user.save({
+                session,
+            });
+        }
+
+        return {
+            changed,
+            reset: changed,
+
+            boostsRemaining:
+            targetBalance,
+
+            boostsResetAt: null,
+        };
+    }
 
     const planIsActive =
         user.plan?.status === "active";
 
-    const planExpiresAt = user.plan?.expiresAt
-        ? new Date(user.plan.expiresAt)
-        : null;
+    const planExpiresAt =
+        user.plan?.expiresAt
+            ? new Date(
+                user.plan.expiresAt,
+            )
+            : null;
 
     const planHasExpired =
         planExpiresAt !== null &&
-        planExpiresAt.getTime() <= now.getTime();
-
-    const balanceBefore =
-        user.plan?.boostsRemaining ?? 0;
+        planExpiresAt.getTime() <=
+        now.getTime();
 
     if (
         !planIsActive ||
@@ -48,13 +102,19 @@ export async function refreshBoostAllowanceIfNeeded(
     ) {
         const changed =
             balanceBefore !== 0 ||
-            Boolean(user.plan?.boostsResetAt);
+            Boolean(
+                user.plan?.boostsResetAt,
+            );
 
         user.plan.boostsRemaining = 0;
-        user.plan.boostsResetAt = undefined;
+
+        user.plan.boostsResetAt =
+            undefined;
 
         if (changed && save) {
-            await user.save({ session });
+            await user.save({
+                session,
+            });
         }
 
         return {
@@ -67,37 +127,48 @@ export async function refreshBoostAllowanceIfNeeded(
 
     const existingResetAt =
         user.plan?.boostsResetAt
-            ? new Date(user.plan.boostsResetAt)
+            ? new Date(
+                user.plan.boostsResetAt,
+            )
             : null;
 
     /*
      * Existing paid account with no reset date:
-     * establish its first reset without granting
-     * another duplicate balance.
+     * establish its first reset without granting another
+     * duplicate balance.
      */
     if (!existingResetAt) {
         const anchor =
             user.plan?.startedAt
-                ? new Date(user.plan.startedAt)
+                ? new Date(
+                    user.plan.startedAt,
+                )
                 : now;
 
         const nextResetAt =
             advanceMonthlyResetIntoFuture(
                 addCalendarMonth(anchor),
-                now
+                now,
             );
 
-        user.plan.boostsResetAt = nextResetAt;
+        user.plan.boostsResetAt =
+            nextResetAt;
 
         if (save) {
-            await user.save({ session });
+            await user.save({
+                session,
+            });
         }
 
         return {
             changed: true,
             reset: false,
-            boostsRemaining: balanceBefore,
-            boostsResetAt: nextResetAt,
+
+            boostsRemaining:
+            balanceBefore,
+
+            boostsResetAt:
+            nextResetAt,
         };
     }
 
@@ -108,56 +179,74 @@ export async function refreshBoostAllowanceIfNeeded(
         return {
             changed: false,
             reset: false,
-            boostsRemaining: balanceBefore,
-            boostsResetAt: existingResetAt,
+
+            boostsRemaining:
+            balanceBefore,
+
+            boostsResetAt:
+            existingResetAt,
         };
     }
 
     const nextResetAt =
         advanceMonthlyResetIntoFuture(
             existingResetAt,
-            now
+            now,
         );
 
     user.plan.boostsRemaining =
         monthlyAllowance;
 
     user.plan.lastBoostResetAt = now;
-    user.plan.boostsResetAt = nextResetAt;
+
+    user.plan.boostsResetAt =
+        nextResetAt;
 
     if (save) {
-        await user.save({ session });
+        await user.save({
+            session,
+        });
     }
 
     await BoostTransaction.create(
         [
             {
                 userId: user._id,
+
                 type: "monthly_reset",
+
                 amount:
                     monthlyAllowance -
                     balanceBefore,
+
                 balanceBefore,
+
                 balanceAfter:
                 monthlyAllowance,
+
                 planTier: limits.tier,
+
                 metadata: {
                     previousResetAt:
                     existingResetAt,
+
                     nextResetAt,
                 },
             },
         ],
         {
             session,
-        }
+        },
     );
 
     return {
         changed: true,
         reset: true,
+
         boostsRemaining:
         monthlyAllowance,
-        boostsResetAt: nextResetAt,
+
+        boostsResetAt:
+        nextResetAt,
     };
 }

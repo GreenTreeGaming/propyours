@@ -6,6 +6,7 @@ import {
     isPlanTier,
 } from "@/lib/plan-catalog";
 import {
+    getPlanLimits,
     type PlanTier,
     type PlanStatus,
     type PlanAudience,
@@ -15,7 +16,9 @@ import { addCalendarMonth } from "@/lib/boost-dates";
 import User from "@/models/User";
 import Property from "@/models/Property";
 import BoostTransaction from "@/models/BoostTransaction";
-import { setListingCapacity } from "@/lib/listing-capacity";
+import {
+    setListingCapacity,
+} from "@/lib/listing-capacity";
 
 type ApplyPlanChangeArgs = {
     userId: string;
@@ -53,6 +56,7 @@ export async function applyPlanChange({
             plan: {
                 tier: PlanTier;
                 audience: PlanAudience;
+                unlimitedAccess: boolean;
                 activeProperties: number;
                 listingDays: number;
                 maxImages: number;
@@ -75,7 +79,9 @@ export async function applyPlanChange({
             | undefined;
 
         await session.withTransaction(async () => {
-            const user = await User.findById(userId).session(session);
+            const user = await User.findById(userId).session(
+                session,
+            );
 
             if (!user) {
                 throw new Error("User not found");
@@ -100,27 +106,44 @@ export async function applyPlanChange({
                 );
             }
 
-            const limits = {
+            const catalogLimits = {
                 tier,
                 audience: targetPlan.audience,
+                unlimitedAccess: false,
                 ...targetPlan.entitlements,
             };
 
-            const previousTier = isPlanTier(user.plan?.tier)
+            const previousTier = isPlanTier(
+                user.plan?.tier,
+            )
                 ? user.plan.tier
                 : "silver";
 
-            const previousStatus = user.plan?.status as
-                | PlanStatus
-                | undefined;
+            const previousStatus =
+                user.plan?.status as
+                    | PlanStatus
+                    | undefined;
 
             const previousBalance =
                 user.plan?.boostsRemaining ?? 0;
 
+            /*
+             * Preserve the internal entitlement override independently
+             * of the underlying public/customer plan.
+             */
+            const unlimitedAccess =
+                user.plan?.unlimitedAccess === true;
+
+            /*
+             * Unlimited accounts receive an effectively unlimited boost
+             * balance regardless of the underlying subscription status.
+             */
             const newMonthlyAllowance =
-                status === "active"
-                    ? limits.promoteBoostsPerMonth
-                    : 0;
+                unlimitedAccess
+                    ? Number.MAX_SAFE_INTEGER
+                    : status === "active"
+                        ? catalogLimits.promoteBoostsPerMonth
+                        : 0;
 
             const isActivation =
                 status === "active" &&
@@ -130,29 +153,35 @@ export async function applyPlanChange({
                 status === "active" &&
                 previousTier !== tier;
 
-            /*
-             * Only grant a fresh allowance when:
-             * - activating a plan;
-             * - upgrading;
-             * - downgrading.
-             *
-             * Calling applyPlanChange repeatedly for the same active
-             * plan must not refill the user's credits.
-             */
             const shouldResetBoostAllowance =
                 isActivation || isTierChange;
 
             let nextBoostBalance = previousBalance;
-            let boostsResetAt = user.plan?.boostsResetAt
-                ? new Date(user.plan.boostsResetAt)
-                : undefined;
+
+            let boostsResetAt =
+                user.plan?.boostsResetAt
+                    ? new Date(
+                        user.plan.boostsResetAt,
+                    )
+                    : undefined;
 
             let lastBoostResetAt =
                 user.plan?.lastBoostResetAt
-                    ? new Date(user.plan.lastBoostResetAt)
+                    ? new Date(
+                        user.plan.lastBoostResetAt,
+                    )
                     : undefined;
 
-            if (status !== "active") {
+            /*
+             * Unlimited accounts do not depend on the normal monthly
+             * subscription lifecycle.
+             */
+            if (unlimitedAccess) {
+                nextBoostBalance =
+                    Number.MAX_SAFE_INTEGER;
+                boostsResetAt = undefined;
+                lastBoostResetAt = undefined;
+            } else if (status !== "active") {
                 nextBoostBalance = 0;
                 boostsResetAt = undefined;
                 lastBoostResetAt = undefined;
@@ -161,25 +190,35 @@ export async function applyPlanChange({
                 boostsResetAt = undefined;
                 lastBoostResetAt = undefined;
             } else if (shouldResetBoostAllowance) {
-                nextBoostBalance = newMonthlyAllowance;
+                nextBoostBalance =
+                    newMonthlyAllowance;
+
                 lastBoostResetAt = now;
-                boostsResetAt = addCalendarMonth(now);
+
+                boostsResetAt =
+                    addCalendarMonth(now);
             } else if (!boostsResetAt) {
                 /*
                  * Existing active plan missing a reset date.
-                 * Establish the schedule without granting extra credits.
+                 * Establish the schedule without granting an
+                 * additional duplicate balance.
                  */
                 boostsResetAt = addCalendarMonth(
                     user.plan?.startedAt
-                        ? new Date(user.plan.startedAt)
-                        : now
+                        ? new Date(
+                            user.plan.startedAt,
+                        )
+                        : now,
                 );
 
                 while (
-                    boostsResetAt.getTime() <= now.getTime()
+                    boostsResetAt.getTime() <=
+                    now.getTime()
                     ) {
                     boostsResetAt =
-                        addCalendarMonth(boostsResetAt);
+                        addCalendarMonth(
+                            boostsResetAt,
+                        );
                 }
             }
 
@@ -191,25 +230,27 @@ export async function applyPlanChange({
 
             user.plan = {
                 ...user.plan?.toObject?.(),
-                unlimitedAccess:
-                    user.plan?.unlimitedAccess === true,
+
+                unlimitedAccess,
+
                 tier,
                 status,
                 audience: resolvedAudience,
                 source,
 
                 /*
-                 * Start a new plan period for activation/tier changes.
-                 * Preserve the existing date for an idempotent update.
+                 * Start a new normal plan period for an activation or
+                 * tier change. Unlimited access remains independent.
                  */
                 startedAt:
                     isActivation || isTierChange
                         ? now
-                        : user.plan?.startedAt ?? now,
+                        : user.plan?.startedAt ??
+                        now,
 
                 /*
                  * Passing null explicitly clears expiry.
-                 * Omitting expiresAt preserves its current value.
+                 * Omitting expiresAt preserves the existing expiry.
                  */
                 expiresAt:
                     expiresAt === null
@@ -218,7 +259,9 @@ export async function applyPlanChange({
                         user.plan?.expiresAt ??
                         undefined,
 
-                boostsRemaining: nextBoostBalance,
+                boostsRemaining:
+                nextBoostBalance,
+
                 boostsResetAt,
                 lastBoostResetAt,
 
@@ -230,10 +273,19 @@ export async function applyPlanChange({
 
             await user.save({ session });
 
+            /*
+             * Calculate the real effective entitlements after the plan
+             * has been written. This is important because unlimitedAccess
+             * overrides the underlying catalog tier.
+             */
+            const effectiveLimits =
+                getPlanLimits(user, now);
+
             const shouldRecordPlanChange =
                 previousTier !== tier ||
                 previousStatus !== status ||
-                previousBalance !== nextBoostBalance;
+                previousBalance !==
+                nextBoostBalance;
 
             if (shouldRecordPlanChange) {
                 const transactionType =
@@ -249,49 +301,63 @@ export async function applyPlanChange({
                         {
                             userId: user._id,
                             type: transactionType,
+
                             amount:
                                 nextBoostBalance -
                                 previousBalance,
-                            balanceBefore: previousBalance,
-                            balanceAfter: nextBoostBalance,
+
+                            balanceBefore:
+                            previousBalance,
+
+                            balanceAfter:
+                            nextBoostBalance,
+
                             planTier: tier,
+
                             metadata: {
                                 previousTier,
                                 previousStatus,
                                 source,
+
+                                unlimitedAccess,
+
                                 boostsResetAt:
-                                    boostsResetAt ?? null,
+                                    boostsResetAt ??
+                                    null,
                             },
                         },
                     ],
-                    { session }
+                    { session },
                 );
             }
 
             /*
-             * Expired/cancelled plans:
-             * deactivate all properties and remove promotions.
+             * Normal inactive plans have zero active capacity.
+             *
+             * The internal unlimited override remains usable even if its
+             * underlying customer-facing plan is expired/free/cancelled.
              */
-            const unlimitedAccess =
-                user.plan?.unlimitedAccess === true;
-
             const {
                 kept: propertiesToKeepActive,
-                deactivated: propertiesToDeactivate,
+                deactivated:
+                    propertiesToDeactivate,
             } = await setListingCapacity(
                 user,
                 unlimitedAccess
-                    ? Number.MAX_SAFE_INTEGER
+                    ? effectiveLimits.activeProperties
                     : status === "active"
-                        ? limits.activeProperties
+                        ? effectiveLimits.activeProperties
                         : 0,
                 session,
             );
 
-            if (status !== "active" && !unlimitedAccess) {
+            if (
+                status !== "active" &&
+                !unlimitedAccess
+            ) {
                 result = {
                     user: user.toObject(),
-                    plan: limits,
+                    plan: effectiveLimits,
                     keptActive: 0,
                     deactivated: "all",
                     boostsRemaining: 0,
@@ -301,69 +367,109 @@ export async function applyPlanChange({
                 return;
             }
 
-            const cappedExpiry = new Date(
-                now.getTime() +
-                limits.listingDays *
-                24 *
-                60 *
-                60 *
-                1000
-            );
+            const cappedExpiry =
+                unlimitedAccess
+                    ? null
+                    : new Date(
+                        now.getTime() +
+                        effectiveLimits.listingDays *
+                        24 *
+                        60 *
+                        60 *
+                        1000,
+                    );
 
-            for (const property of propertiesToKeepActive) {
+            for (
+                const property of
+                propertiesToKeepActive
+                ) {
                 const setUpdates: Record<
                     string,
                     unknown
                 > = {
                     planSnapshot: {
-                        tier: limits.tier,
+                        tier:
+                        effectiveLimits.tier,
+
                         listingDays:
-                        limits.listingDays,
+                        effectiveLimits.listingDays,
+
                         maxPhotos:
-                        limits.maxImages,
+                        effectiveLimits.maxImages,
+
                         maxVideoLinks:
-                        limits.maxVideoLinks,
+                        effectiveLimits.maxVideoLinks,
+
                         featured:
-                        limits.featured,
+                        effectiveLimits.featured,
+
                         homepageFeatured:
-                        limits.homepageFeatured,
+                        effectiveLimits.homepageFeatured,
+
                         rankingLevel:
-                        limits.rankingLevel,
+                        effectiveLimits.rankingLevel,
+
                         compareVisibility:
-                        limits.compareVisibility,
+                        effectiveLimits.compareVisibility,
+
                         badgeLevel:
-                        limits.badgeLevel,
+                        effectiveLimits.badgeLevel,
+
                         analyticsLevel:
-                        limits.analyticsLevel,
+                        effectiveLimits.analyticsLevel,
                     },
 
                     featured:
-                    limits.featured,
+                    effectiveLimits.featured,
                 };
 
-                const existingExpiry =
-                    property.listingExpiresAt
-                        ? new Date(
-                            property.listingExpiresAt
+                const unsetUpdates: Record<
+                    string,
+                    string
+                > = {};
+
+                if (unlimitedAccess) {
+                    /*
+                     * Unlimited listings never expire.
+                     */
+                    unsetUpdates.listingExpiresAt =
+                        "";
+                } else {
+                    const existingExpiry =
+                        property.listingExpiresAt
+                            ? new Date(
+                                property.listingExpiresAt,
+                            )
+                            : null;
+
+                    if (
+                        !existingExpiry ||
+                        (
+                            cappedExpiry &&
+                            existingExpiry.getTime() >
+                            cappedExpiry.getTime()
                         )
-                        : null;
+                    ) {
+                        setUpdates.listingExpiresAt =
+                            cappedExpiry;
+                    }
+                }
 
                 if (
-                    !existingExpiry ||
-                    existingExpiry.getTime() >
-                    cappedExpiry.getTime()
+                    effectiveLimits
+                        .promoteBoostsPerMonth <= 0
                 ) {
-                    setUpdates.listingExpiresAt =
-                        cappedExpiry;
+                    unsetUpdates.promotedUntil =
+                        "";
                 }
 
                 const update =
-                    limits.promoteBoostsPerMonth <= 0
+                    Object.keys(unsetUpdates)
+                        .length > 0
                         ? {
                             $set: setUpdates,
-                            $unset: {
-                                promotedUntil: "",
-                            },
+                            $unset:
+                            unsetUpdates,
                         }
                         : {
                             $set: setUpdates,
@@ -374,15 +480,17 @@ export async function applyPlanChange({
                         _id: property._id,
                     },
                     update,
-                    { session }
+                    { session },
                 );
             }
 
             /*
-             * A plan without boosts cannot retain active promotions.
+             * A normal plan without boosts cannot retain an active
+             * promotion. Unlimited accounts never enter this branch.
              */
             if (
-                limits.promoteBoostsPerMonth <= 0
+                effectiveLimits
+                    .promoteBoostsPerMonth <= 0
             ) {
                 await Property.updateMany(
                     {
@@ -393,27 +501,33 @@ export async function applyPlanChange({
                             promotedUntil: "",
                         },
                     },
-                    { session }
+                    { session },
                 );
             }
 
             result = {
                 user: user.toObject(),
-                plan: limits,
-                keptActive: propertiesToKeepActive.length,
+                plan: effectiveLimits,
+
+                keptActive:
+                propertiesToKeepActive.length,
+
                 deactivated:
                 propertiesToDeactivate.length,
+
                 boostsRemaining:
-                    user.plan.boostsRemaining ?? 0,
+                    user.plan
+                        .boostsRemaining ?? 0,
+
                 boostsResetAt:
-                    user.plan.boostsResetAt ??
-                    null,
+                    user.plan
+                        .boostsResetAt ?? null,
             };
         });
 
         if (!result) {
             throw new Error(
-                "Plan change did not complete"
+                "Plan change did not complete",
             );
         }
 
