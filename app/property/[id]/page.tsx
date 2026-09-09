@@ -2758,7 +2758,7 @@ export default function PropertyDetailsPage() {
                                         </p>
                                     </div>
 
-                                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                    <div className="mt-5 grid gap-4">
                                         {property.unitConfigurations.map(
                                             (configuration, index) => (
                                                 <div
@@ -2853,7 +2853,7 @@ export default function PropertyDetailsPage() {
                                             ? "Land features"
                                             : "Amenities"
                                 }
-                                title="What the listing includes"
+                                title="What the property offers"
                                 description="Facilities marked as available by the listing owner."
                                 icon={CheckCircle2}
                             />

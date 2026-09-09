@@ -158,14 +158,51 @@ function addTextFilters(
     clauses: Record<string, unknown>[],
     filters: BubbySearchFilters,
 ): void {
+    /*
+     * Location names are often ambiguous.
+     *
+     * Example:
+     * "Pallavaram" may be interpreted by the model as a city,
+     * while our database stores:
+     *
+     * city: "Chennai"
+     * locality: "Pallavaram"
+     *
+     * Search across all useful location fields instead of assuming
+     * the model classified the place perfectly.
+     */
     if (filters.city) {
+        const locationRegex =
+            createSafeRegex(filters.city);
+
         clauses.push({
-            city: createSafeRegex(filters.city),
+            $or: [
+                {
+                    city:
+                    locationRegex,
+                },
+                {
+                    locality:
+                    locationRegex,
+                },
+                {
+                    address:
+                    locationRegex,
+                },
+                {
+                    projectName:
+                    locationRegex,
+                },
+                {
+                    state:
+                    locationRegex,
+                },
+            ],
         });
     }
 
     if (filters.locality) {
-        const localityRegex =
+        const locationRegex =
             createSafeRegex(
                 filters.locality,
             );
@@ -173,25 +210,34 @@ function addTextFilters(
         clauses.push({
             $or: [
                 {
-                    projectName:
-                    localityRegex,
+                    locality:
+                    locationRegex,
+                },
+                {
+                    city:
+                    locationRegex,
                 },
                 {
                     address:
-                    localityRegex,
+                    locationRegex,
                 },
                 {
-                    locality:
-                    localityRegex,
+                    projectName:
+                    locationRegex,
+                },
+                {
+                    landmark:
+                    locationRegex,
                 },
             ],
         });
     }
 
     if (filters.searchText) {
-        const searchRegex = createSafeRegex(
-            filters.searchText,
-        );
+        const searchRegex =
+            createSafeRegex(
+                filters.searchText,
+            );
 
         clauses.push({
             $or: [
@@ -216,16 +262,20 @@ function addTextFilters(
                     searchRegex,
                 },
                 {
-                    landmark: searchRegex,
+                    landmark:
+                    searchRegex,
                 },
                 {
-                    description: searchRegex,
+                    description:
+                    searchRegex,
                 },
                 {
-                    propertyType: searchRegex,
+                    propertyType:
+                    searchRegex,
                 },
                 {
-                    commercialType: searchRegex,
+                    commercialType:
+                    searchRegex,
                 },
             ],
         });
@@ -236,76 +286,161 @@ function addNumberFilters(
     clauses: Record<string, unknown>[],
     filters: BubbySearchFilters,
 ): void {
-    const priceRange: Record<string, number> = {};
+    const priceRange:
+        Record<string, number> = {};
 
     if (filters.minPrice !== null) {
-        priceRange.$gte = filters.minPrice;
+        priceRange.$gte =
+            filters.minPrice;
     }
 
     if (filters.maxPrice !== null) {
-        priceRange.$lte = filters.maxPrice;
-    }
-
-    if (Object.keys(priceRange).length > 0) {
-        clauses.push({
-            price: priceRange,
-        });
-    }
-
-    const bedroomRange: Record<string, number> = {};
-
-    if (filters.minBedrooms !== null) {
-        bedroomRange.$gte = filters.minBedrooms;
-    }
-
-    if (filters.maxBedrooms !== null) {
-        bedroomRange.$lte = filters.maxBedrooms;
+        priceRange.$lte =
+            filters.maxPrice;
     }
 
     if (
-        Object.keys(bedroomRange).length > 0
+        Object.keys(priceRange).length >
+        0
     ) {
+        /*
+         * Normal listings store their price at property.price.
+         *
+         * Builder/project listings can instead store each available
+         * unit's price in unitConfigurations[].price.
+         *
+         * Match if either representation satisfies the requested
+         * range.
+         */
         clauses.push({
-            bedrooms: bedroomRange,
+            $or: [
+                {
+                    price:
+                    priceRange,
+                },
+                {
+                    unitConfigurations: {
+                        $elemMatch: {
+                            price:
+                            priceRange,
+                        },
+                    },
+                },
+            ],
         });
     }
 
-    const bathroomRange: Record<
-        string,
-        number
-    > = {};
+    const bedroomRange:
+        Record<string, number> = {};
 
-    if (filters.minBathrooms !== null) {
+    if (
+        filters.minBedrooms !== null
+    ) {
+        bedroomRange.$gte =
+            filters.minBedrooms;
+    }
+
+    if (
+        filters.maxBedrooms !== null
+    ) {
+        bedroomRange.$lte =
+            filters.maxBedrooms;
+    }
+
+    if (
+        Object.keys(
+            bedroomRange,
+        ).length > 0
+    ) {
+        /*
+         * Same principle for bedrooms.
+         *
+         * A project may have no meaningful top-level bedrooms field
+         * because it contains several configurations such as:
+         *
+         * 2 BHK
+         * 2 BHK
+         * 3 BHK
+         * 3 BHK
+         */
+        clauses.push({
+            $or: [
+                {
+                    bedrooms:
+                    bedroomRange,
+                },
+                {
+                    unitConfigurations: {
+                        $elemMatch: {
+                            bedrooms:
+                            bedroomRange,
+                        },
+                    },
+                },
+            ],
+        });
+    }
+
+    const bathroomRange:
+        Record<string, number> = {};
+
+    if (
+        filters.minBathrooms !== null
+    ) {
         bathroomRange.$gte =
             filters.minBathrooms;
     }
 
-    if (filters.maxBathrooms !== null) {
+    if (
+        filters.maxBathrooms !== null
+    ) {
         bathroomRange.$lte =
             filters.maxBathrooms;
     }
 
     if (
-        Object.keys(bathroomRange).length > 0
+        Object.keys(
+            bathroomRange,
+        ).length > 0
     ) {
         clauses.push({
-            bathrooms: bathroomRange,
+            bathrooms:
+            bathroomRange,
         });
     }
 
-    const sizeRange: Record<string, number> = {};
+    const sizeRange:
+        Record<string, number> = {};
 
     if (filters.minSize !== null) {
-        sizeRange.$gte = filters.minSize;
+        sizeRange.$gte =
+            filters.minSize;
     }
 
     if (filters.maxSize !== null) {
-        sizeRange.$lte = filters.maxSize;
+        sizeRange.$lte =
+            filters.maxSize;
     }
 
-    if (Object.keys(sizeRange).length > 0) {
+    if (
+        Object.keys(sizeRange).length >
+        0
+    ) {
         clauses.push({
-            size: sizeRange,
+            $or: [
+                {
+                    size:
+                    sizeRange,
+                },
+                {
+                    unitConfigurations: {
+                        $elemMatch: {
+                            builtUpArea:
+                            sizeRange,
+                        },
+                    },
+                },
+            ],
         });
     }
 }

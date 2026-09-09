@@ -2022,10 +2022,10 @@ function ProfilePropertyCard({
                                 href={`/property/${property._id}`}
                                 className="mt-2 block"
                             >
-                                <h3 className="line-clamp-2 font-heading text-2xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
-                                    {
-                                        property.address
-                                    }
+                                <h3 className="line-clamp-2 font-heading text-xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
+                                    {getPropertyDisplayTitle(
+                                        property,
+                                    )}
                                 </h3>
                             </Link>
 
@@ -2248,7 +2248,9 @@ function ProfilePropertyCard({
                         <Link
                             href={`/property/${property._id}`}
                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white transition group-hover:bg-primary"
-                            aria-label={`View ${property.address}`}
+                            aria-label={`View ${getPropertyDisplayTitle(
+                                property,
+                            )}`}
                         >
                             <ArrowRight
                                 size={17}

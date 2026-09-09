@@ -694,7 +694,10 @@ export async function POST(
             );
 
         const reply = replyIsAllowed
-            ? normalizeReply(generatedReply)
+            ? normalizeBubbyReply(
+                generatedReply,
+                propertyMatches.length > 0,
+            )
             : SAFE_FAILURE_REPLY;
 
         return NextResponse.json<BubbyApiResponse>({
@@ -1025,11 +1028,21 @@ Security rules:
 - Never provide legal, financial, investment, valuation, or safety guarantees.
 - Never provide external URLs.
 - Do not claim to perform actions on behalf of the user.
-- Use plain text only. Do not use Markdown links or code blocks.
-- Be concise, friendly, and helpful.
-- When properties are supplied, mention only actual supplied properties.
+
+Response-format rules:
+- Return plain text only.
+- Never use Markdown.
+- Never use *, **, _, #, backticks, brackets, Markdown links, or numbered property lists.
+- Never write property URLs or paths.
+- Never write "View Property".
+- Do not reproduce individual property cards in the reply.
+- The application separately renders every matching property as a structured card.
+- When properties are supplied, give only a short summary of the results and optionally mention one useful comparison or clarification.
+- Do not repeat each property's address, price, amenities, type, or link in a list.
+- Keep the reply to 1-3 short sentences.
 - When no properties match, clearly say there were no exact matches and suggest changing one or two filters.
-      `.trim(),
+- Be concise, friendly, and helpful.
+`.trim(),
         },
         {
             role: "user",
@@ -1585,13 +1598,67 @@ function isDeterministicallyUnsafeReply(
     );
 }
 
-function normalizeReply(
+function normalizeBubbyReply(
     reply: string,
+    hasPropertyResults: boolean,
 ): string {
-    return reply
+    let normalized = reply
         .replace(/\0/g, "")
         .trim()
+
+        /*
+         * Strip Markdown formatting if the model ignores
+         * the plain-text requirement.
+         */
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1")
+        .replace(/__(.*?)__/g, "$1")
+        .replace(/_(.*?)_/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+
+        /*
+         * Remove Markdown property links.
+         *
+         * The UI already renders clickable property cards.
+         */
+        .replace(
+            /\[View Property\]\(\s*\/property\/[^)]+\)/gi,
+            "",
+        )
+
+        /*
+         * Remove raw internal property paths if the model
+         * outputs them without Markdown.
+         */
+        .replace(
+            /\/property\/[a-f0-9]{24}/gi,
+            "",
+        )
+
+        /*
+         * Clean up extra whitespace left after removing links.
+         */
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
         .slice(0, 2_000);
+
+    /*
+     * If real property cards are already being returned,
+     * don't let the LLM duplicate them as a giant text list.
+     */
+    if (
+        hasPropertyResults &&
+        (
+            normalized.length > 500 ||
+            /\b(?:key amenities|configuration|view property)\b/i.test(
+                normalized,
+            )
+        )
+    ) {
+        return "I found matching properties on PropYours. You can review the listings below and tell me if you want to narrow them by location, budget, property type, or configuration.";
+    }
+
+    return normalized;
 }
 
 function toPublicPropertyResult(
@@ -1599,25 +1666,71 @@ function toPublicPropertyResult(
 ): BubbyPropertyResult {
     return {
         id: match.id,
-        propertyType: match.propertyType,
+        propertyType:
+        match.propertyType,
+
         commercialType:
         match.commercialType,
-        address: match.address,
-        locality: match.locality,
-        city: match.city,
-        state: match.state,
-        price: match.price,
-        priceType: match.priceType,
-        negotiable: match.negotiable,
-        bedrooms: match.bedrooms,
-        bathrooms: match.bathrooms,
-        size: match.size,
-        sizeUnit: match.sizeUnit,
-        purpose: match.purpose,
-        featured: match.featured,
-        image: match.image,
-        amenities: match.amenities,
-        url: match.url,
+
+        projectName:
+        match.projectName,
+
+        address:
+        match.address,
+
+        locality:
+        match.locality,
+
+        city:
+        match.city,
+
+        state:
+        match.state,
+
+        price:
+        match.price,
+
+        startingPrice:
+        match.startingPrice,
+
+        hasUnitConfigurations:
+        match.hasUnitConfigurations,
+
+        availableBHKs:
+        match.availableBHKs,
+
+        priceType:
+        match.priceType,
+
+        negotiable:
+        match.negotiable,
+
+        bedrooms:
+        match.bedrooms,
+
+        bathrooms:
+        match.bathrooms,
+
+        size:
+        match.size,
+
+        sizeUnit:
+        match.sizeUnit,
+
+        purpose:
+        match.purpose,
+
+        featured:
+        match.featured,
+
+        image:
+        match.image,
+
+        amenities:
+        match.amenities,
+
+        url:
+        match.url,
     };
 }
 

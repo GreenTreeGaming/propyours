@@ -6,9 +6,6 @@ import {
 } from "@/lib/property-filters";
 
 import {
-    getOptionalAuthenticatedUser,
-} from "@/lib/auth";
-import {
     propertySearchQuerySchema,
     type PropertySearchQuery,
 } from "@/lib/validation/property-search";
@@ -392,12 +389,6 @@ export async function GET(
 
         await connectDB();
 
-        const viewer =
-            await getOptionalAuthenticatedUser();
-
-        const canViewPrice =
-            viewer !== null;
-
         const now = new Date();
 
         const matchFilter =
@@ -576,26 +567,10 @@ export async function GET(
 
         const properties =
             result.properties.map(
-                (property) => {
-                    if (canViewPrice) {
-                        return {
-                            ...property,
-                            priceLocked: false,
-                        };
-                    }
-
-                    const {
-                        price: _price,
-                        startingPrice: _startingPrice,
-                        ...publicProperty
-                    } = property;
-
-                    return {
-                        ...publicProperty,
-                        price: null,
-                        priceLocked: true,
-                    };
-                },
+                (property) => ({
+                    ...property,
+                    priceLocked: false,
+                }),
             );
 
         const response:
