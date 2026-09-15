@@ -168,15 +168,53 @@ function isValidEmail(
     );
 }
 
+function getIndianPhoneDigits(
+    value: string,
+): string {
+    let digits = value.replace(
+        /\D/g,
+        "",
+    );
+
+    if (
+        digits.startsWith("91") &&
+        digits.length > 10
+    ) {
+        digits = digits.slice(2);
+    }
+
+    return digits.slice(0, 10);
+}
+
+function formatIndianPhone(
+    value: string,
+): string {
+    const digits =
+        getIndianPhoneDigits(value);
+
+    if (digits.length <= 5) {
+        return digits;
+    }
+
+    return `${digits.slice(
+        0,
+        5,
+    )} ${digits.slice(5)}`;
+}
+
+function getFullIndianPhone(
+    value: string,
+): string {
+    return `+91${getIndianPhoneDigits(
+        value,
+    )}`;
+}
+
 function isValidPhone(
     value: string,
 ): boolean {
-    const digits =
-        value.replace(/\D/g, "");
-
-    return (
-        digits.length >= 10 &&
-        digits.length <= 15
+    return /^\d{10}$/.test(
+        getIndianPhoneDigits(value),
     );
 }
 
@@ -790,7 +828,7 @@ function SignupFormContent() {
                     },
                     body: JSON.stringify({
                         phone:
-                            form.phone.trim(),
+                            getFullIndianPhone(form.phone),
                         email:
                             form.email
                                 .trim()
@@ -851,7 +889,7 @@ function SignupFormContent() {
                     },
                     body: JSON.stringify({
                         phone:
-                            form.phone.trim(),
+                            getFullIndianPhone(form.phone),
                         otp,
                     }),
                 },
@@ -976,7 +1014,7 @@ function SignupFormContent() {
                                 .trim()
                                 .toLowerCase(),
                         phone:
-                            form.phone.trim(),
+                            getFullIndianPhone(form.phone),
                         password:
                         form.password,
                         role: form.role,
@@ -1853,36 +1891,41 @@ function IdentityStep({
 
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
                         <span className="relative block">
-                            <Phone
-                                size={
-                                    17
-                                }
-                                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                                aria-hidden="true"
-                            />
 
-                            <input
-                                type="tel"
-                                value={
-                                    form.phone
-                                }
-                                autoComplete="tel"
-                                inputMode="tel"
-                                disabled={
-                                    phoneVerified
-                                }
-                                onChange={(
-                                    event,
-                                ) =>
-                                    onPhoneChange(
-                                        event
-                                            .target
-                                            .value,
-                                    )
-                                }
-                                placeholder="+91 98765 43210"
-                                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:border-teal-100 disabled:bg-teal-50 disabled:text-slate-700"
-                            />
+                            <div className="flex h-12 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition focus-within:border-primary focus-within:bg-white focus-within:ring-4 focus-within:ring-primary/10">
+    <div className="flex shrink-0 items-center gap-2 border-r border-slate-200 bg-white px-4">
+        <Phone
+            size={16}
+            className="text-slate-400"
+            aria-hidden="true"
+        />
+
+        <span className="text-sm font-black text-slate-700">
+            +91
+        </span>
+    </div>
+
+    <input
+        type="tel"
+        inputMode="numeric"
+        autoComplete="tel-national"
+        value={formatIndianPhone(
+            form.phone,
+        )}
+        onChange={(event) => {
+            const phone =
+                getIndianPhoneDigits(
+                    event.target.value,
+                );
+
+            onPhoneChange(phone);
+        }}
+        placeholder="98765 43210"
+        maxLength={11}
+        aria-label="Indian mobile number"
+        className="min-w-0 flex-1 bg-transparent px-4 text-sm font-bold tracking-[0.02em] text-slate-950 outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-slate-400"
+    />
+</div>
 
                             {phoneVerified ? (
                                 <CheckCircle2
