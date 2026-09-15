@@ -178,10 +178,10 @@ export async function POST(
             },
         );
 
-        await sendSms(
+        await sendSms({
             phone,
-            `Your PROPYOURS verification code is ${otp}. It expires in 10 minutes.`,
-        );
+            otp,
+        });
 
         return NextResponse.json({
             message:
