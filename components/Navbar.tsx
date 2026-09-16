@@ -304,13 +304,13 @@ export default function Navbar() {
               <Link
                   href="/"
                   onClick={closeMenus}
-                  className="group hidden shrink-0 items-center rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-primary/15 sm:flex"
+                  className="group flex shrink-0 items-center rounded-xl outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
                   aria-label="PropYours home"
               >
                 <BrandLogo
                     href=""
                     priority
-                    className="h-16 w-[265px] sm:h-[72px] sm:w-[315px]"
+                    className="max-sm:h-[28px] max-sm:w-[140px]"
                 />
               </Link>
 

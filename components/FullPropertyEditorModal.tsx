@@ -1162,9 +1162,6 @@ export default function FullPropertyEditorModal({
                                 !Number.isFinite(
                                     bedrooms,
                                 ) ||
-                                !Number.isInteger(
-                                    bedrooms,
-                                ) ||
                                 bedrooms < 0 ||
                                 bedrooms > 20 ||
 
@@ -2607,7 +2604,7 @@ export default function FullPropertyEditorModal({
                                                                                             type="number"
                                                                                             min="0"
                                                                                             max="20"
-                                                                                            step="1"
+                                                                                            step="0.5"
                                                                                             value={
                                                                                                 configuration.bedrooms
                                                                                             }

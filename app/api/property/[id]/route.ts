@@ -180,16 +180,13 @@ function parseUnitConfigurations(
             !Number.isFinite(
                 bedrooms,
             ) ||
-            !Number.isInteger(
-                bedrooms,
-            ) ||
             bedrooms < 0 ||
             bedrooms > 20
         ) {
             return {
                 success: false,
                 error:
-                    "BHK must be a whole number between 0 and 20.",
+                    "BHK must be a number between 0 and 20.",
             };
         }
 

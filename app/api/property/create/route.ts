@@ -623,7 +623,6 @@ export async function POST(
             if (
                 typeof bedrooms !== "number" ||
                 !Number.isFinite(bedrooms) ||
-                !Number.isInteger(bedrooms) ||
                 bedrooms < 0 ||
                 bedrooms > 20 ||
 

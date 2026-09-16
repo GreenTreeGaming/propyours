@@ -17,7 +17,7 @@ export default function BrandLogo({
     const logo = (
         <span
             className={[
-                "relative block shrink-0",
+                "relative block shrink-0 overflow-hidden",
                 "h-[30px] w-[150px]",
                 "sm:h-[32px] sm:w-[160px]",
                 "lg:h-[34px] lg:w-[168px]",

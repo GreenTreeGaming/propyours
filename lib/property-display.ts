@@ -49,7 +49,8 @@ export function getPropertyBHKLabel(
     ]
         .filter(
             (value) =>
-                Number.isInteger(value) &&
+                typeof value === "number" &&
+                Number.isFinite(value) &&
                 value >= 0,
         )
         .sort(

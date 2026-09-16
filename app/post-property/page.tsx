@@ -1147,9 +1147,6 @@ export default function PostPropertyPage() {
                                 !Number.isFinite(
                                     bedrooms,
                                 ) ||
-                                !Number.isInteger(
-                                    bedrooms,
-                                ) ||
                                 bedrooms < 0 ||
                                 bedrooms > 20 ||
 
@@ -2888,7 +2885,7 @@ export default function PostPropertyPage() {
                                                                                             type="number"
                                                                                             min="0"
                                                                                             max="20"
-                                                                                            step="1"
+                                                                                            step="0.5"
                                                                                             value={
                                                                                                 configuration.bedrooms
                                                                                             }
