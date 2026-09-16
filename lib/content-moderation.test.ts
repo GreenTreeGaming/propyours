@@ -82,6 +82,17 @@ describe(
                 );
 
                 it(
+                    "allows legitimate Tamil Nadu place names",
+                    () => {
+                        expect(
+                            hasInappropriateContent(
+                                "Sholinganallur",
+                            ),
+                        ).toBe(false);
+                    },
+                );
+
+                it(
                     "allows empty strings",
                     () => {
                         expect(

@@ -4434,7 +4434,9 @@ export default function PostPropertyPage() {
                                                                         {displayType}
                                                                     </h3>
                                                                     <p className="mt-3 text-xl font-black text-slate-950">
-                                                                        {formatPrice(form.price)}
+                                                                        {projectStartingPrice !== null
+                                                                            ? `${formatPrice(String(projectStartingPrice))} onwards`
+                                                                            : formatPrice(form.price)}
                                                                     </p>
                                                                 </div>
                                                             </div>

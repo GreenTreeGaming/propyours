@@ -269,13 +269,10 @@ export async function POST(
             findInappropriateField({
                 description:
                 body.description,
-                address,
-                locality,
-                city,
-                landmark:
-                body.landmark,
-                dimensions:
-                body.dimensions,
+                developerName:
+                body.developerName,
+                projectName:
+                body.projectName,
             });
 
         if (inappropriateField) {

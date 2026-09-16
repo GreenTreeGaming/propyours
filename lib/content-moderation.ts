@@ -4,10 +4,28 @@ import {
     englishRecommendedTransformers,
 } from "obscenity";
 
+import {
+    TAMIL_NADU_CITIES,
+    getTamilNaduLocalities,
+} from "@/lib/property-form-options";
+
 const englishMatcher = new RegExpMatcher({
     ...englishDataset.build(),
     ...englishRecommendedTransformers,
 });
+
+const APPROVED_LOCATION_TERMS = [
+    ...TAMIL_NADU_CITIES,
+    ...TAMIL_NADU_CITIES.flatMap(
+        (city) =>
+            getTamilNaduLocalities(city),
+    ),
+]
+    .filter(Boolean)
+    .sort(
+        (a, b) =>
+            b.length - a.length,
+    );
 
 /**
  * Add reviewed Tamil-script and transliterated Tamil terms here.
@@ -30,6 +48,36 @@ const ZERO_WIDTH_CHARACTERS =
 
 const NON_WORD_CHARACTERS =
     /[^\p{L}\p{N}\p{M}]+/gu;
+
+function escapeRegExp(value: string): string {
+    return value.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+    );
+}
+
+function removeApprovedLocations(
+    value: string,
+): string {
+    let result = value;
+
+    for (
+        const location of
+        APPROVED_LOCATION_TERMS
+        ) {
+        result = result.replace(
+            new RegExp(
+                `\\b${escapeRegExp(
+                    location,
+                )}\\b`,
+                "giu",
+            ),
+            " ",
+        );
+    }
+
+    return result;
+}
 
 function normalizeModerationText(
     value: string,
@@ -64,7 +112,14 @@ export function hasInappropriateContent(
         return false;
     }
 
-    if (englishMatcher.hasMatch(value)) {
+    const textWithoutApprovedLocations =
+        removeApprovedLocations(value);
+
+    if (
+        englishMatcher.hasMatch(
+            textWithoutApprovedLocations,
+        )
+    ) {
         return true;
     }
 
