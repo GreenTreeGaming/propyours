@@ -2768,14 +2768,14 @@ export default function PropertyDetailsPage() {
                                                     }
                                                     className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
                                                 >
-                                                    <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+                                                    <div className="flex items-center border-b border-slate-200 bg-white px-4 py-3">
                                                         <div className="flex items-center gap-2">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-primary">
-                                    <BedDouble
-                                        size={17}
-                                        aria-hidden="true"
-                                    />
-                                </span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-primary">
+            <BedDouble
+                size={17}
+                aria-hidden="true"
+            />
+        </span>
 
                                                             <div>
                                                                 <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
@@ -2790,12 +2790,6 @@ export default function PropertyDetailsPage() {
                                                                 </p>
                                                             </div>
                                                         </div>
-
-                                                        <span className="text-sm font-black text-primary">
-                                {formatPrice(
-                                    configuration.price,
-                                )}
-                            </span>
                                                     </div>
 
                                                     <div className="grid grid-cols-2 divide-x divide-slate-200">

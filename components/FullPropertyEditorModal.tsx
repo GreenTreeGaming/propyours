@@ -499,9 +499,9 @@ function getEditorUploadedFileDescriptor(
     file: EditorUploadFile,
 ): EditorUploadedFileDescriptor | null {
     const url =
+        file.serverData?.url ||
         file.ufsUrl ||
-        file.url ||
-        file.serverData?.url;
+        file.url;
 
     if (!url) {
         return null;
@@ -510,8 +510,8 @@ function getEditorUploadedFileDescriptor(
     return {
         url,
         fileKey:
-            file.key ||
             file.serverData?.fileKey ||
+            file.key ||
             null,
         deleteToken:
             file.serverData?.deleteToken ||

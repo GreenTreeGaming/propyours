@@ -611,6 +611,28 @@ export default function HomePage() {
                   </Link>
                 </div>
 
+                <a
+                    href="tel:+917845508558"
+                    className="mt-5 inline-flex w-fit items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 shadow-sm transition hover:border-primary hover:text-primary"
+                >
+    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-primary">
+        <PhoneCall
+            size={16}
+            aria-hidden="true"
+        />
+    </span>
+
+                  <span>
+        <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+            Call PropYours
+        </span>
+
+        <span className="mt-0.5 block font-black text-slate-900">
+            +91 - 784 550 8558
+        </span>
+    </span>
+                </a>
+
                 <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
                   {[
                     "Search naturally",

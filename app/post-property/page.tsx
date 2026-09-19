@@ -565,9 +565,9 @@ function getUploadedFileDescriptor(
     file: UploadFile,
 ): UploadedFileDescriptor | null {
     const url =
+        file.serverData?.url ||
         file.ufsUrl ||
-        file.url ||
-        file.serverData?.url;
+        file.url;
 
     if (!url) {
         return null;
@@ -575,14 +575,20 @@ function getUploadedFileDescriptor(
 
     return {
         url,
+
         fileKey:
+            file.serverData
+                ?.fileKey ||
             file.key ||
-            file.serverData?.fileKey ||
             null,
+
         deleteToken:
-            file.serverData?.deleteToken ||
+            file.serverData
+                ?.deleteToken ||
             null,
-        fileName: file.name,
+
+        fileName:
+        file.name,
     };
 }
 
@@ -2645,9 +2651,9 @@ export default function PostPropertyPage() {
                                                             </h3>
 
                                                             <p className="mt-1 text-xs leading-5 text-slate-500">
-                                                                Enter the total area of the property.
-                                                                Residential projects can also include
-                                                                individual unit configurations below.
+                                                                {form.propertyType === "Plot"
+                                                                    ? "Enter the total plot size and choose the appropriate area unit."
+                                                                    : "Enter the total area of the property. Residential projects can also include individual unit configurations below."}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -2655,7 +2661,9 @@ export default function PostPropertyPage() {
                                                     <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
                                                         <label className="lg:col-span-2">
                                                             <FieldLabel required>
-                                                                Total area
+                                                                {form.propertyType === "Plot"
+                                                                    ? "Plot size"
+                                                                    : "Total area"}
                                                             </FieldLabel>
 
                                                             <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">

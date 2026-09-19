@@ -49,12 +49,45 @@ function createExactCaseInsensitiveMatch(
     };
 }
 
+function normalizeSearchTerm(
+    value: string,
+): string {
+    const normalized =
+        value.trim().toLowerCase();
+
+    const aliases: Record<
+        string,
+        string
+    > = {
+        plots: "plot",
+        apartments: "apartment",
+        villas: "villa",
+        penthouses: "penthouse",
+        shops: "shop",
+        showrooms: "showroom",
+        warehouses: "warehouse",
+        factories: "factory",
+    };
+
+    return (
+        aliases[normalized] ??
+        normalized
+    );
+}
+
 function createSearchMatch(
     value: string,
 ) {
+    const normalizedValue =
+        normalizeSearchTerm(
+            value,
+        );
+
     return {
         $regex:
-            escapeRegularExpression(value),
+            escapeRegularExpression(
+                normalizedValue,
+            ),
         $options: "i",
     };
 }
@@ -228,6 +261,10 @@ function buildPropertyMatch(
                 },
                 {
                     city: searchMatch,
+                },
+                {
+                    projectName:
+                    searchMatch,
                 },
                 {
                     propertyType:

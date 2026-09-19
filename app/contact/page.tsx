@@ -6,7 +6,14 @@ export const metadata: Metadata = {
         "Contact PropYours for help with property listings, buying, selling, and builder services.",
 };
 
-const CONTACT_EMAIL = "reach@propyours.com";
+const CONTACT_EMAIL =
+    "reach@propyours.com";
+
+const CONTACT_PHONE =
+    "+917845508558";
+
+const CONTACT_PHONE_DISPLAY =
+    "+91 - 784 550 8558";
 
 export default function ContactPage() {
     return (
@@ -26,12 +33,32 @@ export default function ContactPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                     <a
                         href={`mailto:${CONTACT_EMAIL}`}
-                        className="rounded-3xl border border-gray-100 bg-white p-8 shadow-sm"
+                        className="group rounded-3xl border border-gray-100 bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
                     >
                         <p className="mb-2 text-sm font-bold uppercase tracking-wider text-primary">
                             Email
                         </p>
-                        <p className="text-xl font-bold text-gray-900">{CONTACT_EMAIL}</p>
+
+                        <p className="text-xl font-bold text-gray-900 transition group-hover:text-primary">
+                            {CONTACT_EMAIL}
+                        </p>
+                    </a>
+
+                    <a
+                        href={`tel:${CONTACT_PHONE}`}
+                        className="group rounded-3xl border border-gray-100 bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg"
+                    >
+                        <p className="mb-2 text-sm font-bold uppercase tracking-wider text-primary">
+                            Phone
+                        </p>
+
+                        <p className="text-xl font-bold text-gray-900 transition group-hover:text-primary">
+                            {CONTACT_PHONE_DISPLAY}
+                        </p>
+
+                        <p className="mt-2 text-sm text-gray-500">
+                            Tap to call PropYours
+                        </p>
                     </a>
                 </div>
             </div>
