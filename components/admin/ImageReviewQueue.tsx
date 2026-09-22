@@ -31,11 +31,11 @@ export default function ImageReviewQueue() {
     return <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-xl font-black text-slate-950">Images awaiting screening ({properties.length})</h2>
         <p className="mt-1 text-sm text-slate-500">Review customer photos before they appear publicly.</p>
-        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-slate-800">{error}</p>}
         <div className="mt-4 space-y-5">{properties.map((property) => <article key={property._id} className="rounded-xl border border-slate-200 p-4">
             <p className="font-bold">{property.address}, {property.locality}, {property.city}</p>
             <div className="mt-3 flex gap-2 overflow-x-auto">{property.images.map((url) => <div key={url} className="relative h-32 w-40 shrink-0"><Image src={url} alt="Photo pending review" fill sizes="160px" className="rounded-lg object-cover" /></div>)}</div>
-            <div className="mt-3 flex gap-2"><button disabled={busy === property._id} onClick={() => void decide(property._id, "approved")} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Approve</button><button disabled={busy === property._id} onClick={() => void decide(property._id, "rejected")} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">Reject</button></div>
+            <div className="mt-3 flex gap-2"><button disabled={busy === property._id} onClick={() => void decide(property._id, "approved")} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-primary-dark disabled:opacity-50">Approve</button><button disabled={busy === property._id} onClick={() => void decide(property._id, "rejected")} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Reject</button></div>
         </article>)}</div>
     </section>;
 }

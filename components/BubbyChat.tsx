@@ -8,6 +8,7 @@ import {
     useState,
 } from "react";
 import Link from "next/link";
+import VerifiedEnquiryForm from "@/components/VerifiedEnquiryForm";
 import { usePathname } from "next/navigation";
 import {
     AnimatePresence,
@@ -16,33 +17,23 @@ import {
 import {
     Bot,
     Building2,
-    CheckCircle2,
     Home,
     Loader2,
     MapPin,
     MessageCircle,
-    Phone,
     Send,
     Sparkles,
     Trash2,
-    UserRound,
     X,
 } from "lucide-react";
 
 import type {
     BubbyActionLink,
     BubbyApiResponse,
-    BubbyChatMessage,
     BubbyPropertyResult,
     BubbySearchFilters,
 } from "@/lib/bubby/types";
 
-import {
-    BUBBY_COMMERCIAL_TYPES,
-    BUBBY_LISTING_PURPOSES,
-    BUBBY_PROPERTY_TYPES,
-    BUBBY_SORT_OPTIONS,
-} from "@/lib/bubby/types";
 import {
     getPropertyDisplayPrice,
     getPropertyDisplayTitle,
@@ -410,13 +401,11 @@ export default function BubbyChat() {
                     "assistant",
             );
 
+    const leadUnlocked = messages.some((message) => message.leadCaptured);
+    const firstUserMessage = messages.find((message) => message.role === "user");
     const leadOpportunity =
-        latestAssistantMessage &&
-        latestAssistantMessage.properties &&
-        latestAssistantMessage.properties.length >
-        0 &&
-        !latestAssistantMessage.leadCaptured
-            ? latestAssistantMessage
+        firstUserMessage && !leadUnlocked
+            ? firstUserMessage
             : null;
 
     return (
@@ -515,6 +504,7 @@ export default function BubbyChat() {
                                     <MessageBubble
                                         key={message.id}
                                         message={message}
+                                        leadUnlocked={leadUnlocked}
                                         onNavigate={() =>
                                             setOpen(false)
                                         }
@@ -527,13 +517,13 @@ export default function BubbyChat() {
                                             leadOpportunity.id
                                         }
                                         propertyIds={
-                                            leadOpportunity.properties?.map(
+                                            latestAssistantMessage?.properties?.map(
                                                 (property) =>
                                                     property.id,
                                             ) ?? []
                                         }
                                         searchFilters={
-                                            leadOpportunity.searchFilters ??
+                                            latestAssistantMessage?.searchFilters ??
                                             null
                                         }
                                         onSuccess={() =>
@@ -688,9 +678,11 @@ export default function BubbyChat() {
 
 function MessageBubble({
                            message,
+                           leadUnlocked,
                            onNavigate,
                        }: {
     message: UiMessage;
+    leadUnlocked: boolean;
     onNavigate: () => void;
 }) {
     const assistant =
@@ -722,8 +714,8 @@ function MessageBubble({
                     message.properties &&
                     message.properties.length >
                     0 &&
-                    !message.leadCaptured
-                        ? "I found matching properties on PropYours. Before I show them, please share your name and mobile number below."
+                    !leadUnlocked
+                        ? "I found matching properties on PropYours. Please verify your mobile number below to see them."
                         : message.content}
                 </div>
 
@@ -741,7 +733,7 @@ function MessageBubble({
 
                 {message.properties &&
                 message.properties.length > 0 &&
-                message.leadCaptured ? (
+                leadUnlocked ? (
                     <div className="mt-3 space-y-2">
                         {message.properties.map(
                             (property) => (
@@ -761,351 +753,8 @@ function MessageBubble({
     );
 }
 
-function BubbyLeadCapture({
-                              propertyIds,
-                              searchFilters,
-                              onSuccess,
-                          }: {
-    propertyIds: string[];
-    searchFilters:
-        | BubbySearchFilters
-        | null;
-    onSuccess: () => void;
-}) {
-    const [name, setName] =
-        useState("");
-
-    const [mobile, setMobile] =
-        useState("");
-
-    const [
-        submitting,
-        setSubmitting,
-    ] = useState(false);
-
-    const [
-        submitted,
-        setSubmitted,
-    ] = useState(false);
-
-    const [
-        error,
-        setError,
-    ] = useState("");
-
-    async function submitLead(
-        event: FormEvent<HTMLFormElement>,
-    ): Promise<void> {
-        event.preventDefault();
-
-        if (submitting) {
-            return;
-        }
-
-        const cleanName =
-            name.trim();
-
-        const cleanMobile =
-            mobile.trim();
-
-        if (
-            cleanName.length < 2
-        ) {
-            setError(
-                "Please enter your name.",
-            );
-
-            return;
-        }
-
-        if (
-            cleanMobile.length < 8
-        ) {
-            setError(
-                "Please enter a valid mobile number.",
-            );
-
-            return;
-        }
-
-        setSubmitting(true);
-        setError("");
-
-        try {
-            const response =
-                await fetch(
-                    "/api/bubby/lead",
-                    {
-                        method:
-                            "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-                        },
-
-                        credentials:
-                            "same-origin",
-
-                        body:
-                            JSON.stringify({
-                                name:
-                                cleanName,
-
-                                mobile:
-                                cleanMobile,
-
-                                propertyIds,
-
-                                searchFilters,
-
-                                /*
-                                 * Submission of this explicit lead
-                                 * form represents the contact consent
-                                 * displayed immediately below it.
-                                 */
-                                consent:
-                                    true,
-                            }),
-                    },
-                );
-
-            const body =
-                (await response
-                    .json()
-                    .catch(
-                        () =>
-                            null,
-                    )) as unknown;
-
-            if (!response.ok) {
-                const message =
-                    isRecord(
-                        body,
-                    ) &&
-                    typeof body.error ===
-                    "string"
-                        ? body.error
-                        : "We couldn't save your details. Please try again.";
-
-                throw new Error(
-                    message,
-                );
-            }
-
-            setSubmitted(true);
-            onSuccess();
-        } catch (
-            submitError
-            ) {
-            setError(
-                submitError instanceof
-                Error
-                    ? submitError.message
-                    : "We couldn't save your details. Please try again.",
-            );
-        } finally {
-            setSubmitting(false);
-        }
-    }
-
-    if (submitted) {
-        return (
-            <div className="ml-10 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                <div className="flex items-start gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                        <CheckCircle2
-                            size={18}
-                            aria-hidden="true"
-                        />
-                    </span>
-
-                    <div>
-                        <p className="text-sm font-black text-slate-950">
-                            Details received
-                        </p>
-
-                        <p className="mt-1 text-xs leading-5 text-slate-600">
-                            Thanks, {name.trim()}.
-                            The PropYours team
-                            can use these details
-                            to help with the
-                            properties you found.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="ml-10 overflow-hidden rounded-2xl border border-primary/20 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-teal-50/70 px-4 py-3">
-                <p className="text-sm font-black text-slate-950">
-                    Before I show your matches
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Share your name and mobile
-                    number to continue and view
-                    the matching PropYours
-                    listings.
-                </p>
-            </div>
-
-            <form
-                onSubmit={
-                    submitLead
-                }
-                className="space-y-3 p-4"
-            >
-                <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                        Name
-                    </span>
-
-                    <div className="relative">
-                        <UserRound
-                            size={15}
-                            aria-hidden="true"
-                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(
-                                event,
-                            ) => {
-                                setName(
-                                    event
-                                        .target
-                                        .value,
-                                );
-
-                                if (
-                                    error
-                                ) {
-                                    setError(
-                                        "",
-                                    );
-                                }
-                            }}
-                            autoComplete="name"
-                            maxLength={
-                                100
-                            }
-                            disabled={
-                                submitting
-                            }
-                            placeholder="Your name"
-                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:cursor-wait disabled:opacity-60"
-                        />
-                    </div>
-                </label>
-
-                <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                        Mobile number
-                    </span>
-
-                    <div className="relative">
-                        <Phone
-                            size={15}
-                            aria-hidden="true"
-                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                            type="tel"
-                            inputMode="tel"
-                            autoComplete="tel"
-                            value={
-                                mobile
-                            }
-                            onChange={(
-                                event,
-                            ) => {
-                                setMobile(
-                                    event
-                                        .target
-                                        .value,
-                                );
-
-                                if (
-                                    error
-                                ) {
-                                    setError(
-                                        "",
-                                    );
-                                }
-                            }}
-                            maxLength={
-                                25
-                            }
-                            disabled={
-                                submitting
-                            }
-                            placeholder="+91 98765 43210"
-                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:cursor-wait disabled:opacity-60"
-                        />
-                    </div>
-                </label>
-
-                {error ? (
-                    <p
-                        role="alert"
-                        className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-700"
-                    >
-                        {error}
-                    </p>
-                ) : null}
-
-                <button
-                    type="submit"
-                    disabled={
-                        submitting ||
-                        !name.trim() ||
-                        !mobile.trim()
-                    }
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-md shadow-primary/20 transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {submitting ? (
-                        <>
-                            <Loader2
-                                size={
-                                    15
-                                }
-                                className="animate-spin"
-                                aria-hidden="true"
-                            />
-
-                            Sending…
-                        </>
-                    ) : (
-                        <>
-                            <Phone
-                                size={
-                                    15
-                                }
-                                aria-hidden="true"
-                            />
-
-                            View matching properties
-                        </>
-                    )}
-                </button>
-
-                <p className="text-center text-[9px] leading-4 text-slate-400">
-                    By submitting, you
-                    agree that PropYours
-                    may contact you about
-                    these property
-                    listings.
-                </p>
-            </form>
-        </div>
-    );
+function BubbyLeadCapture({ propertyIds, searchFilters, onSuccess }: { propertyIds: string[]; searchFilters: BubbySearchFilters | null; onSuccess: () => void }) {
+    return <div className="ml-10 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm"><VerifiedEnquiryForm variant="bubby" propertyIds={propertyIds} searchFilters={searchFilters} onSuccess={onSuccess} /></div>;
 }
 
 function AssistantAvatar() {

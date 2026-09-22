@@ -1417,7 +1417,7 @@ export default function HomePage() {
                   <div className="grid gap-5 lg:grid-cols-12">
                     {/* Featured property */}
                     <Link
-                        href={`/property/${spotlightProperty._id}`}
+                        href={`/property/${spotlightProperty._id}?enquire=1`}
                         className="group relative min-h-[500px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-[0_35px_90px_rgba(0,0,0,0.35)] sm:min-h-[560px] lg:col-span-7"
                     >
                       <Image
@@ -1523,7 +1523,7 @@ export default function HomePage() {
                           return (
                               <Link
                                   key={property._id}
-                                  href={`/property/${property._id}`}
+                                  href={`/property/${property._id}?enquire=1`}
                                   className="group flex h-full min-h-0 snap-start flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)]">
                                 <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[42%]">
                                   <Image

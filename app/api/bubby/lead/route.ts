@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 
 import { connectDB } from "@/lib/mongoose";
+import { consumeVerifiedLeadPhone, normalizeLeadPhone } from "@/lib/lead-phone";
 
 import {
     hasTrustedOrigin,
@@ -162,15 +163,13 @@ const leadSchema =
                     25,
                     "Enter a valid mobile number.",
                 ),
+        email: z.email().max(160),
+        verificationToken: z.string().min(20).max(200),
 
         propertyIds:
             z.array(
                 z.string().min(1),
             )
-                .min(
-                    1,
-                    "At least one property is required.",
-                )
                 .max(8),
 
         searchFilters:
@@ -221,14 +220,13 @@ export async function POST(
         const {
             name,
             mobile,
+            email,
+            verificationToken,
             propertyIds,
             searchFilters,
         } = parsed.data;
 
-        const normalizedMobile =
-            normalizeMobileNumber(
-                mobile,
-            );
+        const normalizedMobile = normalizeLeadPhone(mobile);
 
         if (!normalizedMobile) {
             return NextResponse.json(
@@ -297,10 +295,7 @@ export async function POST(
                 .select("_id")
                 .lean();
 
-        if (
-            validProperties.length ===
-            0
-        ) {
+        if (uniquePropertyIds.length > 0 && validProperties.length === 0) {
             return NextResponse.json(
                 {
                     error:
@@ -319,6 +314,10 @@ export async function POST(
                         property._id.toString(),
                 )
                 .sort();
+
+        if (!(await consumeVerifiedLeadPhone(normalizedMobile, verificationToken))) {
+            return NextResponse.json({ error: "Phone verification expired. Request a new code." }, { status: 403 });
+        }
 
         /*
          * Build a deterministic identifier for the same mobile
@@ -362,6 +361,7 @@ export async function POST(
              * corrected it and record the repeated interest.
              */
             existingLead.name = name;
+            existingLead.email = email;
 
             existingLead.submissionCount =
                 (
@@ -388,6 +388,7 @@ export async function POST(
         const lead =
             await BubbyLead.create({
                 name,
+                email,
 
                 mobile:
                 normalizedMobile,
@@ -471,57 +472,4 @@ export async function POST(
             },
         );
     }
-}
-
-function normalizeMobileNumber(
-    input: string,
-): string | null {
-    const trimmed =
-        input.trim();
-
-    if (!trimmed) {
-        return null;
-    }
-
-    /*
-     * Strip spaces, brackets, hyphens, etc.
-     */
-    let digits =
-        trimmed.replace(
-            /\D/g,
-            "",
-        );
-
-    /*
-     * Indian mobile numbers are the primary use case.
-     *
-     * 9876543210
-     * becomes
-     * +919876543210
-     */
-    if (digits.length === 10) {
-        digits =
-            `91${digits}`;
-    }
-
-    /*
-     * E.164 allows up to 15 digits.
-     */
-    if (
-        digits.length < 8 ||
-        digits.length > 15
-    ) {
-        return null;
-    }
-
-    /*
-     * Avoid obviously invalid repeated-zero numbers.
-     */
-    if (
-        /^0+$/.test(digits)
-    ) {
-        return null;
-    }
-
-    return `+${digits}`;
 }

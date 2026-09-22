@@ -447,7 +447,7 @@ function PropertyCard({
           className="group overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_24px_65px_rgba(15,23,42,0.12)]"
       >
         <Link
-            href={`/property/${property._id}`}
+            href={`/property/${property._id}?enquire=1`}
             className={
               isList
                   ? "grid h-full sm:grid-cols-[280px_minmax(0,1fr)]"

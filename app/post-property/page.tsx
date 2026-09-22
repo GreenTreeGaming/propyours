@@ -52,6 +52,7 @@ import {
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { UploadDropzone } from "@/lib/uploadthing";
+import { preparePropertyImages } from "@/lib/prepare-property-image";
 import MapPinPicker from "@/components/MapPinPicker";
 import { validMapPoint } from "@/lib/map-locations";
 import {
@@ -3722,11 +3723,16 @@ export default function PostPropertyPage() {
                                                             <UploadDropzone
                                                                 endpoint="propertyImageUploader"
                                                                 config={{ mode: "auto" }}
+                                                                onBeforeUploadBegin={async (files) => {
+                                                                    setUploadMessage("Preparing and watermarking photos...");
+                                                                    return preparePropertyImages(files);
+                                                                }}
                                                                 onUploadBegin={() =>
                                                                     setUploadMessage(
-                                                                        "Uploading image...",
+                                                                        "Uploading photos...",
                                                                     )
                                                                 }
+                                                                onUploadProgress={(progress) => setUploadMessage(`Uploading photos... ${Math.round(progress)}%`)}
                                                                 onClientUploadComplete={(result) => {
                                                                     const descriptors = (
                                                                         (result ?? []) as UploadFile[]
@@ -4120,6 +4126,7 @@ export default function PostPropertyPage() {
                                                                 <UploadDropzone
                                                                     endpoint="developerBrochureUploader"
                                                                     config={{ mode: "auto" }}
+                                                                    onUploadProgress={(progress) => setUploadMessage(`Uploading brochure... ${Math.round(progress)}%`)}
                                                                     onUploadBegin={() =>
                                                                         setUploadMessage(
                                                                             "Uploading brochure...",

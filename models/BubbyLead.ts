@@ -19,6 +19,7 @@ const BubbyLeadSchema = new Schema(
             maxlength: 20,
             index: true,
         },
+        email: { type: String, required: true, trim: true, lowercase: true, maxlength: 160 },
 
         propertyIds: [
             {

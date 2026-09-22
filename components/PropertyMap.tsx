@@ -31,6 +31,6 @@ export default function PropertyMap({ properties, city }: { properties: MapPrope
             <span className="text-xs text-slate-500">City markers are approximate until a listing has a precise pin.</span>
         </div>
         <TileMap city={mapCity} height={520} pins={pins} onSelect={setSelected} />
-        {selected && <div className="p-4">{visible.filter((property) => property._id === selected).map((property) => <p key={property._id} className="text-sm"><strong>{property.address}</strong>, {property.locality}, {property.city} · <Link className="font-bold text-teal-700 underline" href={`/property/${property._id}`}>View listing</Link></p>)}</div>}
+        {selected && <div className="p-4">{visible.filter((property) => property._id === selected).map((property) => <p key={property._id} className="text-sm"><strong>{property.address}</strong>, {property.locality}, {property.city} · <Link className="font-bold text-teal-700 underline" href={`/property/${property._id}?enquire=1`}>View listing</Link></p>)}</div>}
     </div>;
 }

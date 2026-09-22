@@ -33,10 +33,8 @@ import {
     Landmark,
     Layers,
     Loader2,
-    Mail,
     Map as MapIcon,
     MapPin,
-    MessageCircle,
     Phone,
     RefreshCw,
     Ruler,
@@ -63,6 +61,7 @@ import EMICalculator from "@/components/EMICalculator";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import PropertyAnalyticsModal from "@/components/PropertyAnalyticsModal";
 import SharePropertyModal from "@/components/SharePropertyModal";
+import PropertyContactDialog from "@/components/PropertyContactDialog";
 import {
     useCompare,
 } from "@/components/CompareContext";
@@ -1105,25 +1104,6 @@ function getFactRows(
     return rows;
 }
 
-function getWhatsAppUrl(
-    phone: string,
-    property: PropertyRecord,
-): string {
-    const digits =
-        phone.replace(/\D/g, "");
-
-    const message =
-        encodeURIComponent(
-            `Hi, I am interested in the ${getPropertyTypeLabel(
-                property,
-            )} at ${getFullAddress(
-                property,
-            )} listed on PropYours.`,
-        );
-
-    return `https://wa.me/${digits}?text=${message}`;
-}
-
 function PropertyPageSkeleton() {
     return (
         <main className="min-h-screen bg-[#f5f7f6] pb-20 pt-24">
@@ -1176,10 +1156,6 @@ export default function PropertyDetailsPage() {
     const [loadError, setLoadError] =
         useState("");
     const [
-        contactError,
-        setContactError,
-    ] = useState("");
-    const [
         favoriteError,
         setFavoriteError,
     ] = useState("");
@@ -1205,14 +1181,7 @@ export default function PropertyDetailsPage() {
         displayUnit,
         setDisplayUnit,
     ] = useState("sqft");
-    const [showPhone, setShowPhone] =
-        useState(false);
-    const [
-        contactLoading,
-        setContactLoading,
-    ] = useState<
-        "phone" | "email" | "whatsapp" | null
-    >(null);
+    const [contactOpen, setContactOpen] = useState(false);
     const [shareUrl, setShareUrl] =
         useState("");
     const [isOwner, setIsOwner] =
@@ -1339,6 +1308,13 @@ export default function PropertyDetailsPage() {
         property,
         propertyId,
     ]);
+
+    useEffect(() => {
+        if (!property || !propertyId || new URLSearchParams(window.location.search).get("enquire") !== "1") return;
+        const userId = getUserId(getStoredUser());
+        if (userId === property.userId?._id) return;
+        queueMicrotask(() => setContactOpen(true));
+    }, [property, propertyId]);
 
     useEffect(() => {
         if (
@@ -1998,123 +1974,8 @@ export default function PropertyDetailsPage() {
         });
     }
 
-    async function handlePhone() {
-        if (
-            !property ||
-            contactLoading
-        ) {
-            return;
-        }
-
-        if (isOwner) {
-            setShowPhone(true);
-            return;
-        }
-
-        setContactLoading("phone");
-        setContactError("");
-
-        try {
-            const leadCreated =
-                await createLead("phone");
-
-            if (!leadCreated) {
-                return;
-            }
-
-            await recordPhoneClick();
-            setShowPhone(true);
-        } catch (error) {
-            setContactError(
-                error instanceof Error
-                    ? error.message
-                    : "Unable to reveal the phone number.",
-            );
-        } finally {
-            setContactLoading(null);
-        }
-    }
-
-    async function handleEmail() {
-        if (
-            !property ||
-            !property.userId?.email ||
-            contactLoading
-        ) {
-            return;
-        }
-
-        if (isOwner) {
-            window.location.href =
-                `mailto:${property.userId.email}`;
-            return;
-        }
-
-        setContactLoading("email");
-        setContactError("");
-
-        try {
-            const leadCreated =
-                await createLead("email");
-
-            if (!leadCreated) {
-                return;
-            }
-
-            window.location.href =
-                `mailto:${property.userId.email}`;
-        } catch (error) {
-            setContactError(
-                error instanceof Error
-                    ? error.message
-                    : "Unable to start an email.",
-            );
-        } finally {
-            setContactLoading(null);
-        }
-    }
-
-    async function handleWhatsApp() {
-        if (
-            !property ||
-            !property.userId?.phone ||
-            contactLoading
-        ) {
-            return;
-        }
-
-        if (!isOwner) {
-            setContactLoading(
-                "whatsapp",
-            );
-            setContactError("");
-
-            try {
-                const leadCreated =
-                    await createLead(
-                        "whatsapp",
-                    );
-
-                if (!leadCreated) {
-                    return;
-                }
-            } catch (error) {
-                setContactError(
-                    error instanceof Error
-                        ? error.message
-                        : "Unable to open WhatsApp.",
-                );
-                return;
-            } finally {
-                setContactLoading(null);
-            }
-        }
-
-        window.location.href =
-            getWhatsAppUrl(
-                property.userId.phone,
-                property,
-            );
+    function handlePhone() {
+        if (property && !isOwner) setContactOpen(true);
     }
 
     if (loading) {
@@ -3019,21 +2880,8 @@ export default function PropertyDetailsPage() {
                         <ContactCard
                             property={property}
                             isOwner={isOwner}
-                            showPhone={showPhone}
-                            contactLoading={
-                                contactLoading
-                            }
-                            contactError={
-                                contactError
-                            }
                             onPhone={() =>
                                 void handlePhone()
-                            }
-                            onEmail={() =>
-                                void handleEmail()
-                            }
-                            onWhatsApp={() =>
-                                void handleWhatsApp()
                             }
                             onAnalytics={() =>
                                 setAnalyticsOpen(true)
@@ -3047,17 +2895,13 @@ export default function PropertyDetailsPage() {
                 <MobileContactBar
                     property={property}
                     minimumUnitPrice={minimumUnitPrice}
-                    contactLoading={
-                        contactLoading
-                    }
                     onPhone={() =>
                         void handlePhone()
                     }
-                    onWhatsApp={() =>
-                        void handleWhatsApp()
-                    }
                 />
             ) : null}
+
+            {contactOpen && propertyId && <PropertyContactDialog propertyId={propertyId} address={property.address} onClose={() => setContactOpen(false)} onSuccess={() => void recordPhoneClick()} />}
 
             <AnimatePresence>
                 {selectedImageIndex !==
@@ -3508,31 +3352,7 @@ function FactRow({
     );
 }
 
-function ContactCard({
-                         property,
-                         isOwner,
-                         showPhone,
-                         contactLoading,
-                         contactError,
-                         onPhone,
-                         onEmail,
-                         onWhatsApp,
-                         onAnalytics,
-                     }: {
-    property: PropertyRecord;
-    isOwner: boolean;
-    showPhone: boolean;
-    contactLoading:
-        | "phone"
-        | "email"
-        | "whatsapp"
-        | null;
-    contactError: string;
-    onPhone: () => void;
-    onEmail: () => void;
-    onWhatsApp: () => void;
-    onAnalytics: () => void;
-}) {
+function ContactCard({ property, isOwner, onPhone, onAnalytics }: { property: PropertyRecord; isOwner: boolean; onPhone: () => void; onAnalytics: () => void }) {
     const owner =
         property.userId;
     const ownerName =
@@ -3642,118 +3462,16 @@ function ContactCard({
                                 Contact the listing owner
                             </h3>
                             <p className="mt-2 text-xs leading-5 text-slate-500">
-                                Sign in before contacting so
-                                the owner receives a verified
-                                enquiry from your profile.
+                                Verify your mobile number to get the owner’s contact details. You can create an account later to save and compare homes.
                             </p>
                         </div>
 
-                        {contactError ? (
-                            <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3 text-red-700">
-                                <AlertTriangle
-                                    size={16}
-                                    className="mt-0.5 shrink-0"
-                                    aria-hidden="true"
-                                />
-                                <p className="text-xs font-bold leading-5">
-                                    {contactError}
-                                </p>
-                            </div>
-                        ) : null}
-
-                        <div className="mt-5 space-y-3">
-                            {showPhone &&
-                            owner?.phone ? (
-                                <a
-                                    href={`tel:${owner.phone}`}
-                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20"
-                                >
-                                    <Phone
-                                        size={17}
-                                        aria-hidden="true"
-                                    />
-                                    {owner.phone}
-                                </a>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={onPhone}
-                                    disabled={
-                                        contactLoading !==
-                                        null
-                                    }
-                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 disabled:cursor-wait disabled:opacity-60"
-                                >
-                                    {contactLoading ===
-                                    "phone" ? (
-                                        <Loader2
-                                            size={17}
-                                            className="animate-spin"
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <Phone
-                                            size={17}
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    {owner?.phone
-                                        ? "Show phone number"
-                                        : "Request phone contact"}
-                                </button>
-                            )}
-
-                            {owner?.phone ? (
-                                <button
-                                    type="button"
-                                    onClick={onWhatsApp}
-                                    disabled={
-                                        contactLoading !==
-                                        null
-                                    }
-                                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#159C62] px-5 text-sm font-black text-white transition hover:bg-[#118353] disabled:cursor-wait disabled:opacity-60"
-                                >
-                                    {contactLoading ===
-                                    "whatsapp" ? (
-                                        <Loader2
-                                            size={17}
-                                            className="animate-spin"
-                                            aria-hidden="true"
-                                        />
-                                    ) : (
-                                        <MessageCircle
-                                            size={17}
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    WhatsApp owner
-                                </button>
-                            ) : null}
-
-                            <button
-                                type="button"
-                                onClick={onEmail}
-                                disabled={
-                                    !owner?.email ||
-                                    contactLoading !== null
-                                }
-                                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {contactLoading ===
-                                "email" ? (
-                                    <Loader2
-                                        size={17}
-                                        className="animate-spin"
-                                        aria-hidden="true"
-                                    />
-                                ) : (
-                                    <Mail
-                                        size={17}
-                                        aria-hidden="true"
-                                    />
-                                )}
-                                Email owner
+                        <div className="mt-5">
+                            <button type="button" onClick={onPhone} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                                <Phone size={17} aria-hidden="true" />
+                                Get owner contact details
                             </button>
+                            <p className="mt-3 text-center text-[11px] leading-5 text-slate-500">Quick phone verification · no account required</p>
                         </div>
                     </>
                 )}
@@ -3797,26 +3515,10 @@ function ContactCard({
     );
 }
 
-function MobileContactBar({
-                              property,
-                              minimumUnitPrice,
-                              contactLoading,
-                              onPhone,
-                              onWhatsApp,
-                          }: {
-    property: PropertyRecord;
-    minimumUnitPrice: number | null;
-    contactLoading:
-        | "phone"
-        | "email"
-        | "whatsapp"
-        | null;
-    onPhone: () => void;
-    onWhatsApp: () => void;
-}) {
+function MobileContactBar({ property, minimumUnitPrice, onPhone }: { property: PropertyRecord; minimumUnitPrice: number | null; onPhone: () => void }) {
     return (
         <div className="fixed inset-x-0 bottom-0 z-[900] border-t border-slate-200 bg-white/95 p-3 shadow-[0_-16px_45px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
-            <div className="mx-auto grid max-w-2xl grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2">
+            <div className="mx-auto grid max-w-2xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
                 <div className="min-w-0 px-1">
                     <p className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
                         Asking price
@@ -3849,55 +3551,7 @@ function MobileContactBar({
                     )}
                 </div>
 
-                {property.userId?.phone ? (
-                    <button
-                        type="button"
-                        onClick={onWhatsApp}
-                        disabled={
-                            contactLoading !== null
-                        }
-                        className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#159C62] text-white disabled:opacity-60"
-                        aria-label="WhatsApp owner"
-                    >
-                        {contactLoading ===
-                        "whatsapp" ? (
-                            <Loader2
-                                size={17}
-                                className="animate-spin"
-                                aria-hidden="true"
-                            />
-                        ) : (
-                            <MessageCircle
-                                size={18}
-                                aria-hidden="true"
-                            />
-                        )}
-                    </button>
-                ) : null}
-
-                <button
-                    type="button"
-                    onClick={onPhone}
-                    disabled={
-                        contactLoading !== null
-                    }
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-lg shadow-primary/20 disabled:opacity-60"
-                >
-                    {contactLoading ===
-                    "phone" ? (
-                        <Loader2
-                            size={16}
-                            className="animate-spin"
-                            aria-hidden="true"
-                        />
-                    ) : (
-                        <Phone
-                            size={16}
-                            aria-hidden="true"
-                        />
-                    )}
-                    Contact
-                </button>
+                <button type="button" onClick={onPhone} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-black text-white shadow-lg shadow-primary/20 transition hover:bg-primary-dark"><Phone size={16} aria-hidden="true" /> Contact owner</button>
             </div>
         </div>
     );

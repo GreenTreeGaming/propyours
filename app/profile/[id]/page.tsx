@@ -1986,7 +1986,7 @@ function ProfilePropertyCard({
             <article className="group overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition hover:border-teal-200 hover:shadow-[0_20px_55px_rgba(15,23,42,0.1)]">
                 <div className="grid min-h-[250px] md:grid-cols-[285px_minmax(0,1fr)]">
                     <Link
-                        href={`/property/${property._id}`}
+                        href={`/property/${property._id}?enquire=1`}
                         className="relative block min-h-56 overflow-hidden bg-slate-100 md:min-h-full"
                     >
                         <Image
@@ -2022,7 +2022,7 @@ function ProfilePropertyCard({
                             </p>
 
                             <Link
-                                href={`/property/${property._id}`}
+                                href={`/property/${property._id}?enquire=1`}
                                 className="mt-2 block"
                             >
                                 <h3 className="line-clamp-2 font-heading text-xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
@@ -2107,7 +2107,7 @@ function ProfilePropertyCard({
                                 ) : null}
 
                                 <Link
-                                    href={`/property/${property._id}`}
+                                    href={`/property/${property._id}?enquire=1`}
                                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 text-xs font-black text-white transition hover:bg-primary"
                                 >
                                     View property
@@ -2128,7 +2128,7 @@ function ProfilePropertyCard({
         <article className="group flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_24px_65px_rgba(15,23,42,0.12)]">
             <div className="relative">
                 <Link
-                    href={`/property/${property._id}`}
+                    href={`/property/${property._id}?enquire=1`}
                     className="relative block h-58 overflow-hidden bg-slate-100"
                 >
                     <Image
@@ -2181,7 +2181,7 @@ function ProfilePropertyCard({
                 </p>
 
                 <Link
-                    href={`/property/${property._id}`}
+                    href={`/property/${property._id}?enquire=1`}
                     className="mt-2 block"
                 >
                     <h3 className="line-clamp-2 font-heading text-xl font-black leading-tight tracking-[-0.025em] text-slate-950 transition group-hover:text-primary">
@@ -2250,7 +2250,7 @@ function ProfilePropertyCard({
                         </div>
 
                         <Link
-                            href={`/property/${property._id}`}
+                            href={`/property/${property._id}?enquire=1`}
                             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white transition group-hover:bg-primary"
                             aria-label={`View ${getPropertyDisplayTitle(
                                 property,
