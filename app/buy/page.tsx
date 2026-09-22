@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import Image from "next/image";
+import PropertyMap from "@/components/PropertyMap";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import Link from "next/link";
 import {
@@ -59,6 +60,8 @@ interface Property {
   address: string;
   locality?: string;
   city: string;
+  latitude?: number | null;
+  longitude?: number | null;
   state?: string;
   description?: string;
   price: number | null;
@@ -70,11 +73,13 @@ interface Property {
   negotiable?: boolean;
   bedrooms?: number;
   availableBHKs?: number[];
+  unitConfigurations?: Array<{ bedrooms: number; toilets?: number | null }>;
   bathrooms?: number;
   floors?: number;
   size?: number;
   sizeUnit?: string;
   images?: string[];
+  imageReviewStatus?: "pending" | "approved" | "rejected";
   purpose: string;
   featured?: boolean;
 
@@ -160,7 +165,7 @@ function isPropertySearchApiResponse(
 }
 
 type SearchMode = "buy" | "rent" | "commercial";
-type ViewMode = "list" | "grid";
+type ViewMode = "list" | "grid" | "map";
 type SortOption =
     | "default"
     | "newest"
@@ -467,6 +472,7 @@ function PropertyCard({
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-slate-950/5" />
+            {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") && <span className="absolute bottom-4 left-4 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Image under screening</span>}
 
             <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
               <div className="flex flex-wrap gap-2">
@@ -2099,6 +2105,7 @@ function BuyPageContent() {
                       >
                         <Grid2X2 size={17} aria-hidden="true" />
                       </button>
+                      <button type="button" onClick={() => setViewMode("map")} aria-label="Map view" aria-pressed={viewMode === "map"} className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${viewMode === "map" ? "bg-white text-primary shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><MapPin size={17} aria-hidden="true" /></button>
                     </div>
                   </div>
                 </div>
@@ -2195,7 +2202,7 @@ function BuyPageContent() {
                     </div>
                 ) : properties.length > 0 ? (
                     <>
-                      <div
+                      {viewMode === "map" ? <PropertyMap key={selectedCity} properties={properties} city={selectedCity} /> : <div
                           className={
                             viewMode === "grid"
                                 ? "grid gap-5 md:grid-cols-2"
@@ -2210,7 +2217,7 @@ function BuyPageContent() {
                                 index={index}
                             />
                         ))}
-                      </div>
+                      </div>}
 
                       {hasNextPage ? (
                           <div className="mt-8 flex flex-col items-center">

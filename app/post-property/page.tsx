@@ -52,6 +52,8 @@ import {
 
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { UploadDropzone } from "@/lib/uploadthing";
+import MapPinPicker from "@/components/MapPinPicker";
+import { validMapPoint } from "@/lib/map-locations";
 import {
     PLAN_CATALOG,
     isPlanTier,
@@ -172,6 +174,7 @@ type UnitPriceUnit =
 interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
+    toilets: string;
     size: string;
     sizeUnit: string;
     uds: string;
@@ -188,6 +191,8 @@ interface PropertyForm {
     address: string;
     locality: string;
     city: string;
+    latitude: string;
+    longitude: string;
     state: "Tamil Nadu";
     landmark: string;
     developerName: string;
@@ -237,6 +242,7 @@ function createUnitConfiguration():
                 : `${Date.now()}-${Math.random()}`,
 
         bedrooms: "",
+        toilets: "",
         size: "",
         sizeUnit: "sqft",
         uds: "",
@@ -352,6 +358,8 @@ const DEFAULT_FORM: PropertyForm = {
     address: "",
     locality: "",
     city: "",
+    latitude: "",
+    longitude: "",
     state: "Tamil Nadu",
     landmark: "",
     developerName: "",
@@ -486,6 +494,7 @@ function loadInitialForm(): PropertyForm {
                             bedrooms:
                                 configuration.bedrooms ??
                                 "",
+                            toilets: configuration.toilets ?? "",
 
                             size:
                                 configuration.size ??
@@ -922,6 +931,7 @@ export default function PostPropertyPage() {
         id: string,
         field:
             | "bedrooms"
+            | "toilets"
             | "size"
             | "sizeUnit"
             | "uds"
@@ -1070,6 +1080,9 @@ export default function PostPropertyPage() {
         }
 
         if (step === "location") {
+            if (!validMapPoint(form.latitude.trim() ? Number(form.latitude) : null, form.longitude.trim() ? Number(form.longitude) : null)) {
+                nextErrors.mapPin = "Enter both valid coordinates or clear the map pin.";
+            }
             if (!form.city) {
                 nextErrors.city = "Select a city.";
             }
@@ -1130,6 +1143,7 @@ export default function PostPropertyPage() {
                                 Number(
                                     configuration.bedrooms,
                                 );
+                            const toilets = Number(configuration.toilets);
 
                             const size =
                                 Number(
@@ -1150,11 +1164,13 @@ export default function PostPropertyPage() {
                                 );
 
                             return (
+                                !configuration.toilets.trim() ||
                                 !Number.isFinite(
                                     bedrooms,
                                 ) ||
                                 bedrooms < 0 ||
                                 bedrooms > 20 ||
+                                !Number.isInteger(toilets) || toilets < 0 || toilets > 20 ||
 
                                 !Number.isFinite(
                                     size,
@@ -1182,7 +1198,7 @@ export default function PostPropertyPage() {
 
                 if (invalidConfiguration) {
                     nextErrors.unitConfigurations =
-                        "Complete the BHK, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
+                        "Complete the BHK, toilets, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
                 }
             }
         }
@@ -1544,6 +1560,8 @@ export default function PostPropertyPage() {
                         address: form.address.trim(),
                         locality: form.locality,
                         city: form.city,
+                        latitude: form.latitude ? Number(form.latitude) : null,
+                        longitude: form.longitude ? Number(form.longitude) : null,
                         state: "Tamil Nadu",
                         landmark: form.landmark.trim(),
 
@@ -1567,6 +1585,7 @@ export default function PostPropertyPage() {
                                         Number(
                                             configuration.bedrooms,
                                         ),
+                                    toilets: Number(configuration.toilets),
 
                                     size:
                                         Number(
@@ -2490,6 +2509,8 @@ export default function PostPropertyPage() {
                                                                     updateForm({
                                                                         city,
                                                                         locality: "",
+                                                                        latitude: "",
+                                                                        longitude: "",
                                                                     })
                                                                 }
                                                             >
@@ -2538,6 +2559,9 @@ export default function PostPropertyPage() {
                                                             ) : null}
                                                         </label>
                                                     </div>
+
+                                                    {form.city && <MapPinPicker city={form.city} latitude={form.latitude} longitude={form.longitude} onChange={(latitude, longitude) => updateForm({ latitude, longitude })} />}
+                                                    {errors.mapPin && <ErrorText>{errors.mapPin}</ErrorText>}
 
                                                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                                                         <label className="sm:col-span-2">
@@ -2881,7 +2905,7 @@ export default function PostPropertyPage() {
                                                                                     </button>
                                                                                 </div>
 
-                                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[110px_minmax(150px,1fr)_130px_140px_minmax(240px,1.2fr)]">
+                                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[100px_100px_minmax(150px,1fr)_130px_140px_minmax(240px,1.2fr)]">
                                                                                     <label>
                                                                                         <FieldLabel
                                                                                             required
@@ -2911,6 +2935,11 @@ export default function PostPropertyPage() {
                                                                                             placeholder="2"
                                                                                             className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                                                                                         />
+                                                                                    </label>
+
+                                                                                    <label>
+                                                                                        <FieldLabel required>Toilets</FieldLabel>
+                                                                                        <input type="number" min="0" max="20" step="1" value={configuration.toilets} onChange={(event) => updateUnitConfiguration(configuration.id, "toilets", event.target.value)} placeholder="2" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" />
                                                                                     </label>
 
                                                                                     <label>
@@ -3674,7 +3703,7 @@ export default function PostPropertyPage() {
                                                             </h3>
                                                             <p className="mt-1 text-sm leading-6 text-slate-500">
                                                                 Add at least one. The first image is
-                                                                the public cover.
+                                                                the public cover after admin screening. Photos are watermarked automatically.
                                                             </p>
                                                         </div>
                                                         <span className="rounded-full bg-teal-50 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-primary">
@@ -4301,7 +4330,7 @@ export default function PostPropertyPage() {
                                                                                     index + 1
                                                                                 }: ${
                                                                                     configuration.bedrooms
-                                                                                } BHK · ${
+                                                                                }BHK ${configuration.toilets}T · ${
                                                                                     configuration.size
                                                                                 } ${
                                                                                     configuration.sizeUnit

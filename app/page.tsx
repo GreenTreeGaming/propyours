@@ -49,9 +49,13 @@ interface Property {
   hasUnitConfigurations?: boolean;
 
   bedrooms?: number;
+  size?: number;
+  sizeUnit?: string;
   availableBHKs?: number[];
+  unitConfigurations?: Array<{ bedrooms: number; toilets?: number | null }>;
 
   images?: string[];
+  imageReviewStatus?: "pending" | "approved" | "rejected";
   promotedUntil?: string;
   negotiable?: boolean;
 
@@ -1428,6 +1432,7 @@ export default function HomePage() {
                       />
 
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-slate-950/5" />
+                      {(spotlightProperty.imageReviewStatus === "pending" || spotlightProperty.imageReviewStatus === "rejected") && <span className="absolute bottom-5 left-5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Image under screening</span>}
 
                       {/* Main-card badges */}
                       <div className="absolute inset-x-0 top-0 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
@@ -1533,6 +1538,7 @@ export default function HomePage() {
                                   />
 
                                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
+                                  {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") && <span className="absolute bottom-3 right-3 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900">Image under screening</span>}
 
                                   <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-slate-950/55 text-xs font-black text-white backdrop-blur">
                         {String(index + 2).padStart(2, "0")}

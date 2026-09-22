@@ -120,6 +120,8 @@ interface PropertyPlanSnapshot {
 }
 
 interface ManagedProperty extends PropertyEditorProperty {
+    imageReviewStatus?: "pending" | "approved" | "rejected";
+    imageReviewNote?: string;
     startingPrice?: number;
     hasUnitConfigurations?: boolean;
     availableBHKs?: number[];
@@ -706,6 +708,7 @@ function PropertyCard({
               >
                 {status.label}
               </span>
+                            {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") && <span className="rounded-full bg-amber-100 px-3 py-1.5 text-[10px] font-black uppercase text-amber-900">{property.imageReviewStatus === "rejected" ? "Images rejected" : "Image under screening"}</span>}
 
                             <span className="rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-900 backdrop-blur">
                 {property.purpose}
@@ -748,6 +751,7 @@ function PropertyCard({
                             : "p-5"
                     }`}
                 >
+                    {property.imageReviewStatus === "rejected" && property.imageReviewNote && <p className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-semibold text-red-800">Photo review: {property.imageReviewNote}</p>}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-1.5 text-xs font-bold text-primary">
                             <MapPin

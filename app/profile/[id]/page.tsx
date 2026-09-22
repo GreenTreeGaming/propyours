@@ -118,6 +118,7 @@ interface PropertyListing {
     purpose?: string;
     description?: string;
     images?: string[];
+    imageReviewStatus?: "pending" | "approved" | "rejected";
     featured?: boolean;
     promotedUntil?: string;
     createdAt?: string;
@@ -1970,6 +1971,7 @@ function ProfilePropertyCard({
     const image =
         property.images?.[0] ||
         "/loginimage.png";
+    const imageScreening = property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected";
     const category =
         getPropertyCategory(property);
     const typeLabel =
@@ -1996,6 +1998,7 @@ function ProfilePropertyCard({
                         />
 
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
+                        {imageScreening && <span className="absolute bottom-4 left-4 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Image under screening</span>}
 
                         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                             <PropertyPurposeBadge
@@ -2137,6 +2140,7 @@ function ProfilePropertyCard({
                     />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+                    {imageScreening && <span className="absolute bottom-4 left-4 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Image under screening</span>}
                 </Link>
 
                 <div className="pointer-events-none absolute left-4 top-4 flex flex-wrap gap-2">

@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 
 import { UploadDropzone } from "@/lib/uploadthing";
+import MapPinPicker from "@/components/MapPinPicker";
+import { validMapPoint } from "@/lib/map-locations";
 import {
     AMENITY_CATEGORIES,
     OWNERSHIP_TYPES,
@@ -56,6 +58,8 @@ export interface PropertyEditorProperty {
     address: string;
     locality?: string;
     city: string;
+    latitude?: number | null;
+    longitude?: number | null;
     state?: string;
     landmark?: string;
     developerName?: string;
@@ -78,6 +82,7 @@ export interface PropertyEditorProperty {
     unitConfigurations?: Array<{
         _id?: string;
         bedrooms: number;
+        toilets?: number | null;
         size: number;
         sizeUnit: string;
         uds?: number | null;
@@ -145,6 +150,7 @@ type UnitPriceUnit =
 interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
+    toilets: string;
     size: string;
     sizeUnit: string;
     uds: string;
@@ -159,6 +165,8 @@ interface EditorForm {
     address: string;
     locality: string;
     city: string;
+    latitude: string;
+    longitude: string;
     state: "Tamil Nadu";
     landmark: string;
     developerName: string;
@@ -375,6 +383,8 @@ function createEditorForm(
         address: property.address || "",
         locality: property.locality || "",
         city: property.city || "",
+        latitude: property.latitude == null ? "" : String(property.latitude),
+        longitude: property.longitude == null ? "" : String(property.longitude),
         state: "Tamil Nadu",
         landmark: property.landmark || "",
 
@@ -406,6 +416,7 @@ function createEditorForm(
                         bedrooms: String(
                             configuration.bedrooms,
                         ),
+                        toilets: configuration.toilets == null ? "" : String(configuration.toilets),
 
                         size: String(
                             configuration.size,
@@ -827,6 +838,7 @@ export default function FullPropertyEditorModal({
                                 ? crypto.randomUUID()
                                 : `${Date.now()}-${Math.random()}`,
                         bedrooms: "",
+                        toilets: "",
                         size: "",
                         sizeUnit: "sqft",
                         uds: "",
@@ -1066,6 +1078,9 @@ export default function FullPropertyEditorModal({
         }
 
         if (step === "location") {
+            if (!validMapPoint(form.latitude.trim() ? Number(form.latitude) : null, form.longitude.trim() ? Number(form.longitude) : null)) {
+                nextErrors.mapPin = "Enter both valid coordinates or clear the map pin.";
+            }
             if (!form.city) {
                 nextErrors.city =
                     "Select a city.";
@@ -1129,6 +1144,7 @@ export default function FullPropertyEditorModal({
                         (configuration) => {
                             if (
                                 !configuration.bedrooms.trim() ||
+                                !configuration.toilets.trim() ||
                                 !configuration.size.trim() ||
                                 !configuration.price.trim()
                             ) {
@@ -1139,6 +1155,7 @@ export default function FullPropertyEditorModal({
                                 Number(
                                     configuration.bedrooms,
                                 );
+                            const toilets = Number(configuration.toilets);
 
                             const size =
                                 Number(
@@ -1163,6 +1180,7 @@ export default function FullPropertyEditorModal({
                                     bedrooms,
                                 ) ||
                                 bedrooms < 0 ||
+                                !Number.isInteger(toilets) || toilets < 0 || toilets > 20 ||
                                 bedrooms > 20 ||
 
                                 !Number.isFinite(
@@ -1193,7 +1211,7 @@ export default function FullPropertyEditorModal({
                     invalidUnitConfiguration
                 ) {
                     nextErrors.unitConfigurations =
-                        "Complete the BHK, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
+                        "Complete the BHK, toilets, built-up size and price for every unit. UDS, when provided, must be between 0% and 100%.";
                 }
             }
 
@@ -1378,6 +1396,8 @@ export default function FullPropertyEditorModal({
                         : null,
 
                 city: form.city,
+                latitude: form.latitude ? Number(form.latitude) : null,
+                longitude: form.longitude ? Number(form.longitude) : null,
                 state: "Tamil Nadu",
                 landmark:
                     form.landmark.trim(),
@@ -1395,6 +1415,7 @@ export default function FullPropertyEditorModal({
                                     Number(
                                         configuration.bedrooms,
                                     ),
+                                toilets: Number(configuration.toilets),
 
                                 size:
                                     Number(
@@ -1957,6 +1978,8 @@ export default function FullPropertyEditorModal({
                                                                         city,
                                                                         locality:
                                                                             "",
+                                                                        latitude: "",
+                                                                        longitude: "",
                                                                     })
                                                                 }
                                                             >
@@ -2045,6 +2068,9 @@ export default function FullPropertyEditorModal({
                                                             ) : null}
                                                         </label>
                                                     </div>
+
+                                                    {form.city && <MapPinPicker city={form.city} latitude={form.latitude} longitude={form.longitude} onChange={(latitude, longitude) => updateForm({ latitude, longitude })} />}
+                                                    {errors.mapPin && <ErrorText>{errors.mapPin}</ErrorText>}
 
                                                     <div className="mt-5 grid gap-5 sm:grid-cols-2">
                                                         <label className="sm:col-span-2">
@@ -2592,7 +2618,7 @@ export default function FullPropertyEditorModal({
                                                                                     </button>
                                                                                 </div>
 
-                                                                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[110px_minmax(150px,1fr)_130px_140px_minmax(250px,1.25fr)]">
+                                                                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[90px_90px_minmax(150px,1fr)_130px_140px_minmax(250px,1.25fr)]">
                                                                                     <label>
                                                                                         <FieldLabel
                                                                                             required
@@ -2625,6 +2651,8 @@ export default function FullPropertyEditorModal({
                                                                                             className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                                                                                         />
                                                                                     </label>
+
+                                                                                    <label><FieldLabel required>Toilets</FieldLabel><input type="number" min="0" max="20" step="1" value={configuration.toilets} onChange={(event) => updateUnitConfiguration(configuration.id, { toilets: event.target.value })} placeholder="2" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
 
                                                                                     <label>
                                                                                         <FieldLabel
@@ -3146,7 +3174,7 @@ export default function FullPropertyEditorModal({
                                                 <SectionHeading
                                                     eyebrow="Photos & media"
                                                     title="Control the public presentation"
-                                                    description="Add or remove images, choose the cover photo, manage video links and update the property brochure."
+                                                    description="Add or remove images, choose the cover photo, manage video links and update the property brochure. New photos are watermarked and screened before public display."
                                                     icon={ImageIcon}
                                                 />
 
@@ -3824,7 +3852,7 @@ export default function FullPropertyEditorModal({
                                                                     value={form.unitConfigurations
                                                                         .map(
                                                                             (configuration) =>
-                                                                                `${configuration.bedrooms} BHK · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(
+                                                                                `${configuration.bedrooms}BHK ${configuration.toilets}T · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(
                                                                                     String(
                                                                                         unitPriceToRupees(
                                                                                             configuration.price,

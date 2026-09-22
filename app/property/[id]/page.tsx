@@ -67,6 +67,7 @@ import {
     useCompare,
 } from "@/components/CompareContext";
 import {
+    getPropertyBHKLabel,
     getPropertyDisplayTitle,
 } from "@/lib/property-display";
 import {
@@ -107,6 +108,7 @@ interface PropertyRecord {
     address: string;
     developerName?: string;
     images?: string[];
+    imageReviewStatus?: "pending" | "approved" | "rejected";
     videoLinks?: string[];
     brochure?: {
         url?: string;
@@ -118,6 +120,7 @@ interface PropertyRecord {
     unitConfigurations?: Array<{
         _id?: string;
         bedrooms: number;
+        toilets?: number | null;
         size: number;
         sizeUnit: string;
         uds?: number | null;
@@ -848,14 +851,7 @@ function getPrimaryDetails(
         ) {
             details.push({
                 label: "Configurations",
-                value:
-                    configuredBedrooms
-                        .map((bedrooms) =>
-                            bedrooms === 0
-                                ? "Studio"
-                                : `${bedrooms} BHK`,
-                        )
-                        .join(", "),
+                value: getPropertyBHKLabel(property) ?? configuredBedrooms.map((bedrooms) => bedrooms === 0 ? "Studio" : `${bedrooms} BHK`).join(", "),
                 icon: BedDouble,
             });
         } else if (
@@ -2305,6 +2301,7 @@ export default function PropertyDetailsPage() {
                 ) : null}
 
                 <section className="mt-6">
+                    {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") && <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900">Image under screening</p>}
                     <PropertyGallery
                         images={propertyImages}
                         address={
@@ -2786,7 +2783,7 @@ export default function PropertyDetailsPage() {
                                                                     {configuration.bedrooms ===
                                                                     0
                                                                         ? "Studio"
-                                                                        : `${configuration.bedrooms} BHK`}
+                                                                        : `${configuration.bedrooms}BHK${configuration.toilets != null ? ` ${configuration.toilets}T` : ""}`}
                                                                 </p>
                                                             </div>
                                                         </div>

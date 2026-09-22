@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validMapPoint } from "@/lib/map-locations";
 
 import { connectDB } from "@/lib/mongoose";
 import Property from "@/models/Property";
@@ -103,6 +104,7 @@ const ALLOWED_SIZE_UNITS = [
 
 interface SanitizedUnitConfiguration {
     bedrooms: number;
+    toilets: number | null;
     size: number;
     sizeUnit:
         (typeof ALLOWED_SIZE_UNITS)[number];
@@ -162,6 +164,7 @@ function parseUnitConfigurations(
 
         const bedrooms =
             record.bedrooms;
+        const toilets = record.toilets ?? null;
 
         const size =
             record.size;
@@ -188,6 +191,10 @@ function parseUnitConfigurations(
                 error:
                     "BHK must be a number between 0 and 20.",
             };
+        }
+
+        if (toilets !== null && (typeof toilets !== "number" || !Number.isInteger(toilets) || toilets < 0 || toilets > 20)) {
+            return { success: false, error: "Toilets must be a whole number between 0 and 20." };
         }
 
         if (
@@ -256,6 +263,7 @@ function parseUnitConfigurations(
 
         units.push({
             bedrooms,
+            toilets: toilets as number | null,
             size,
 
             sizeUnit:
@@ -418,6 +426,9 @@ export async function GET(
 
         const responseProperty =
             property.toObject();
+        if (responseProperty.imageReviewStatus === "pending" || responseProperty.imageReviewStatus === "rejected") {
+            responseProperty.images = [];
+        }
 
         if (!canViewPrice) {
             responseProperty.price = null;
@@ -1029,6 +1040,10 @@ export async function PUT(
                 ? previousBrochureUrl
                 : brochure?.url ?? null;
 
+        if (!validMapPoint(body.latitude, body.longitude)) {
+            return NextResponse.json({ error: "Enter both valid map coordinates or leave the pin blank." }, { status: 400 });
+        }
+
         const allowedUpdates: Record<
             string,
             unknown
@@ -1042,6 +1057,8 @@ export async function PUT(
             address: body.address,
             locality: body.locality,
             city: body.city,
+            latitude: body.latitude,
+            longitude: body.longitude,
             state: body.state,
             landmark: body.landmark,
 
@@ -1118,6 +1135,9 @@ export async function PUT(
                 ? body.amenities
                 : undefined,
             images,
+            ...(JSON.stringify(images) !== JSON.stringify(property.images ?? [])
+                ? { imageReviewStatus: "pending", imageReviewNote: "", imageReviewedAt: null, imageReviewedBy: null }
+                : {}),
             videoLinks,
             brochure,
         };

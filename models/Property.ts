@@ -10,6 +10,8 @@ const UnitConfigurationSchema =
                 max: 20,
             },
 
+            toilets: { type: Number, min: 0, max: 20, default: null },
+
             size: {
                 type: Number,
                 required: true,
@@ -131,6 +133,8 @@ const PropertySchema =
                 type: String,
                 required: true,
             },
+            latitude: { type: Number, min: 8, max: 14, default: null },
+            longitude: { type: Number, min: 76, max: 81, default: null },
             state: String,
             landmark: String,
 
@@ -280,6 +284,15 @@ const PropertySchema =
                 type: [String],
                 default: [],
             },
+
+            imageReviewStatus: {
+                type: String,
+                enum: ["pending", "approved", "rejected"],
+                default: "approved",
+            },
+            imageReviewNote: { type: String, maxlength: 500, default: "" },
+            imageReviewedAt: { type: Date, default: null },
+            imageReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
             videoLinks: {
                 type: [String],

@@ -5,6 +5,7 @@ export interface PropertyDisplayData {
 
     bedrooms?: number | null;
     availableBHKs?: number[];
+    unitConfigurations?: Array<{ bedrooms: number; toilets?: number | null }>;
 
     projectName?: string | null;
     locality?: string | null;
@@ -41,6 +42,10 @@ export function getPropertyDisplayPrice(
 export function getPropertyBHKLabel(
     property: PropertyDisplayData,
 ): string | null {
+    const pairedUnits = property.unitConfigurations
+        ?.filter((unit) => Number.isFinite(unit.bedrooms) && typeof unit.toilets === "number" && Number.isFinite(unit.toilets))
+        .map((unit) => `${unit.bedrooms === 0 ? "Studio" : `${unit.bedrooms}BHK`} ${unit.toilets}T`);
+    if (pairedUnits?.length) return [...new Set(pairedUnits)].join(" · ");
     const values = [
         ...new Set(
             property.availableBHKs ??

@@ -11,6 +11,7 @@ import {
 
 import User from "@/models/User";
 import Property from "@/models/Property";
+import { screenPropertyImages } from "@/lib/public-property-images";
 
 const BUILDER_PLAN_RANK: Record<
     string,
@@ -299,7 +300,7 @@ export async function GET(
                 },
             },
 
-            properties,
+            properties: properties.map(screenPropertyImages),
             stats,
         });
     } catch (error) {

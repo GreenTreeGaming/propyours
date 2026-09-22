@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { validMapPoint } from "@/lib/map-locations";
 
 import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
@@ -248,6 +249,9 @@ export async function POST(
             body.city,
             120,
         );
+        if (!validMapPoint(body.latitude, body.longitude)) {
+            return NextResponse.json({ error: "Enter both valid map coordinates or leave the pin blank." }, { status: 400 });
+        }
 
         if (
             !address ||
@@ -556,6 +560,7 @@ export async function POST(
 
         const unitConfigurations: Array<{
             bedrooms: number;
+            toilets: number | null;
             size: number;
             sizeUnit: string;
             uds: number | null;
@@ -586,6 +591,7 @@ export async function POST(
                 "bedrooms" in configuration
                     ? configuration.bedrooms
                     : undefined;
+            const toilets = "toilets" in configuration ? configuration.toilets : null;
 
             const size =
                 "size" in configuration
@@ -623,6 +629,9 @@ export async function POST(
                 bedrooms < 0 ||
                 bedrooms > 20 ||
 
+                (toilets !== null && toilets !== undefined &&
+                    (typeof toilets !== "number" || !Number.isInteger(toilets) || toilets < 0 || toilets > 20)) ||
+
                 typeof size !== "number" ||
                 !Number.isFinite(size) ||
                 size <= 0 ||
@@ -656,6 +665,7 @@ export async function POST(
 
             unitConfigurations.push({
                 bedrooms,
+                toilets: typeof toilets === "number" ? toilets : null,
                 size,
                 sizeUnit,
                 uds:
@@ -729,6 +739,8 @@ export async function POST(
                 address,
                 locality,
                 city,
+                latitude: body.latitude ?? null,
+                longitude: body.longitude ?? null,
                 state: "Tamil Nadu",
                     landmark: cleanText(
                         body.landmark,
@@ -811,6 +823,7 @@ export async function POST(
                     body.amenities,
                 ),
                     images,
+                    imageReviewStatus: "pending",
                     videoLinks,
                     brochure,
 

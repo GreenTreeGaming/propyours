@@ -11,6 +11,7 @@ import {
 } from "@/lib/validation/property-search";
 
 import Property from "@/models/Property";
+import { screenPropertyImages } from "@/lib/public-property-images";
 
 type SortDirection = 1 | -1;
 
@@ -605,7 +606,7 @@ export async function GET(
         const properties =
             result.properties.map(
                 (property) => ({
-                    ...property,
+                    ...screenPropertyImages(property),
                     priceLocked: false,
                 }),
             );

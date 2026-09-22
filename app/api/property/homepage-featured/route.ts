@@ -11,6 +11,7 @@ import {
 } from "@/lib/property-filters";
 
 import Property from "@/models/Property";
+import { screenPropertyImages } from "@/lib/public-property-images";
 
 const HOMEPAGE_PROPERTY_LIMIT = 4;
 
@@ -168,7 +169,7 @@ export async function GET() {
             ]);
 
         return NextResponse.json(
-            properties,
+            properties.map(screenPropertyImages),
         );
     } catch (error) {
         console.error(

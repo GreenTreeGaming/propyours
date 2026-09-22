@@ -1624,7 +1624,7 @@ function normalizeBubbyReply(
     reply: string,
     hasPropertyResults: boolean,
 ): string {
-    let normalized = reply
+    const normalized = reply
         .replace(/\0/g, "")
         .trim()
 

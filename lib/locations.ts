@@ -307,23 +307,23 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     "Zamin Pallavaram"
   ],
 
-  Coimbatore: ["All", "Gandhipuram", "Peelamedu", "RS Puram", "Saibaba Colony", "Vadavalli", "Saravanampatti"],
-  Madurai: ["All", "Anna Nagar", "K.Pudur", "KK Nagar", "Simmakkal", "Sellur"],
-  Trichy: ["All", "Thillai Nagar", "Woraiyur", "Srirangam", "K.K. Nagar"],
-  Salem: ["All", "Fairlands", "Hasthampatti", "Alagapuram", "Suramangalam"],
-  Vellore: ["All", "Sathuvachari", "Katpadi", "Gandhinagar", "Arcot Road"],
-  Erode: ["All", "Perundurai Road", "Thindal", "Sampath Nagar"],
-  Tiruppur: ["All", "Avinashi Road", "Palladam Road", "Rayapuram"],
-  Tirunelveli: ["All", "Palayamkottai", "Maharaja Nagar", "Perumalpuram"],
-  Thanjavur: ["All", "Medical College Road", "NK Road", "Pattukottai Road"],
-  Thoothukudi: ["All", "Millerpuram", "Chidambara Nagar", "Meelavittan"],
-  Nagercoil: ["All", "Kottar", "Vadasery", "Parvathipuram"],
-  Hosur: ["All", "Zuzuvadi", "Mookandapalli", "Mathigiri"],
-  Kanchipuram: ["All", "Orikkai", "Little Kanchipuram", "Ennaikaran"],
-  Dindigul: ["All", "Palani Road", "Natham Road", "Batlagundu Road"],
-  Karur: ["All", "Gandhigramam", "Thanthonimalai", "Vengamedu"],
-  Kumbakonam: ["All", "TSR Big Street", "Sakkottai", "Darasuram"],
-  Sivakasi: ["All", "Sattur Road", "Virudhunagar Road", "Thiruthangal"]
+  Coimbatore: ["All", "Avinashi Road", "Bharathiyar Road", "Cheran Ma Nagar", "Ganapathy", "Gandhipuram", "Kalapatti", "Kovaipudur", "Kurichi", "Lakshmi Mills", "Neelambur", "Ondipudur", "Peelamedu", "Podanur", "Race Course", "Ramanathapuram", "RS Puram", "Saibaba Colony", "Saravanampatti", "Singanallur", "Sundarapuram", "Thudiyalur", "Ukkadam", "Vadavalli", "Vellalore", "Vilimedu"],
+  Madurai: ["All", "Anna Nagar", "Arappalayam", "Avaniyapuram", "Bypass Road", "Ellis Nagar", "Iyer Bungalow", "K.Pudur", "KK Nagar", "Mattuthavani", "Nagamalai Pudukottai", "Othakadai", "Pasumalai", "Sellur", "Simmakkal", "Tallakulam", "Thirunagar", "Villapuram"],
+  Trichy: ["All", "Cantonment", "Crawford", "Edamalaipatti Pudur", "K.K. Nagar", "Karumandapam", "Kattur", "Manachanallur", "Puthur", "Samayapuram", "Srirangam", "Thillai Nagar", "Thiruverumbur", "Thuvakudi", "Woraiyur"],
+  Salem: ["All", "Alagapuram", "Ammapet", "Fairlands", "Five Roads", "Gugai", "Hasthampatti", "Kondalampatti", "Seelanaickenpatti", "Shevapet", "Suramangalam", "Yercaud Road"],
+  Vellore: ["All", "Arcot Road", "Bagayam", "Gandhinagar", "Katpadi", "Sathuvachari", "Thorapadi", "Viruthampet"],
+  Erode: ["All", "Karungalpalayam", "Kollampalayam", "Perundurai Road", "Sampath Nagar", "Solar", "Surampatti", "Thindal", "Veerappanchatram"],
+  Tiruppur: ["All", "Anupparpalayam", "Avinashi Road", "Chettipalayam", "Murugampalayam", "Nallur", "Palladam Road", "PN Road", "Rayapuram", "Velampalayam"],
+  Tirunelveli: ["All", "Melapalayam", "Maharaja Nagar", "Palayamkottai", "Perumalpuram", "Pettai", "Thatchanallur", "Vannarpettai"],
+  Thanjavur: ["All", "Anna Nagar", "East Main Street", "Medical College Road", "NK Road", "Pattukottai Road", "Pillaiyarpatti", "Rahman Nagar", "Vallam"],
+  Thoothukudi: ["All", "Bryant Nagar", "Chidambara Nagar", "Korampallam", "Meelavittan", "Millerpuram", "Muthiahpuram", "Toovipuram"],
+  Nagercoil: ["All", "Asaripallam", "Kottar", "Nesamony Nagar", "Parvathipuram", "Suchindram", "Vadasery", "Vetturnimadam"],
+  Hosur: ["All", "Bagalur Road", "Hosur New Town", "Mathigiri", "Mookandapalli", "Shanthi Nagar", "Zuzuvadi"],
+  Kanchipuram: ["All", "Ennaikaran", "Kalimedu", "Little Kanchipuram", "Orikkai", "Pillaiyarpalayam", "Sevilimedu"],
+  Dindigul: ["All", "Batlagundu Road", "Begampur", "Natham Road", "Palani Road", "RM Colony", "Siluvathur Road"],
+  Karur: ["All", "Gandhigramam", "Jawahar Bazaar", "Pasupathipalayam", "Ramanujam Nagar", "Thanthonimalai", "Vengamedu"],
+  Kumbakonam: ["All", "Darasuram", "Koranattu Karuppur", "Sakkottai", "Swamimalai", "TSR Big Street", "Valayapettai"],
+  Sivakasi: ["All", "Reserve Line", "Sattur Road", "Sivakasi East", "Thiruthangal", "Virudhunagar Road"]
 };
 
 export const TAMIL_NADU_CITIES = Object.keys(TAMIL_NADU_LOCATIONS);
