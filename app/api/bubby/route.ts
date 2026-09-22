@@ -34,6 +34,9 @@ import {
     searchProperties,
     type BubbyPropertyMatch,
 } from "@/lib/bubby/property-search";
+import {
+    TAMIL_NADU_CITIES,
+} from "@/lib/property-form-options";
 
 export const runtime = "nodejs";
 
@@ -172,11 +175,19 @@ function getSimplePropertySearch(
     const message = latestMessage.toLowerCase();
 
     const hasSearchLanguage =
-        /\b(?:find|show|search|looking for|need|want|house|houses|home|homes|apartment|apartments|flat|flats|villa|villas|bedroom|bedrooms|bhk|bath|baths|bathroom|bathrooms)\b/i.test(
+        /\b(?:find|show|search|looking for|need|want|house|houses|home|homes|apartment|apartments|flat|flats|villa|villas|plot|plots|bedroom|bedrooms|bhk|bath|baths|bathroom|bathrooms)\b/i.test(
             message,
         );
 
     const maxPrice = parseMaximumPrice(message);
+
+    const matchedCity =
+        TAMIL_NADU_CITIES.find(
+            (city) =>
+                message.includes(
+                    city.toLowerCase(),
+                ),
+        ) ?? null;
 
     // Allow budget-only follow-ups such as:
     // "any under 60 L?"
@@ -186,6 +197,10 @@ function getSimplePropertySearch(
     }
 
     const filters = createEmptyFilters();
+
+    if (matchedCity) {
+        filters.city = matchedCity;
+    }
 
     const bedroomMatch = message.match(
         /\b(\d{1,2})\s*(?:bed(?:room)?s?|bhk)\b/i,
@@ -216,7 +231,7 @@ function getSimplePropertySearch(
     }
 
     if (
-        /\b(?:independent house|house|houses|home|homes)\b/i.test(
+        /\b(?:independent house|independent houses|house|houses)\b/i.test(
             message,
         )
     ) {
@@ -232,7 +247,13 @@ function getSimplePropertySearch(
     } else if (
         /\bvillas?\b/i.test(message)
     ) {
-        filters.propertyType = "Villa";
+        filters.propertyType =
+            "Villa";
+    } else if (
+        /\bplots?\b/i.test(message)
+    ) {
+        filters.propertyType =
+            "Plot";
     }
 
     if (
@@ -255,6 +276,7 @@ function getSimplePropertySearch(
 
     const hasUsefulFilter =
         filters.propertyType !== null ||
+        filters.city !== null ||
         filters.minBedrooms !== null ||
         filters.minBathrooms !== null ||
         filters.listingPurpose !== null ||

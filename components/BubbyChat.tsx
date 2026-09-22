@@ -57,6 +57,8 @@ interface UiMessage {
     searchFilters?:
         | BubbySearchFilters
         | null;
+
+    leadCaptured?: boolean;
 }
 
 const STORAGE_KEY =
@@ -375,6 +377,25 @@ export default function BubbyChat() {
         }
     }
 
+    function markLeadCaptured(
+        messageId: string,
+    ): void {
+        setMessages(
+            (currentMessages) =>
+                currentMessages.map(
+                    (message) =>
+                        message.id ===
+                        messageId
+                            ? {
+                                ...message,
+                                leadCaptured:
+                                    true,
+                            }
+                            : message,
+                ),
+        );
+    }
+
     const showQuickPrompts =
         messages.length === 1 &&
         messages[0]?.id ===
@@ -391,10 +412,10 @@ export default function BubbyChat() {
 
     const leadOpportunity =
         latestAssistantMessage &&
-        latestAssistantMessage
-            .properties &&
-        latestAssistantMessage
-            .properties.length > 0
+        latestAssistantMessage.properties &&
+        latestAssistantMessage.properties.length >
+        0 &&
+        !latestAssistantMessage.leadCaptured
             ? latestAssistantMessage
             : null;
 
@@ -514,6 +535,11 @@ export default function BubbyChat() {
                                         searchFilters={
                                             leadOpportunity.searchFilters ??
                                             null
+                                        }
+                                        onSuccess={() =>
+                                            markLeadCaptured(
+                                                leadOpportunity.id,
+                                            )
                                         }
                                     />
                                 ) : null}
@@ -692,7 +718,13 @@ function MessageBubble({
                             : "rounded-br-md bg-primary text-white"
                     }`}
                 >
-                    {message.content}
+                    {assistant &&
+                    message.properties &&
+                    message.properties.length >
+                    0 &&
+                    !message.leadCaptured
+                        ? "I found matching properties on PropYours. Before I show them, please share your name and mobile number below."
+                        : message.content}
                 </div>
 
                 {message.actions && message.actions.length > 0 ? (
@@ -708,14 +740,17 @@ function MessageBubble({
                 ) : null}
 
                 {message.properties &&
-                message.properties.length > 0 ? (
+                message.properties.length > 0 &&
+                message.leadCaptured ? (
                     <div className="mt-3 space-y-2">
                         {message.properties.map(
                             (property) => (
                                 <PropertyMiniCard
                                     key={property.id}
                                     property={property}
-                                    onNavigate={onNavigate}
+                                    onNavigate={
+                                        onNavigate
+                                    }
                                 />
                             ),
                         )}
@@ -729,11 +764,13 @@ function MessageBubble({
 function BubbyLeadCapture({
                               propertyIds,
                               searchFilters,
+                              onSuccess,
                           }: {
     propertyIds: string[];
     searchFilters:
         | BubbySearchFilters
         | null;
+    onSuccess: () => void;
 }) {
     const [name, setName] =
         useState("");
@@ -857,6 +894,7 @@ function BubbyLeadCapture({
             }
 
             setSubmitted(true);
+            onSuccess();
         } catch (
             submitError
             ) {
@@ -904,16 +942,14 @@ function BubbyLeadCapture({
         <div className="ml-10 overflow-hidden rounded-2xl border border-primary/20 bg-white shadow-sm">
             <div className="border-b border-slate-100 bg-teal-50/70 px-4 py-3">
                 <p className="text-sm font-black text-slate-950">
-                    Want us to help you
-                    with these properties?
+                    Before I show your matches
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Share your name and
-                    mobile number and the
-                    PropYours team can help
-                    you with the listings
-                    Bubby found.
+                    Share your name and mobile
+                    number to continue and view
+                    the matching PropYours
+                    listings.
                 </p>
             </div>
 
@@ -1055,7 +1091,7 @@ function BubbyLeadCapture({
                                 aria-hidden="true"
                             />
 
-                            Request help
+                            View matching properties
                         </>
                     )}
                 </button>
@@ -1452,6 +1488,9 @@ function parseStoredMessages(
                 content: (
                     item.content as string
                 ).slice(0, 2_000),
+
+                leadCaptured:
+                    item.leadCaptured === true,
 
                 properties: Array.isArray(
                     item.properties,

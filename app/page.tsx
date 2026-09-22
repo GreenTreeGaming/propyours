@@ -611,28 +611,6 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                <a
-                    href="tel:+917845508558"
-                    className="mt-5 inline-flex w-fit items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 shadow-sm transition hover:border-primary hover:text-primary"
-                >
-    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-primary">
-        <PhoneCall
-            size={16}
-            aria-hidden="true"
-        />
-    </span>
-
-                  <span>
-        <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
-            Call PropYours
-        </span>
-
-        <span className="mt-0.5 block font-black text-slate-900">
-            +91 - 784 550 8558
-        </span>
-    </span>
-                </a>
-
                 <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
                   {[
                     "Search naturally",
@@ -1475,14 +1453,18 @@ export default function HomePage() {
 
                       {/* Main-card details */}
                       <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                          <MapPin size={16} aria-hidden="true" />
+                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/55 px-3 py-2 text-sm font-bold text-white shadow-sm backdrop-blur-md">
+                          <MapPin
+                              size={16}
+                              className="shrink-0 text-teal-300"
+                              aria-hidden="true"
+                          />
 
                           <span>
-                  {spotlightProperty.locality
-                      ? `${spotlightProperty.locality}, ${spotlightProperty.city}`
-                      : spotlightProperty.city}
-                </span>
+        {spotlightProperty.locality
+            ? `${spotlightProperty.locality}, ${spotlightProperty.city}`
+            : spotlightProperty.city}
+    </span>
                         </div>
 
                         <h3 className="mt-3 max-w-xl text-2xl font-black leading-tight tracking-tight sm:text-3xl">
@@ -1537,8 +1519,7 @@ export default function HomePage() {
                               <Link
                                   key={property._id}
                                   href={`/property/${property._id}`}
-                                  className="group flex min-h-[280px] snap-start flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)]"
-                              >
+                                  className="group flex h-full min-h-0 snap-start flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)]">
                                 <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[42%]">
                                   <Image
                                       src={
@@ -1568,7 +1549,7 @@ export default function HomePage() {
                       </span>
                                 </div>
 
-                                <div className="flex flex-1 flex-col p-4">
+                                <div className="flex min-h-0 flex-1 flex-col p-4">
                                   <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
                                     <MapPin
                                         size={13}
@@ -1577,47 +1558,67 @@ export default function HomePage() {
                                     />
 
                                     <span className="truncate">
-                          {property.locality
-                              ? `${property.locality}, ${property.city}`
-                              : property.city}
-                        </span>
+            {property.locality
+                ? `${property.locality}, ${property.city}`
+                : property.city}
+        </span>
                                   </div>
 
-                                  <h3 className="mt-3 shrink-0 line-clamp-2 text-sm font-black leading-5 text-slate-950 transition group-hover:text-primary sm:text-base">
-                                    {getPropertyDisplayTitle(
-                                        property,
-                                    )}
+                                  <h3 className="mt-2 line-clamp-1 text-base font-black leading-6 text-slate-950 transition group-hover:text-primary">
+                                    {getPropertyDisplayTitle(property)}
                                   </h3>
 
-                                  <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-                                    <div className="min-w-0">
-                                      <p className="text-lg font-black text-slate-950">
-                                        <>
-                                          {formatPrice(
-                                              getPropertyDisplayPrice(property),
-                                          )}
+                                  <div className="mt-3 border-t border-slate-100 pt-3">
+                                    <div className="flex items-end justify-between gap-3">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-baseline gap-x-1.5">
+                                          <p className="text-xl font-black tracking-tight text-slate-950">
+                                            {formatPrice(
+                                                getPropertyDisplayPrice(property),
+                                            )}
+                                          </p>
 
                                           {property.hasUnitConfigurations ? (
-                                              <span className="ml-1 text-sm font-bold text-slate-500">
-        onwards
-      </span>
-                                          ) : null}
-                                        </>
-                                      </p>
-
-                                      <PriceNegotiabilityBadge
-                                          negotiable={property.negotiable}
-                                          className="mt-1.5"
-                                      />
-
-                                      <p className="mt-1 truncate text-xs text-slate-500">
-                                        {getPropertyBHKLabel(property)}
-                                      </p>
-                                    </div>
-
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
-                          <ArrowRight size={16} aria-hidden="true" />
+                                              <span className="text-sm font-bold text-slate-500">
+                            onwards
                         </span>
+                                          ) : null}
+                                        </div>
+
+                                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                                          <PriceNegotiabilityBadge
+                                              negotiable={property.negotiable}
+                                          />
+
+                                          {property.propertyType === "Plot" ? (
+                                              property.size ? (
+                                                  <span className="truncate text-xs font-semibold text-slate-500">
+            {new Intl.NumberFormat(
+                "en-IN",
+                {
+                  maximumFractionDigits: 2,
+                },
+            ).format(property.size)}{" "}
+                                                    {property.sizeUnit}
+        </span>
+                                              ) : null
+                                          ) : getPropertyBHKLabel(property) ? (
+                                              <span className="truncate text-xs font-semibold text-slate-500">
+        {getPropertyBHKLabel(
+            property,
+        )}
+    </span>
+                                          ) : null}
+                                        </div>
+                                      </div>
+
+                                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
+                <ArrowRight
+                    size={17}
+                    aria-hidden="true"
+                />
+            </span>
+                                    </div>
                                   </div>
                                 </div>
                               </Link>
