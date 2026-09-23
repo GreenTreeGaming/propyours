@@ -105,11 +105,28 @@ const ALLOWED_SIZE_UNITS = [
 interface SanitizedUnitConfiguration {
     bedrooms: number;
     toilets: number | null;
+    landArea: number | null;
+    landAreaUnit: (typeof ALLOWED_SIZE_UNITS)[number];
     size: number;
     sizeUnit:
         (typeof ALLOWED_SIZE_UNITS)[number];
     uds: number | null;
     price: number;
+}
+
+interface SanitizedPlotSize { size: number; sizeUnit: (typeof ALLOWED_SIZE_UNITS)[number] }
+
+function parsePlotSizes(value: unknown): { success: true; plots: SanitizedPlotSize[] } | { success: false; error: string } {
+    if (!Array.isArray(value)) return { success: false, error: "Plot sizes must be an array." };
+    if (value.length > 50) return { success: false, error: "A listing can have at most 50 plot sizes." };
+    const plots: SanitizedPlotSize[] = [];
+    for (const item of value) {
+        const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : null;
+        const size = record?.size, sizeUnit = record?.sizeUnit;
+        if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !(ALLOWED_SIZE_UNITS as readonly string[]).includes(sizeUnit)) return { success: false, error: "Every plot size must have a valid area and unit." };
+        plots.push({ size, sizeUnit: sizeUnit as SanitizedPlotSize["sizeUnit"] });
+    }
+    return { success: true, plots };
 }
 
 function parseUnitConfigurations(
@@ -165,6 +182,8 @@ function parseUnitConfigurations(
         const bedrooms =
             record.bedrooms;
         const toilets = record.toilets ?? null;
+        const landArea = record.landArea ?? null;
+        const landAreaUnit = record.landAreaUnit ?? "sqft";
 
         const size =
             record.size;
@@ -196,6 +215,9 @@ function parseUnitConfigurations(
         if (toilets !== null && (typeof toilets !== "number" || !Number.isInteger(toilets) || toilets < 0 || toilets > 20)) {
             return { success: false, error: "Toilets must be a whole number between 0 and 20." };
         }
+
+        if (landArea !== null && (typeof landArea !== "number" || !Number.isFinite(landArea) || landArea <= 0)) return { success: false, error: "Land area must be a positive number." };
+        if (typeof landAreaUnit !== "string" || !(ALLOWED_SIZE_UNITS as readonly string[]).includes(landAreaUnit)) return { success: false, error: "Land area must have a valid unit." };
 
         if (
             typeof size !== "number" ||
@@ -264,6 +286,8 @@ function parseUnitConfigurations(
         units.push({
             bedrooms,
             toilets: toilets as number | null,
+            landArea: landArea as number | null,
+            landAreaUnit: landAreaUnit as SanitizedUnitConfiguration["landAreaUnit"],
             size,
 
             sizeUnit:
@@ -735,6 +759,10 @@ export async function PUT(
             nextPropertyType ===
             "Commercial";
 
+        if (body.totalUnits != null && (typeof body.totalUnits !== "number" || !Number.isInteger(body.totalUnits) || body.totalUnits < 0)) {
+            return NextResponse.json({ error: "Total units must be a non-negative whole number." }, { status: 400 });
+        }
+
         let unitConfigurations:
             | SanitizedUnitConfiguration[]
             | undefined;
@@ -776,6 +804,9 @@ export async function PUT(
                 ).map(
                     (unit: {
                         bedrooms: number;
+                        toilets?: number | null;
+                        landArea?: number | null;
+                        landAreaUnit?: string;
                         size: number;
                         sizeUnit: string;
                         uds?: number | null;
@@ -783,6 +814,9 @@ export async function PUT(
                     }) => ({
                         bedrooms:
                         unit.bedrooms,
+                        toilets: unit.toilets ?? null,
+                        landArea: unit.landArea ?? null,
+                        landAreaUnit: (unit.landAreaUnit ?? "sqft") as SanitizedUnitConfiguration["landAreaUnit"],
 
                         size:
                         unit.size,
@@ -797,6 +831,18 @@ export async function PUT(
                         unit.price,
                     }),
                 );
+
+        if (nextPropertyType === "Villa" && finalUnitConfigurations.some((unit) => unit.landArea === null)) {
+            return NextResponse.json({ error: "Every villa unit must include its land area." }, { status: 400 });
+        }
+
+        let plotSizes: SanitizedPlotSize[] | undefined;
+        if (!isLand) plotSizes = [];
+        else if ("plotSizes" in body) {
+            const parsedPlots = parsePlotSizes(body.plotSizes);
+            if (!parsedPlots.success) return NextResponse.json({ error: parsedPlots.error }, { status: 400 });
+            plotSizes = parsedPlots.plots;
+        }
 
         const unitPrices =
             finalUnitConfigurations
@@ -1110,6 +1156,7 @@ export async function PUT(
             body.sizeUnit,
 
             unitConfigurations,
+            plotSizes,
 
             dimensions:
             body.dimensions,
@@ -1129,6 +1176,7 @@ export async function PUT(
             floors: isLand
                 ? null
                 : body.floors,
+            totalUnits: isLand ? null : body.totalUnits,
             amenities: Array.isArray(
                 body.amenities,
             )

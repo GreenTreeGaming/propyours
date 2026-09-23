@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import VerifiedEnquiryForm from "@/components/VerifiedEnquiryForm";
 import { usePathname } from "next/navigation";
+import { getStoredUser } from "@/lib/browser-user";
 import {
     AnimatePresence,
     motion,
@@ -92,6 +93,7 @@ export default function BubbyChat() {
         useState(false);
     const [storageLoaded, setStorageLoaded] =
         useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     const inputRef =
         useRef<HTMLTextAreaElement | null>(
@@ -118,6 +120,22 @@ export default function BubbyChat() {
                 "open-bubby-chat",
                 handleOpenBubbyChat,
             );
+        };
+    }, []);
+
+    useEffect(() => {
+        const syncLogin = () => setIsLoggedIn(Boolean(getStoredUser()));
+        syncLogin();
+        let active = true;
+        fetch("/api/auth/me", { credentials: "include", cache: "no-store" })
+            .then((response) => { if (active && (response.ok || response.status === 401)) setIsLoggedIn(response.ok); })
+            .catch(() => { /* Keep the locally stored session state if the check is unavailable. */ });
+        window.addEventListener("storage", syncLogin);
+        window.addEventListener("focus", syncLogin);
+        return () => {
+            active = false;
+            window.removeEventListener("storage", syncLogin);
+            window.removeEventListener("focus", syncLogin);
         };
     }, []);
 
@@ -401,7 +419,7 @@ export default function BubbyChat() {
                     "assistant",
             );
 
-    const leadUnlocked = messages.some((message) => message.leadCaptured);
+    const leadUnlocked = isLoggedIn || messages.some((message) => message.leadCaptured);
     const firstUserMessage = messages.find((message) => message.role === "user");
     const leadOpportunity =
         firstUserMessage && !leadUnlocked

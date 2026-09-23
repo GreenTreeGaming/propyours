@@ -31,6 +31,7 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     "Anna Salai",
     "Annanur",
     "Arakkonam",
+    "Arasankalani",
     "Arumbakkam",
     "Ashok Nagar",
     "Athipattu",
@@ -198,6 +199,7 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     "Palavakkam",
     "Pallavaram",
     "Pallikaranai",
+    "Pattravakkam",
     "Pammal",
     "Panaiyur",
     "Paranur",
@@ -243,6 +245,7 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     "Santhome",
     "Selaiyur",
     "Sembakkam",
+    "Semmancheri",
     "Senneerkuppam",
     "Shenoy Nagar",
     "Sholavaram",
@@ -254,6 +257,7 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     "Sriperumbudur",
     "St. Thomas Mount",
     "Surapet",
+
 
     // T
     "T Nagar",

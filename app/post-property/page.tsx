@@ -176,12 +176,16 @@ interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
     toilets: string;
+    landArea: string;
+    landAreaUnit: string;
     size: string;
     sizeUnit: string;
     uds: string;
     price: string;
     priceUnit: UnitPriceUnit;
 }
+
+interface PlotSizeForm { id: string; size: string; sizeUnit: string }
 
 interface PropertyForm {
     category: PropertyCategory;
@@ -204,6 +208,7 @@ interface PropertyForm {
     dimensions: string;
     ownershipType: string;
     unitConfigurations: UnitConfigurationForm[];
+    plotSizes: PlotSizeForm[];
     price: string;
     zeroCommission: boolean;
     priceType: string;
@@ -213,6 +218,7 @@ interface PropertyForm {
     gstApplicable: boolean;
     registrationChargesAdditional: boolean;
     floors: string;
+    totalUnits: string;
 
     condition:
         | "ready_to_occupy"
@@ -244,12 +250,18 @@ function createUnitConfiguration():
 
         bedrooms: "",
         toilets: "",
+        landArea: "",
+        landAreaUnit: "sqft",
         size: "",
         sizeUnit: "sqft",
         uds: "",
         price: "",
         priceUnit: "lakh",
     };
+}
+
+function createPlotSize(): PlotSizeForm {
+    return { id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, size: "", sizeUnit: "sqft" };
 }
 
 const UNIT_PRICE_MULTIPLIERS: Record<
@@ -367,6 +379,7 @@ const DEFAULT_FORM: PropertyForm = {
     projectName: "",
     uds: "",
     unitConfigurations: [],
+    plotSizes: [],
     size: "",
     sizeUnit: "sqft",
     dimensions: "",
@@ -380,6 +393,7 @@ const DEFAULT_FORM: PropertyForm = {
     bedrooms: "",
     bathrooms: "",
     floors: "",
+    totalUnits: "",
 
     condition: "ready_to_occupy",
 
@@ -496,6 +510,8 @@ function loadInitialForm(): PropertyForm {
                                 configuration.bedrooms ??
                                 "",
                             toilets: configuration.toilets ?? "",
+                            landArea: configuration.landArea ?? "",
+                            landAreaUnit: configuration.landAreaUnit ?? "sqft",
 
                             size:
                                 configuration.size ??
@@ -519,6 +535,9 @@ function loadInitialForm(): PropertyForm {
                         }),
                     )
                     : [],
+            plotSizes: Array.isArray(parsed.plotSizes)
+                ? parsed.plotSizes.map((plot) => ({ id: plot.id || `${Date.now()}-${Math.random()}`, size: plot.size ?? "", sizeUnit: plot.sizeUnit ?? "sqft" }))
+                : [],
             uploadDeleteGrants:
                 typeof parsed.uploadDeleteGrants === "object" &&
                 parsed.uploadDeleteGrants !== null &&
@@ -933,6 +952,8 @@ export default function PostPropertyPage() {
         field:
             | "bedrooms"
             | "toilets"
+            | "landArea"
+            | "landAreaUnit"
             | "size"
             | "sizeUnit"
             | "uds"
@@ -970,6 +991,19 @@ export default function PostPropertyPage() {
         }));
     }
 
+    function addPlotSize() {
+        setForm((current) => ({ ...current, plotSizes: [...current.plotSizes, createPlotSize()] }));
+        setErrors((current) => { const next = { ...current }; delete next.plotSizes; return next; });
+    }
+
+    function updatePlotSize(id: string, patch: Partial<PlotSizeForm>) {
+        setForm((current) => ({ ...current, plotSizes: current.plotSizes.map((plot) => plot.id === id ? { ...plot, ...patch } : plot) }));
+    }
+
+    function removePlotSize(id: string) {
+        setForm((current) => ({ ...current, plotSizes: current.plotSizes.filter((plot) => plot.id !== id) }));
+    }
+
     function selectCategory(category: PropertyCategory) {
         if (category === "commercial") {
             updateForm({
@@ -977,6 +1011,7 @@ export default function PostPropertyPage() {
                 propertyType: "Commercial",
                 commercialType: "",
                 unitConfigurations: [],
+                plotSizes: [],
                 purpose:
                     form.purpose === "PG/CO-Living"
                         ? "Rent"
@@ -984,6 +1019,7 @@ export default function PostPropertyPage() {
                 bedrooms: "",
                 bathrooms: "",
                 floors: "",
+                totalUnits: "",
                 amenities: [],
             });
             return;
@@ -995,6 +1031,7 @@ export default function PostPropertyPage() {
                 propertyType: "Plot",
                 commercialType: "",
                 unitConfigurations: [],
+                plotSizes: [],
                 purpose:
                     form.purpose === "PG/CO-Living"
                         ? "Sell"
@@ -1002,6 +1039,7 @@ export default function PostPropertyPage() {
                 bedrooms: "",
                 bathrooms: "",
                 floors: "",
+                totalUnits: "",
                 amenities: [],
             });
             return;
@@ -1011,6 +1049,7 @@ export default function PostPropertyPage() {
             category,
             propertyType: "Apartment",
             commercialType: "",
+            plotSizes: [],
             amenities: [],
         });
     }
@@ -1103,6 +1142,10 @@ export default function PostPropertyPage() {
                     "Enter a valid property size.";
             }
 
+            if (isLand && form.plotSizes.some((plot) => !plot.size.trim() || !Number.isFinite(Number(plot.size)) || Number(plot.size) <= 0)) {
+                nextErrors.plotSizes = "Enter a valid area for every available plot size.";
+            }
+
             const uds =
                 optionalNumber(form.uds);
 
@@ -1134,6 +1177,10 @@ export default function PostPropertyPage() {
                     "Enter a valid whole number of floors.";
             }
 
+            if (form.totalUnits.trim() && (!Number.isInteger(Number(form.totalUnits)) || Number(form.totalUnits) < 0)) {
+                nextErrors.totalUnits = "Enter a valid whole number of units.";
+            }
+
             if (
                 form.unitConfigurations.length > 0
             ) {
@@ -1163,6 +1210,7 @@ export default function PostPropertyPage() {
                                     configuration.price,
                                     configuration.priceUnit,
                                 );
+                            const landArea = configuration.landArea.trim() ? Number(configuration.landArea) : null;
 
                             return (
                                 !configuration.toilets.trim() ||
@@ -1172,6 +1220,7 @@ export default function PostPropertyPage() {
                                 bedrooms < 0 ||
                                 bedrooms > 20 ||
                                 !Number.isInteger(toilets) || toilets < 0 || toilets > 20 ||
+                                (form.propertyType === "Villa" && (landArea === null || !Number.isFinite(landArea) || landArea <= 0)) ||
 
                                 !Number.isFinite(
                                     size,
@@ -1587,6 +1636,8 @@ export default function PostPropertyPage() {
                                             configuration.bedrooms,
                                         ),
                                     toilets: Number(configuration.toilets),
+                                    landArea: form.propertyType === "Villa" ? Number(configuration.landArea) : null,
+                                    landAreaUnit: configuration.landAreaUnit,
 
                                     size:
                                         Number(
@@ -1608,6 +1659,10 @@ export default function PostPropertyPage() {
                                         ),
                                 }),
                             ),
+
+                        plotSizes: isLand
+                            ? form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit }))
+                            : [],
 
                         dimensions:
                             form.dimensions.trim(),
@@ -1631,6 +1686,7 @@ export default function PostPropertyPage() {
                             form.category === "land"
                                 ? null
                                 : optionalNumber(form.floors),
+                        totalUnits: form.category === "land" ? null : optionalNumber(form.totalUnits),
                         condition:
                             form.category ===
                             "residential"
@@ -2820,6 +2876,17 @@ export default function PostPropertyPage() {
                                                         </label>
                                                     </div>
 
+                                                    {isLand ? (
+                                                        <div className="mt-8 border-t border-slate-100 pt-6">
+                                                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                                                <div><h4 className="text-sm font-black text-slate-950">Available plot sizes</h4><p className="mt-1 text-xs leading-5 text-slate-500">Add every plot area buyers can choose in this listing.</p></div>
+                                                                <button type="button" onClick={addPlotSize} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary transition hover:bg-primary/10"><Plus size={15} /> Add plot size</button>
+                                                            </div>
+                                                            {form.plotSizes.length === 0 ? <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-6 text-center text-sm font-bold text-slate-600">No additional plot sizes added yet.</div> : <div className="mt-5 space-y-3">{form.plotSizes.map((plot, index) => <div key={plot.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:grid-cols-[1fr_150px_40px] sm:items-end"><label><FieldLabel required>Plot {index + 1} area</FieldLabel><input type="number" min="0.01" step="any" value={plot.size} onChange={(event) => updatePlotSize(plot.id, { size: event.target.value })} placeholder="e.g. 1200" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10" /></label><label><FieldLabel required>Unit</FieldLabel><SelectField value={plot.sizeUnit} ariaLabel={`Plot ${index + 1} area unit`} onChange={(sizeUnit) => updatePlotSize(plot.id, { sizeUnit })}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label><button type="button" onClick={() => removePlotSize(plot.id)} aria-label={`Remove plot size ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-100"><Trash2 size={15} /></button></div>)}</div>}
+                                                            {errors.plotSizes ? <ErrorText>{errors.plotSizes}</ErrorText> : null}
+                                                        </div>
+                                                    ) : null}
+
                                                     {!isLand && !isCommercial ? (
                                                         <div className="mt-8 border-t border-slate-100 pt-6">
                                                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -2906,7 +2973,7 @@ export default function PostPropertyPage() {
                                                                                     </button>
                                                                                 </div>
 
-                                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[100px_100px_minmax(150px,1fr)_130px_140px_minmax(240px,1.2fr)]">
+                                                                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                                                                     <label>
                                                                                         <FieldLabel
                                                                                             required
@@ -2942,6 +3009,11 @@ export default function PostPropertyPage() {
                                                                                         <FieldLabel required>Toilets</FieldLabel>
                                                                                         <input type="number" min="0" max="20" step="1" value={configuration.toilets} onChange={(event) => updateUnitConfiguration(configuration.id, "toilets", event.target.value)} placeholder="2" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" />
                                                                                     </label>
+
+                                                                                    {form.propertyType === "Villa" ? <>
+                                                                                        <label><FieldLabel required>Land area</FieldLabel><input type="number" min="0.01" step="any" value={configuration.landArea} onChange={(event) => updateUnitConfiguration(configuration.id, "landArea", event.target.value)} placeholder="e.g. 2400" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
+                                                                                        <label><FieldLabel>Land unit</FieldLabel><SelectField value={configuration.landAreaUnit} onChange={(value) => updateUnitConfiguration(configuration.id, "landAreaUnit", value)} ariaLabel={`Unit ${index + 1} land area unit`}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label>
+                                                                                    </> : null}
 
                                                                                     <label>
                                                                                         <FieldLabel
@@ -3067,7 +3139,7 @@ export default function PostPropertyPage() {
                                                                                         </div>
                                                                                     </label>
 
-                                                                                    <label>
+                                                                                    <label className="min-w-0 sm:col-span-2">
                                                                                         <FieldLabel
                                                                                             required
                                                                                         >
@@ -3181,8 +3253,8 @@ export default function PostPropertyPage() {
                                                                 </ErrorText>
                                                             ) : null}
 
-                                                            <div className="mt-6 border-t border-slate-100 pt-6">
-                                                                <label className="block max-w-xs">
+                                                            <div className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
+                                                                <label>
                                                                     <FieldLabel>
                                                                         Total floors
                                                                     </FieldLabel>
@@ -3207,6 +3279,7 @@ export default function PostPropertyPage() {
                                                                         </ErrorText>
                                                                     ) : null}
                                                                 </label>
+                                                                <label><FieldLabel>Total units</FieldLabel><input type="number" min="0" step="1" value={form.totalUnits} onChange={(event) => updateForm({ totalUnits: event.target.value })} placeholder="Optional" className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10" />{errors.totalUnits ? <ErrorText>{errors.totalUnits}</ErrorText> : null}</label>
                                                             </div>
                                                         </div>
                                                     ) : null}
@@ -4333,6 +4406,7 @@ export default function PostPropertyPage() {
                                                                                         ? ` · UDS ${configuration.uds}%`
                                                                                         : "";
 
+                                                                                const landArea = configuration.landArea ? ` · Land ${configuration.landArea} ${configuration.landAreaUnit}` : "";
                                                                                 return `Unit ${
                                                                                     index + 1
                                                                                 }: ${
@@ -4341,7 +4415,7 @@ export default function PostPropertyPage() {
                                                                                     configuration.size
                                                                                 } ${
                                                                                     configuration.sizeUnit
-                                                                                }${uds} · ${formatPrice(
+                                                                                }${landArea}${uds} · ${formatPrice(
                                                                                     String(price),
                                                                                 )}`;
                                                                             },
@@ -4354,8 +4428,8 @@ export default function PostPropertyPage() {
                                                                 value={form.ownershipType}
                                                             />
                                                             {form.category !== "land" ? (
-                                                                <ReviewRow
-                                                                    label="Total floors"
+                                                            <ReviewRow
+                                                                label="Total floors"
                                                                     value={
                                                                         form.floors
                                                                             ? form.floors
@@ -4387,6 +4461,7 @@ export default function PostPropertyPage() {
                                                                         )} · ${form.priceType}`
                                                                 }
                                                             />
+                                                            <ReviewRow label="Total units" value={form.totalUnits || "Not provided"} />
                                                             <ReviewRow
                                                                 label="Negotiability"
                                                                 value={

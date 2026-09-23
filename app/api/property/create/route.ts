@@ -329,6 +329,7 @@ export async function POST(
             ["bedrooms", body.bedrooms],
             ["bathrooms", body.bathrooms],
             ["floors", body.floors],
+            ["totalUnits", body.totalUnits],
         ] as const) {
             if (
                 !isOptionalNonNegativeNumber(
@@ -344,6 +345,10 @@ export async function POST(
                     },
                 );
             }
+        }
+
+        if (body.totalUnits != null && !Number.isInteger(body.totalUnits)) {
+            return NextResponse.json({ error: "Total units must be a whole number." }, { status: 400 });
         }
 
         if (
@@ -561,6 +566,8 @@ export async function POST(
         const unitConfigurations: Array<{
             bedrooms: number;
             toilets: number | null;
+            landArea: number | null;
+            landAreaUnit: string;
             size: number;
             sizeUnit: string;
             uds: number | null;
@@ -592,6 +599,8 @@ export async function POST(
                     ? configuration.bedrooms
                     : undefined;
             const toilets = "toilets" in configuration ? configuration.toilets : null;
+            const landArea = "landArea" in configuration ? configuration.landArea : null;
+            const landAreaUnit = "landAreaUnit" in configuration ? configuration.landAreaUnit : "sqft";
 
             const size =
                 "size" in configuration
@@ -632,6 +641,10 @@ export async function POST(
                 (toilets !== null && toilets !== undefined &&
                     (typeof toilets !== "number" || !Number.isInteger(toilets) || toilets < 0 || toilets > 20)) ||
 
+                (body.propertyType === "Villa" && (typeof landArea !== "number" || !Number.isFinite(landArea) || landArea <= 0)) ||
+                (landArea !== null && landArea !== undefined && (typeof landArea !== "number" || !Number.isFinite(landArea) || landArea <= 0)) ||
+                typeof landAreaUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla"].includes(landAreaUnit) ||
+
                 typeof size !== "number" ||
                 !Number.isFinite(size) ||
                 size <= 0 ||
@@ -666,6 +679,8 @@ export async function POST(
             unitConfigurations.push({
                 bedrooms,
                 toilets: typeof toilets === "number" ? toilets : null,
+                landArea: typeof landArea === "number" ? landArea : null,
+                landAreaUnit,
                 size,
                 sizeUnit,
                 uds:
@@ -687,6 +702,18 @@ export async function POST(
                         Number.isFinite(price) &&
                         price > 0,
                 );
+
+        const rawPlotSizes = isLand && Array.isArray(body.plotSizes) ? body.plotSizes : [];
+        if (rawPlotSizes.length > 50) return NextResponse.json({ error: "A listing can have at most 50 plot sizes." }, { status: 400 });
+        const plotSizes: Array<{ size: number; sizeUnit: string }> = [];
+        for (const item of rawPlotSizes) {
+            const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : null;
+            const size = record?.size, sizeUnit = record?.sizeUnit;
+            if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla"].includes(sizeUnit)) {
+                return NextResponse.json({ error: "Every plot size must have a valid area and unit." }, { status: 400 });
+            }
+            plotSizes.push({ size, sizeUnit });
+        }
 
         const effectivePrice =
             !isLand &&
@@ -784,6 +811,7 @@ export async function POST(
                     sizeUnit: body.sizeUnit,
 
                     unitConfigurations,
+                    plotSizes,
 
                     dimensions: cleanText(
                     body.dimensions,
@@ -819,6 +847,7 @@ export async function POST(
                 floors: isLand
                     ? null
                     : body.floors,
+                totalUnits: isLand ? null : body.totalUnits,
                 amenities: cleanStringArray(
                     body.amenities,
                 ),

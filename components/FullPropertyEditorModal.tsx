@@ -84,11 +84,14 @@ export interface PropertyEditorProperty {
         _id?: string;
         bedrooms: number;
         toilets?: number | null;
+        landArea?: number | null;
+        landAreaUnit?: string;
         size: number;
         sizeUnit: string;
         uds?: number | null;
         price: number;
     }>;
+    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string }>;
 
     size: number;
     sizeUnit?: string;
@@ -100,6 +103,7 @@ export interface PropertyEditorProperty {
     bedrooms?: number | null;
     bathrooms?: number | null;
     floors?: number | null;
+    totalUnits?: number | null;
     amenities?: string[];
     images?: string[];
     videoLinks?: string[];
@@ -152,6 +156,8 @@ interface UnitConfigurationForm {
     id: string;
     bedrooms: string;
     toilets: string;
+    landArea: string;
+    landAreaUnit: string;
     size: string;
     sizeUnit: string;
     uds: string;
@@ -174,6 +180,7 @@ interface EditorForm {
     projectName: string;
     uds: string;
     unitConfigurations: UnitConfigurationForm[];
+    plotSizes: Array<{ id: string; size: string; sizeUnit: string }>;
     size: string;
     sizeUnit: string;
     dimensions: string;
@@ -184,6 +191,7 @@ interface EditorForm {
     bedrooms: string;
     bathrooms: string;
     floors: string;
+    totalUnits: string;
     condition:
         | "ready_to_occupy"
         | "under_construction";
@@ -418,6 +426,8 @@ function createEditorForm(
                             configuration.bedrooms,
                         ),
                         toilets: configuration.toilets == null ? "" : String(configuration.toilets),
+                        landArea: configuration.landArea == null ? "" : String(configuration.landArea),
+                        landAreaUnit: configuration.landAreaUnit || "sqft",
 
                         size: String(
                             configuration.size,
@@ -445,6 +455,7 @@ function createEditorForm(
                     };
                 },
             ) ?? [],
+        plotSizes: property.plotSizes?.map((plot, index) => ({ id: plot._id ?? `plot-${index}`, size: String(plot.size), sizeUnit: plot.sizeUnit || "sqft" })) ?? [],
 
         size:
             property.size === undefined
@@ -499,6 +510,7 @@ function createEditorForm(
             property.floors === undefined
                 ? ""
                 : String(property.floors),
+        totalUnits: property.totalUnits == null ? "" : String(property.totalUnits),
         amenities: property.amenities ?? [],
         images: property.images ?? [],
         videoLinks: property.videoLinks ?? [],
@@ -840,6 +852,8 @@ export default function FullPropertyEditorModal({
                                 : `${Date.now()}-${Math.random()}`,
                         bedrooms: "",
                         toilets: "",
+                        landArea: "",
+                        landAreaUnit: "sqft",
                         size: "",
                         sizeUnit: "sqft",
                         uds: "",
@@ -893,6 +907,18 @@ export default function FullPropertyEditorModal({
                     ),
             };
         });
+    }
+
+    function addPlotSize() {
+        setForm((current) => current ? { ...current, plotSizes: [...current.plotSizes, { id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, size: "", sizeUnit: "sqft" }] } : current);
+    }
+
+    function updatePlotSize(id: string, patch: { size?: string; sizeUnit?: string }) {
+        setForm((current) => current ? { ...current, plotSizes: current.plotSizes.map((plot) => plot.id === id ? { ...plot, ...patch } : plot) } : current);
+    }
+
+    function removePlotSize(id: string) {
+        setForm((current) => current ? { ...current, plotSizes: current.plotSizes.filter((plot) => plot.id !== id) } : current);
     }
 
     function getPendingUploadFiles(
@@ -1120,6 +1146,10 @@ export default function FullPropertyEditorModal({
                 nextErrors.uds =
                     "UDS must be between 0% and 100%.";
             }
+
+            if (isLand && form.plotSizes.some((plot) => !plot.size.trim() || !Number.isFinite(Number(plot.size)) || Number(plot.size) <= 0)) {
+                nextErrors.plotSizes = "Enter a valid area for every available plot size.";
+            }
         }
 
         if (step === "pricing") {
@@ -1157,6 +1187,7 @@ export default function FullPropertyEditorModal({
                                     configuration.bedrooms,
                                 );
                             const toilets = Number(configuration.toilets);
+                            const landArea = configuration.landArea.trim() ? Number(configuration.landArea) : null;
 
                             const size =
                                 Number(
@@ -1182,6 +1213,7 @@ export default function FullPropertyEditorModal({
                                 ) ||
                                 bedrooms < 0 ||
                                 !Number.isInteger(toilets) || toilets < 0 || toilets > 20 ||
+                                (form.propertyType === "Villa" && (landArea === null || !Number.isFinite(landArea) || landArea <= 0)) ||
                                 bedrooms > 20 ||
 
                                 !Number.isFinite(
@@ -1220,6 +1252,7 @@ export default function FullPropertyEditorModal({
                 ["bedrooms", form.bedrooms],
                 ["bathrooms", form.bathrooms],
                 ["floors", form.floors],
+                ["totalUnits", form.totalUnits],
             ] as const) {
                 if (
                     value.trim() &&
@@ -1232,6 +1265,7 @@ export default function FullPropertyEditorModal({
                         "Enter a valid non-negative number.";
                 }
             }
+            if (form.totalUnits.trim() && !Number.isInteger(Number(form.totalUnits))) nextErrors.totalUnits = "Total units must be a whole number.";
         }
 
         if (step === "media") {
@@ -1417,6 +1451,8 @@ export default function FullPropertyEditorModal({
                                         configuration.bedrooms,
                                     ),
                                 toilets: Number(configuration.toilets),
+                                landArea: form.propertyType === "Villa" ? Number(configuration.landArea) : null,
+                                landAreaUnit: configuration.landAreaUnit,
 
                                 size:
                                     Number(
@@ -1438,6 +1474,8 @@ export default function FullPropertyEditorModal({
                                     ),
                             }),
                         ),
+
+                plotSizes: isLand ? form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit })) : [],
 
                 dimensions:
                     form.dimensions.trim(),
@@ -1462,6 +1500,7 @@ export default function FullPropertyEditorModal({
                     : toOptionalNumber(
                         form.floors,
                     ),
+                totalUnits: isLand ? null : toOptionalNumber(form.totalUnits),
                 amenities: form.amenities,
                 images: form.images,
                 videoLinks:
@@ -1836,6 +1875,7 @@ export default function FullPropertyEditorModal({
                                                                                 bedrooms: "",
                                                                                 bathrooms: "",
                                                                                 floors: "",
+                                                                                totalUnits: "",
                                                                                 unitConfigurations: [],
                                                                             }
                                                                             : {}),
@@ -2348,6 +2388,7 @@ export default function FullPropertyEditorModal({
                                                                 />
                                                             </label>
                                                         </div>
+                                                        {isLand ? <div className="mt-8 border-t border-slate-100 pt-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h4 className="text-sm font-black text-slate-950">Available plot sizes</h4><p className="mt-1 text-xs text-slate-500">Add the plot areas offered in this listing.</p></div><button type="button" onClick={addPlotSize} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary"><Plus size={15} /> Add plot size</button></div><div className="mt-4 space-y-3">{form.plotSizes.map((plot, index) => <div key={plot.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_150px_40px] sm:items-end"><label><FieldLabel required>Plot {index + 1} area</FieldLabel><input type="number" min="0.01" step="any" value={plot.size} onChange={(event) => updatePlotSize(plot.id, { size: event.target.value })} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label><label><FieldLabel required>Unit</FieldLabel><SelectField value={plot.sizeUnit} ariaLabel={`Plot ${index + 1} unit`} onChange={(sizeUnit) => updatePlotSize(plot.id, { sizeUnit })}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label><button type="button" onClick={() => removePlotSize(plot.id)} aria-label={`Remove plot size ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500"><Trash2 size={15} /></button></div>)}</div>{errors.plotSizes ? <ErrorText>{errors.plotSizes}</ErrorText> : null}</div> : null}
                                                     </div>
                                                 </div>
                                             </div>
@@ -2619,7 +2660,7 @@ export default function FullPropertyEditorModal({
                                                                                     </button>
                                                                                 </div>
 
-                                                                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[90px_90px_minmax(150px,1fr)_130px_140px_minmax(250px,1.25fr)]">
+                                                                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                                                                     <label>
                                                                                         <FieldLabel
                                                                                             required
@@ -2654,6 +2695,8 @@ export default function FullPropertyEditorModal({
                                                                                     </label>
 
                                                                                     <label><FieldLabel required>Toilets</FieldLabel><input type="number" min="0" max="20" step="1" value={configuration.toilets} onChange={(event) => updateUnitConfiguration(configuration.id, { toilets: event.target.value })} placeholder="2" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
+
+                                                                                    {form.propertyType === "Villa" ? <><label><FieldLabel required>Land area</FieldLabel><input type="number" min="0.01" step="any" value={configuration.landArea} onChange={(event) => updateUnitConfiguration(configuration.id, { landArea: event.target.value })} placeholder="e.g. 2400" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label><label><FieldLabel>Land unit</FieldLabel><SelectField value={configuration.landAreaUnit} ariaLabel={`Unit ${index + 1} land area unit`} onChange={(landAreaUnit) => updateUnitConfiguration(configuration.id, { landAreaUnit })}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label></> : null}
 
                                                                                     <label>
                                                                                         <FieldLabel
@@ -2783,7 +2826,7 @@ export default function FullPropertyEditorModal({
                                                                                         </div>
                                                                                     </label>
 
-                                                                                    <label>
+                                                                                    <label className="min-w-0 sm:col-span-2">
                                                                                         <FieldLabel
                                                                                             required
                                                                                         >
@@ -2912,7 +2955,7 @@ export default function FullPropertyEditorModal({
 
                                                 {!isLand ? (
                                                     <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                                                        <div className="grid gap-5 sm:grid-cols-3">
+                                                        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
                                                             <label>
                                                                 <FieldLabel>
                                                                     {form.propertyType ===
@@ -3017,6 +3060,7 @@ export default function FullPropertyEditorModal({
                                                                     </ErrorText>
                                                                 ) : null}
                                                             </label>
+                                                            <label><FieldLabel>Total units</FieldLabel><input type="number" min="0" step="1" value={form.totalUnits} onChange={(event) => updateForm({ totalUnits: event.target.value })} placeholder="Optional" className="h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10" />{errors.totalUnits ? <ErrorText>{errors.totalUnits}</ErrorText> : null}</label>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -3859,7 +3903,7 @@ export default function FullPropertyEditorModal({
                                                                     value={form.unitConfigurations
                                                                         .map(
                                                                             (configuration) =>
-                                                                                `${configuration.bedrooms}BHK ${configuration.toilets}T · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(
+                                                                                `${configuration.bedrooms}BHK ${configuration.toilets}T${configuration.landArea ? ` · Land ${configuration.landArea} ${configuration.landAreaUnit}` : ""} · ${configuration.size} ${configuration.sizeUnit} · ${formatPrice(
                                                                                     String(
                                                                                         unitPriceToRupees(
                                                                                             configuration.price,
@@ -3874,7 +3918,7 @@ export default function FullPropertyEditorModal({
                                                             {!isLand ? (
                                                                 <ReviewRow
                                                                     label="Residential specs"
-                                                                    value={`${form.bedrooms || "—"} beds · ${form.bathrooms || "—"} baths · ${form.floors || "—"} floors`}
+                                                                    value={`${form.bedrooms || "—"} beds · ${form.bathrooms || "—"} baths · ${form.floors || "—"} floors · ${form.totalUnits || "—"} units`}
                                                                 />
                                                             ) : null}
                                                         </ReviewCard>

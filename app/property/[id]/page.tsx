@@ -120,11 +120,14 @@ interface PropertyRecord {
         _id?: string;
         bedrooms: number;
         toilets?: number | null;
+        landArea?: number | null;
+        landAreaUnit?: string;
         size: number;
         sizeUnit: string;
         uds?: number | null;
         price: number;
     }>;
+    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string }>;
     bedrooms?: number | null;
     locality?: string;
     city?: string;
@@ -152,6 +155,7 @@ interface PropertyRecord {
     size?: number;
     sizeUnit?: string;
     floors?: number | null;
+    totalUnits?: number | null;
     description?: string;
     uds?: number | null;
     ownershipType?: string;
@@ -946,6 +950,10 @@ function getPrimaryDetails(
         });
     }
 
+    if (category !== "land" && property.totalUnits !== null && property.totalUnits !== undefined) {
+        details.push({ label: "Total units", value: String(property.totalUnits), icon: Building2 });
+    }
+
     if (property.ownershipType) {
         details.push({
             label: "Ownership",
@@ -1080,6 +1088,13 @@ function getFactRows(
             label: "Dimensions",
             value:
             property.dimensions,
+        });
+    }
+
+    if (property.plotSizes?.length) {
+        rows.push({
+            label: "Available plot sizes",
+            value: property.plotSizes.map((plot) => `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(plot.size)} ${SIZE_UNITS.find((unit) => unit.value === plot.sizeUnit)?.label ?? plot.sizeUnit}`).join(", "),
         });
     }
 
@@ -2650,7 +2665,8 @@ export default function PropertyDetailsPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 divide-x divide-slate-200">
+                                                    <div className={`grid divide-x divide-slate-200 ${configuration.landArea ? "grid-cols-3" : "grid-cols-2"}`}>
+                                                        {configuration.landArea ? <div className="p-4"><p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">Land area</p><p className="mt-2 text-sm font-black text-slate-950">{new Intl.NumberFormat("en-IN").format(configuration.landArea)} {SIZE_UNITS.find((unit) => unit.value === configuration.landAreaUnit)?.label ?? configuration.landAreaUnit}</p></div> : null}
                                                         <div className="p-4">
                                                             <p className="text-[9px] font-black uppercase tracking-[0.11em] text-slate-400">
                                                                 Built-up area
