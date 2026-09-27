@@ -8,6 +8,7 @@ import {
     CalendarDays,
     CheckCircle2,
     Eye,
+    ExternalLink,
     Heart,
     Mail,
     MapPin,
@@ -18,7 +19,6 @@ import {
     ShieldAlert,
     ShieldCheck,
     Sparkles,
-    UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -101,6 +101,7 @@ type UserDetail = {
         role: string;
         bio?: string;
         company?: string;
+        companyWebsite?: string;
         address?: string;
         city?: string;
         favoritesCount: number;
@@ -509,7 +510,15 @@ export default function AdminUserDetailClient({
                 </div>
             </div>
 
-            {activeTab === "overview" && <OverviewTab user={user} />}
+            {activeTab === "overview" && (
+                <OverviewTab
+                    user={user}
+                    saving={saving}
+                    onSave={(payload) =>
+                        manage(payload, "Company profile updated successfully.")
+                    }
+                />
+            )}
             {activeTab === "plan" && (
                 <PlanTab
                     plan={user.plan}
@@ -573,9 +582,31 @@ export default function AdminUserDetailClient({
 
 function OverviewTab({
                          user,
+                         saving,
+                         onSave,
                      }: {
     user: UserDetail["user"];
+    saving: boolean;
+    onSave: (payload: Record<string, unknown>) => Promise<void>;
 }) {
+    const isAdministrator =
+        user.role === "Admin" || user.role === "SuperAdmin";
+
+    const [profile, setProfile] = useState({
+        name: user.name,
+        role: user.role,
+        company: user.company ?? "",
+        companyWebsite: user.companyWebsite ?? "",
+        city: user.city ?? "",
+        address: user.address ?? "",
+        bio: user.bio ?? "",
+    });
+
+    async function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        await onSave({ action: "set-profile", ...profile });
+    }
+
     const details = [
         { label: "Email", value: user.email, icon: Mail },
         {
@@ -606,56 +637,131 @@ function OverviewTab({
     ];
 
     return (
-        <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+            <form
+                onSubmit={submit}
+                className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+            >
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                    Admin profile editor
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-slate-950">
+                    Company profile
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Builder accounts appear in the Builders directory. Projects
+                    whose Developer / Builder name exactly matches the company
+                    name below are added to this profile automatically.
+                </p>
+
+                <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                    <Field label="Profile name">
+                        <input
+                            required
+                            value={profile.name}
+                            onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))}
+                            className="admin-input"
+                        />
+                    </Field>
+                    <Field label="Account type">
+                        <select
+                            value={profile.role}
+                            disabled={isAdministrator}
+                            onChange={(event) => setProfile((current) => ({ ...current, role: event.target.value }))}
+                            className="admin-input"
+                        >
+                            <option value="User">User</option>
+                            <option value="Property Owner">Property owner</option>
+                            <option value="Agent">Agent</option>
+                            <option value="Builder">Builder / developer</option>
+                            {isAdministrator ? (
+                                <option value={user.role}>{user.role}</option>
+                            ) : null}
+                        </select>
+                    </Field>
+                    <Field label="Company name">
+                        <input
+                            value={profile.company}
+                            onChange={(event) => setProfile((current) => ({ ...current, company: event.target.value }))}
+                            className="admin-input"
+                            placeholder="Developer name used on listings"
+                        />
+                    </Field>
+                    <Field label="Company website">
+                        <input
+                            type="url"
+                            value={profile.companyWebsite}
+                            onChange={(event) => setProfile((current) => ({ ...current, companyWebsite: event.target.value }))}
+                            className="admin-input"
+                            placeholder="https://example.com"
+                        />
+                    </Field>
+                    <Field label="City">
+                        <input
+                            value={profile.city}
+                            onChange={(event) => setProfile((current) => ({ ...current, city: event.target.value }))}
+                            className="admin-input"
+                        />
+                    </Field>
+                    <Field label="Office address">
+                        <input
+                            value={profile.address}
+                            onChange={(event) => setProfile((current) => ({ ...current, address: event.target.value }))}
+                            className="admin-input"
+                        />
+                    </Field>
+                    <div className="sm:col-span-2">
+                        <Field label="Company description">
+                            <textarea
+                                value={profile.bio}
+                                onChange={(event) => setProfile((current) => ({ ...current, bio: event.target.value }))}
+                                className="admin-input min-h-32 resize-y"
+                                placeholder="Describe the developer, track record and focus areas."
+                            />
+                        </Field>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
+                    >
+                        {saving ? "Saving…" : "Save company profile"}
+                    </button>
+                    {user.role === "Builder" ? (
+                        <Link
+                            href={`/profile/${user._id}`}
+                            target="_blank"
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 px-5 text-sm font-black text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700"
+                        >
+                            View public page
+                            <ExternalLink size={16} aria-hidden="true" />
+                        </Link>
+                    ) : null}
+                </div>
+            </form>
+
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
                     Account details
                 </p>
                 <h2 className="mt-1 text-2xl font-black text-slate-950">
-                    Profile information
+                    Current information
                 </h2>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="mt-6 grid gap-4">
                     {details.map(({ label, value, icon: Icon }) => (
-                        <div
-                            key={label}
-                            className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                        >
+                        <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                             <div className="flex items-start gap-3">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm">
-                                    <Icon size={17} aria-hidden="true" />
-                                </span>
+                                <Icon size={17} className="mt-0.5 shrink-0 text-slate-500" aria-hidden="true" />
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                                        {label}
-                                    </p>
-                                    <p className="mt-1 break-words text-sm font-bold text-slate-900">
-                                        {value}
-                                    </p>
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+                                    <p className="mt-1 break-words text-sm font-bold text-slate-900">{value}</p>
                                 </div>
                             </div>
                         </div>
                     ))}
-                </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
-                    Public profile
-                </p>
-                <h2 className="mt-1 text-2xl font-black text-slate-950">
-                    Biography
-                </h2>
-                <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                    <UserRound
-                        size={22}
-                        className="text-slate-400"
-                        aria-hidden="true"
-                    />
-                    <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                        {user.bio ||
-                            "This account has not added a biography."}
-                    </p>
                 </div>
             </section>
         </div>

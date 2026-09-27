@@ -643,7 +643,7 @@ export async function POST(
 
                 (body.propertyType === "Villa" && (typeof landArea !== "number" || !Number.isFinite(landArea) || landArea <= 0)) ||
                 (landArea !== null && landArea !== undefined && (typeof landArea !== "number" || !Number.isFinite(landArea) || landArea <= 0)) ||
-                typeof landAreaUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla"].includes(landAreaUnit) ||
+                typeof landAreaUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"].includes(landAreaUnit) ||
 
                 typeof size !== "number" ||
                 !Number.isFinite(size) ||
@@ -657,6 +657,8 @@ export async function POST(
                     "acre",
                     "kanal",
                     "marla",
+                    "ground",
+                    "cent",
                 ].includes(sizeUnit) ||
 
                 !validUds ||
@@ -709,7 +711,7 @@ export async function POST(
         for (const item of rawPlotSizes) {
             const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : null;
             const size = record?.size, sizeUnit = record?.sizeUnit;
-            if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla"].includes(sizeUnit)) {
+            if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"].includes(sizeUnit)) {
                 return NextResponse.json({ error: "Every plot size must have a valid area and unit." }, { status: 400 });
             }
             plotSizes.push({ size, sizeUnit });

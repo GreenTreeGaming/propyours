@@ -62,7 +62,9 @@ export const propertySearchQuerySchema = z
                 "1",
                 "2",
                 "3",
+                "4",
                 "4+",
+                "5+",
             ])
             .default("All"),
 

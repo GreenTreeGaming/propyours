@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
+  BedDouble,
   Bot,
   Building2,
   CheckCircle2,
@@ -265,6 +266,7 @@ export default function HomePage() {
   const [locality, setLocality] = useState("");
   const [propertyType, setPropertyType] = useState("All Property Types");
   const [maxPrice, setMaxPrice] = useState("");
+  const [bedrooms, setBedrooms] = useState("");
   const [featuredProperties, setFeaturedProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -441,6 +443,7 @@ export default function HomePage() {
               ? ""
               : propertyType,
       maxPrice,
+      bhk: mode === "Commercial" ? "" : bedrooms,
       purpose:
           mode === "Buy"
               ? "sale"
@@ -999,7 +1002,10 @@ export default function HomePage() {
                             <button
                                 key={item}
                                 type="button"
-                                onClick={() => setMode(item)}
+                                onClick={() => {
+                                  setMode(item);
+                                  if (item === "Commercial") setBedrooms("");
+                                }}
                                 className={`rounded-lg px-5 py-2.5 text-sm font-bold transition ${
                                     mode === item
                                         ? "bg-white text-primary shadow-sm"
@@ -1060,7 +1066,7 @@ export default function HomePage() {
                   </label>
 
                   {/* Locality */}
-                  <label className="min-w-0 lg:col-span-3">
+                  <label className="min-w-0 lg:col-span-2">
             <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
               Locality
             </span>
@@ -1090,7 +1096,7 @@ export default function HomePage() {
                   </label>
 
                   {/* Property type */}
-                  <label className="min-w-0 lg:col-span-3">
+                  <label className="min-w-0 lg:col-span-2">
             <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
               Property type
             </span>
@@ -1125,6 +1131,39 @@ export default function HomePage() {
                   aria-hidden="true"
               />
             </span>
+                  </label>
+
+                  {/* Bedrooms */}
+                  <label className="min-w-0 lg:col-span-2">
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                      Bedrooms
+                    </span>
+                    <span className="relative block">
+                      <BedDouble
+                          size={18}
+                          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary"
+                          aria-hidden="true"
+                      />
+                      <select
+                          value={bedrooms}
+                          disabled={mode === "Commercial"}
+                          onChange={(event) => setBedrooms(event.target.value)}
+                          className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label="Select number of bedrooms"
+                      >
+                        <option value="">Any bedrooms</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5+">5+</option>
+                      </select>
+                      <ChevronRight
+                          size={15}
+                          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-400"
+                          aria-hidden="true"
+                      />
+                    </span>
                   </label>
 
                   {/* Budget */}
@@ -1570,7 +1609,7 @@ export default function HomePage() {
         </span>
                                   </div>
 
-                                  <h3 className="mt-2 line-clamp-1 text-base font-black leading-6 text-slate-950 transition group-hover:text-primary">
+                                  <h3 className="mt-2 min-h-6 shrink-0 line-clamp-1 text-base font-black leading-6 text-slate-950 transition group-hover:text-primary">
                                     {getPropertyDisplayTitle(property)}
                                   </h3>
 

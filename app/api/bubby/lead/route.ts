@@ -176,6 +176,8 @@ const leadSchema =
             searchFiltersSchema
                 .nullable(),
 
+        searchQuery: z.string().trim().max(1000).default(""),
+
         consent:
             z.literal(true),
     })
@@ -224,6 +226,7 @@ export async function POST(
             verificationToken,
             propertyIds,
             searchFilters,
+            searchQuery,
         } = parsed.data;
 
         const normalizedMobile = normalizeLeadPhone(mobile);
@@ -371,6 +374,7 @@ export async function POST(
 
             existingLead.searchFilters =
                 searchFilters ?? undefined;
+            existingLead.searchQuery = searchQuery;
 
             await existingLead.save();
 
@@ -404,6 +408,8 @@ export async function POST(
                 searchFilters:
                     searchFilters ??
                     undefined,
+
+                searchQuery,
 
                 source:
                     "bubby",

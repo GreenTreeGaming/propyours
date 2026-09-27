@@ -243,6 +243,14 @@ const SIZE_UNITS = [
         value: "marla",
         label: "Marla",
     },
+    {
+        value: "ground",
+        label: "Ground",
+    },
+    {
+        value: "cent",
+        label: "Cent",
+    },
 ] as const;
 
 const SIZE_FACTORS: Record<
@@ -255,6 +263,8 @@ const SIZE_FACTORS: Record<
     acre: 43_560,
     kanal: 5_445,
     marla: 272.25,
+    ground: 2_400,
+    cent: 435.6,
 };
 
 const LAND_PROPERTY_TYPES =

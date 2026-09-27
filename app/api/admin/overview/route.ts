@@ -15,6 +15,7 @@ import {
 import User from "@/models/User";
 import Property from "@/models/Property";
 import Lead from "@/models/Lead";
+import BubbyLead from "@/models/BubbyLead";
 
 export async function GET() {
     const admin =
@@ -57,7 +58,7 @@ export async function GET() {
             status: "active",
         }),
 
-        Lead.countDocuments(),
+        Promise.all([Lead.countDocuments(), BubbyLead.countDocuments()]).then(([propertyLeads, bubbyLeads]) => propertyLeads + bubbyLeads),
     ]);
 
     return NextResponse.json(

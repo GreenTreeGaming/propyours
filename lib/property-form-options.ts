@@ -165,6 +165,8 @@ export const SIZE_UNITS = [
     { value: "acre", label: "Acre" },
     { value: "kanal", label: "Kanal" },
     { value: "marla", label: "Marla" },
+    { value: "ground", label: "Ground" },
+    { value: "cent", label: "Cent" },
 ] as const;
 
 export const OWNERSHIP_TYPES = [

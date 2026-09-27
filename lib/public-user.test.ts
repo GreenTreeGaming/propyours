@@ -9,6 +9,7 @@ describe("public user DTO", () => {
             role: "Builder",
             bio: "Bio",
             company: "Company",
+            companyWebsite: "",
             city: "Chennai",
             email: "private@example.com",
             phone: "+919999999999",
@@ -29,6 +30,7 @@ describe("public user DTO", () => {
             role: "Builder",
             bio: "Bio",
             company: "Company",
+            companyWebsite: "",
             city: "Chennai",
             reraNumber: "",
             builderPlan: {

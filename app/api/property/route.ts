@@ -307,17 +307,18 @@ function buildPropertyMatch(
                 },
             ],
         });
-    } else if (query.bhk === "4+") {
+    } else if (query.bhk === "4+" || query.bhk === "5+") {
+        const minimumBedrooms = query.bhk === "5+" ? 5 : 4;
         conditions.push({
             $or: [
                 {
                     bedrooms: {
-                        $gte: 4,
+                        $gte: minimumBedrooms,
                     },
                 },
                 {
                     "unitConfigurations.bedrooms": {
-                        $gte: 4,
+                        $gte: minimumBedrooms,
                     },
                 },
             ],

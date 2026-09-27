@@ -13,7 +13,7 @@ const UnitConfigurationSchema =
             toilets: { type: Number, min: 0, max: 20, default: null },
 
             landArea: { type: Number, min: 0.01, default: null },
-            landAreaUnit: { type: String, enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla"], default: "sqft" },
+            landAreaUnit: { type: String, enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"], default: "sqft" },
 
             size: {
                 type: Number,
@@ -30,6 +30,8 @@ const UnitConfigurationSchema =
                     "acre",
                     "kanal",
                     "marla",
+                    "ground",
+                    "cent",
                 ],
                 default: "sqft",
             },
@@ -54,7 +56,7 @@ const UnitConfigurationSchema =
 
 const PlotSizeSchema = new mongoose.Schema({
     size: { type: Number, required: true, min: 0.01 },
-    sizeUnit: { type: String, enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla"], default: "sqft" },
+    sizeUnit: { type: String, enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"], default: "sqft" },
 }, { _id: true });
 
 const PropertySchema =
@@ -171,6 +173,8 @@ const PropertySchema =
                     "acre",
                     "kanal",
                     "marla",
+                    "ground",
+                    "cent",
                 ],
                 default: "sqft",
             },

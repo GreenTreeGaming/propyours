@@ -34,6 +34,34 @@ const actionSchema =
         "action",
         [
             z.object({
+                action: z.literal("set-profile"),
+                name: z.string().trim().min(2).max(100),
+                role: z.enum([
+                    "User",
+                    "Admin",
+                    "SuperAdmin",
+                    "Agent",
+                    "Builder",
+                    "Property Owner",
+                ]),
+                company: z.string().trim().max(150),
+                companyWebsite: z.union([
+                    z.literal(""),
+                    z.string()
+                        .trim()
+                        .url()
+                        .max(300)
+                        .refine(
+                            (value) => /^https?:\/\//i.test(value),
+                            "Company website must use http or https.",
+                        ),
+                ]),
+                city: z.string().trim().max(100),
+                address: z.string().trim().max(300),
+                bio: z.string().trim().max(1200),
+            }).strict(),
+
+            z.object({
                 action:
                     z.literal(
                         "revoke-sessions",
@@ -214,7 +242,7 @@ export async function PATCH(
     const target =
         await User.findById(id)
             .select(
-                "name email role plan +tokenVersion",
+                "name email role bio company companyWebsite address city plan +tokenVersion",
             );
 
     if (!target) {
@@ -245,6 +273,54 @@ export async function PATCH(
     }
 
     const action = parsed.data;
+
+    if (action.action === "set-profile") {
+        if (
+            (target.role === "Admin" || target.role === "SuperAdmin") &&
+            action.role !== target.role
+        ) {
+            return NextResponse.json(
+                { error: "Administrator roles cannot be changed from the profile editor." },
+                { status: 403 },
+            );
+        }
+
+        const previousProfile = {
+            name: target.name,
+            role: target.role,
+            company: target.company ?? "",
+            companyWebsite: target.companyWebsite ?? "",
+            city: target.city ?? "",
+            address: target.address ?? "",
+            bio: target.bio ?? "",
+        };
+
+        target.name = action.name;
+        target.role = action.role;
+        target.company = action.company || undefined;
+        target.companyWebsite = action.companyWebsite || undefined;
+        target.city = action.city || undefined;
+        target.address = action.address || undefined;
+        target.bio = action.bio || undefined;
+
+        await target.save();
+
+        await writeAdminAudit({
+            request,
+            actorUserId: admin.userId,
+            actorRole: admin.role,
+            action: "user.profile.update",
+            targetUserId: id,
+            metadata: {
+                previousProfile,
+                nextProfile: action,
+            },
+        });
+
+        return NextResponse.json({
+            message: "Company profile updated.",
+        });
+    }
 
     if (
         action.action ===

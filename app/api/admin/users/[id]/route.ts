@@ -49,6 +49,7 @@ export async function GET(
                 "role",
                 "bio",
                 "company",
+                "companyWebsite",
                 "address",
                 "city",
                 "favorites",

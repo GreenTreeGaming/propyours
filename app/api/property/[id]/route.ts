@@ -8,7 +8,6 @@ import { getPublicPropertyFilter } from "@/lib/property-filters";
 import { toPublicUserProfile } from "@/lib/public-user";
 import {
     getAuthenticatedUser,
-    getOptionalAuthenticatedUser,
     isAuthError,
 } from "@/lib/auth";
 import { getPlanLimits } from "@/lib/plans";
@@ -100,6 +99,8 @@ const ALLOWED_SIZE_UNITS = [
     "acre",
     "kanal",
     "marla",
+    "ground",
+    "cent",
 ] as const;
 
 interface SanitizedUnitConfiguration {
@@ -418,12 +419,6 @@ export async function GET(
     try {
         await connectDB();
 
-        const viewer =
-            await getOptionalAuthenticatedUser();
-
-        const canViewPrice =
-            viewer !== null;
-
         const { id } = await params;
 
         const property =
@@ -454,43 +449,9 @@ export async function GET(
             responseProperty.images = [];
         }
 
-        if (!canViewPrice) {
-            responseProperty.price = null;
-
-            if (
-                Array.isArray(
-                    responseProperty.unitConfigurations,
-                )
-            ) {
-                responseProperty.unitConfigurations =
-                    responseProperty.unitConfigurations.map(
-                        (
-                            unit: Record<
-                                string,
-                                unknown
-                            >,
-                        ) => ({
-                            ...unit,
-                            price: null,
-                        }),
-                    );
-            }
-
-            (
-                responseProperty as Record<
-                    string,
-                    unknown
-                >
-            ).priceLocked = true;
-        } else {
-            (
-                responseProperty as Record<
-                    string,
-                    unknown
-                >
-            ).priceLocked =
-                false;
-        }
+        (
+            responseProperty as Record<string, unknown>
+        ).priceLocked = false;
 
         if (
             responseProperty.userId &&

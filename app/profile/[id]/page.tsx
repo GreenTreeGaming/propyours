@@ -151,6 +151,7 @@ interface UserProfile {
     role?: string;
     bio?: string;
     company?: string;
+    companyWebsite?: string;
     address?: string;
     city?: string;
     phone?: string;
@@ -262,6 +263,8 @@ const SIZE_UNIT_LABELS: Record<
     acre: "acre",
     kanal: "kanal",
     marla: "marla",
+    ground: "ground",
+    cent: "cent",
 };
 
 function isAbortError(
@@ -970,7 +973,7 @@ export default function PublicProfilePage() {
         const shareUrl =
             window.location.href;
         const shareData = {
-            title: `${profile.name} on PropYours`,
+            title: `${profile.company || profile.name} on PropYours`,
             text: profile.company
                 ? `View ${profile.company}'s active property listings on PropYours.`
                 : `View ${profile.name}'s active property listings on PropYours.`,
@@ -1192,7 +1195,7 @@ export default function PublicProfilePage() {
                                 </div>
 
                                 <h1 className="mt-5 font-heading text-4xl font-black leading-[1.04] tracking-[-0.05em] sm:text-5xl lg:text-6xl">
-                                    {profile.name}
+                                    {profile.company || profile.name}
                                 </h1>
 
                                 {profile.role === "Agent" &&
@@ -1228,7 +1231,7 @@ export default function PublicProfilePage() {
 
                                 {profile.company ? (
                                     <p className={`mt-3 text-xl font-black ${plan.accentClassName}`}>
-                                        {profile.company}
+                                        {profile.name}
                                     </p>
                                 ) : null}
 
@@ -1758,6 +1761,27 @@ function ProfileContactCard({
                             label="Location"
                             value={profile.city}
                         />
+                    ) : null}
+
+                    {profile.companyWebsite ? (
+                        <a
+                            href={profile.companyWebsite}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-start gap-3 rounded-xl border border-slate-100 p-3.5 transition hover:border-teal-200 hover:bg-teal-50/40"
+                        >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-primary">
+                                <ExternalLink size={16} aria-hidden="true" />
+                            </span>
+                            <span className="min-w-0">
+                                <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                                    Company website
+                                </span>
+                                <span className="mt-1 block truncate text-sm font-black leading-5 text-primary">
+                                    {profile.companyWebsite.replace(/^https?:\/\//, "")}
+                                </span>
+                            </span>
+                        </a>
                     ) : null}
 
                     {profile.address ? (

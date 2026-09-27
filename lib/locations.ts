@@ -135,6 +135,7 @@ export const TAMIL_NADU_LOCATIONS: Record<string, string[]> = {
     // M
     "Madhavaram",
     "Madhavaram Milk Colony",
+    "Madambakkam",
     "Madipakkam",
     "Maduravoyal",
     "Mahabalipuram",

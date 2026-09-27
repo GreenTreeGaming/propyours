@@ -294,6 +294,8 @@ function formatArea(
         acre: "acre",
         kanal: "kanal",
         marla: "marla",
+        ground: "ground",
+        cent: "cent",
     };
 
     return `${new Intl.NumberFormat(

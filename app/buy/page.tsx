@@ -237,7 +237,7 @@ const RESIDENTIAL_TYPES = new Set([
   "Farm House",
 ]);
 
-const BHK_OPTIONS = ["All", "1", "2", "3", "4+", "Studio"];
+const BHK_OPTIONS = ["All", "1", "2", "3", "4", "5+", "Studio"];
 
 const PRICE_PRESETS = [
   { label: "Under ₹25 L", value: "2500000" },

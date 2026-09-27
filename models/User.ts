@@ -55,6 +55,13 @@ const UserSchema = new Schema(
             required: false,
         },
 
+        companyWebsite: {
+            type: String,
+            required: false,
+            trim: true,
+            maxlength: 300,
+        },
+
         reraNumber: {
             type: String,
             required: false,

@@ -34,6 +34,7 @@ import {
 import { UploadDropzone } from "@/lib/uploadthing";
 import { preparePropertyImages } from "@/lib/prepare-property-image";
 import MapPinPicker from "@/components/MapPinPicker";
+import NegotiabilityToggle from "@/components/NegotiabilityToggle";
 import { validMapPoint } from "@/lib/map-locations";
 import {
     AMENITY_CATEGORIES,
@@ -2490,50 +2491,12 @@ export default function FullPropertyEditorModal({
                                                                 <FieldLabel>
                                                                     Negotiability
                                                                 </FieldLabel>
-
-                                                                <button
-                                                                    type="button"
-                                                                    aria-pressed={
-                                                                        form.negotiable
+                                                                <NegotiabilityToggle
+                                                                    value={form.negotiable}
+                                                                    onChange={(negotiable) =>
+                                                                        updateForm({ negotiable })
                                                                     }
-                                                                    onClick={() =>
-                                                                        updateForm({
-                                                                            negotiable:
-                                                                                !form.negotiable,
-                                                                        })
-                                                                    }
-                                                                    className={`flex h-13 w-full items-center justify-between rounded-xl border px-4 text-left transition ${
-                                                                        form.negotiable
-                                                                            ? "border-primary bg-teal-50"
-                                                                            : "border-slate-200 bg-slate-50"
-                                                                    }`}
-                                                                >
-                                  <span>
-                                    <span className="block text-sm font-black text-slate-950">
-                                      {form.negotiable
-                                          ? "Negotiable"
-                                          : "Fixed price"}
-                                    </span>
-                                    <span className="mt-0.5 block text-xs text-slate-500">
-                                      {form.negotiable
-                                          ? "Offers can be discussed."
-                                          : "The listed amount is final."}
-                                    </span>
-                                  </span>
-
-                                                                    <span
-                                                                        className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                                                                            form.negotiable
-                                                                                ? "border-primary bg-primary text-white"
-                                                                                : "border-slate-300 bg-white text-transparent"
-                                                                        }`}
-                                                                    >
-                                    <Check
-                                        size={13}
-                                        aria-hidden="true"
-                                    />
-                                  </span>
-                                                                </button>
+                                                                />
                                                             </div>
                                                         </div>
                                                     </div>

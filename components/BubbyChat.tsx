@@ -56,6 +56,9 @@ interface UiMessage {
 const STORAGE_KEY =
     "propyours-bubby-conversation";
 
+const API_CONTEXT_MESSAGE_LIMIT = 10;
+const API_CONTEXT_CHARACTER_LIMIT = 6_000;
+
 const HIDDEN_ROUTE_PREFIXES = [
     "/post-property",
     "/create-property",
@@ -286,12 +289,7 @@ export default function BubbyChat() {
                     },
                     credentials: "same-origin",
                     body: JSON.stringify({
-                        messages: requestMessages.map(
-                            (message) => ({
-                                role: message.role,
-                                content: message.content,
-                            }),
-                        ),
+                        messages: getApiMessageContext(requestMessages),
                         previousFilters,
                     }),
                 },
@@ -544,6 +542,7 @@ export default function BubbyChat() {
                                             latestAssistantMessage?.searchFilters ??
                                             null
                                         }
+                                        searchQuery={leadOpportunity.content}
                                         onSuccess={() =>
                                             markLeadCaptured(
                                                 leadOpportunity.id,
@@ -694,6 +693,34 @@ export default function BubbyChat() {
     );
 }
 
+function getApiMessageContext(messages: UiMessage[]) {
+    const context: Array<Pick<UiMessage, "role" | "content">> = [];
+    let characterCount = 0;
+
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+
+        if (!message || context.length >= API_CONTEXT_MESSAGE_LIMIT) {
+            break;
+        }
+
+        if (
+            context.length > 0 &&
+            characterCount + message.content.length > API_CONTEXT_CHARACTER_LIMIT
+        ) {
+            break;
+        }
+
+        context.push({
+            role: message.role,
+            content: message.content,
+        });
+        characterCount += message.content.length;
+    }
+
+    return context.reverse();
+}
+
 function MessageBubble({
                            message,
                            leadUnlocked,
@@ -771,8 +798,8 @@ function MessageBubble({
     );
 }
 
-function BubbyLeadCapture({ propertyIds, searchFilters, onSuccess }: { propertyIds: string[]; searchFilters: BubbySearchFilters | null; onSuccess: () => void }) {
-    return <div className="ml-10 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm"><VerifiedEnquiryForm variant="bubby" propertyIds={propertyIds} searchFilters={searchFilters} onSuccess={onSuccess} /></div>;
+function BubbyLeadCapture({ propertyIds, searchFilters, searchQuery, onSuccess }: { propertyIds: string[]; searchFilters: BubbySearchFilters | null; searchQuery: string; onSuccess: () => void }) {
+    return <div className="ml-10 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm"><VerifiedEnquiryForm variant="bubby" propertyIds={propertyIds} searchFilters={searchFilters} searchQuery={searchQuery} onSuccess={onSuccess} /></div>;
 }
 
 function AssistantAvatar() {

@@ -34,6 +34,13 @@ const BubbyLeadSchema = new Schema(
             required: false,
         },
 
+        searchQuery: {
+            type: String,
+            trim: true,
+            maxlength: 1000,
+            default: "",
+        },
+
         source: {
             type: String,
             enum: ["bubby"],

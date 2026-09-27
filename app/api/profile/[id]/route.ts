@@ -12,6 +12,7 @@ import {
 import User from "@/models/User";
 import Property from "@/models/Property";
 import { screenPropertyImages } from "@/lib/public-property-images";
+import { getBuilderPropertyAssociation } from "@/lib/builder-properties";
 
 const BUILDER_PLAN_RANK: Record<
     string,
@@ -78,7 +79,7 @@ export async function GET(
         const user =
             await User.findById(id)
                 .select(
-                    "name role bio company city plan",
+                    "name role bio company companyWebsite address city plan",
                 )
                 .lean();
 
@@ -102,10 +103,14 @@ export async function GET(
                     $match:
                         getPublicPropertyFilter(
                             {
-                                userId:
-                                    new mongoose.Types.ObjectId(
-                                        id,
+                                $and: [
+                                    getBuilderPropertyAssociation(
+                                        new mongoose.Types.ObjectId(id),
+                                        (user as any).role === "Builder"
+                                            ? (user as any).company
+                                            : "",
                                     ),
+                                ],
                             },
                         ),
                 },

@@ -3,6 +3,10 @@ import { connectDB } from "@/lib/mongoose";
 import User from "@/models/User";
 import Property from "@/models/Property";
 import { toPublicUserProfile } from "@/lib/public-user";
+import {
+    exactBuilderNameRegex,
+    normalizedBuilderName,
+} from "@/lib/builder-properties";
 
 const BUILDER_PLAN_RANK: Record<string, number> = {
     "builder-elite": 3,
@@ -27,41 +31,72 @@ export async function GET() {
         await connectDB();
 
         const builders = await User.find({ role: "Builder" })
-            .select("name role bio company city plan")
+            .select("name role bio company companyWebsite address city plan")
             .lean();
 
         const builderIds = builders.map((builder: any) => builder._id);
 
-        const propertyStats = await Property.aggregate([
-            {
-                $match: {
-                    userId: { $in: builderIds },
-                },
-            },
-            {
-                $group: {
-                    _id: "$userId",
-                    projects: { $sum: 1 },
-                    activeProjects: {
-                        $sum: {
-                            $cond: [{ $eq: ["$status", "active"] }, 1, 0],
-                        },
-                    },
-                    featuredProjects: {
-                        $sum: {
-                            $cond: [{ $eq: ["$featured", true] }, 1, 0],
-                        },
-                    },
-                    totalViews: { $sum: "$analytics.views" },
-                    phoneClicks: { $sum: "$analytics.phoneClicks" },
-                    favorites: { $sum: "$analytics.favoritesCount" },
-                },
-            },
-        ]);
+        const companyExpressions = builders
+            .map((builder: any) => exactBuilderNameRegex(builder.company))
+            .filter((value): value is RegExp => value !== null);
 
-        const statsByBuilderId = new Map(
-            propertyStats.map((stats) => [String(stats._id), stats])
-        );
+        const relatedProperties = builderIds.length
+            ? await Property.find({
+                $or: [
+                    { userId: { $in: builderIds } },
+                    ...(companyExpressions.length
+                        ? [{ developerName: { $in: companyExpressions } }]
+                        : []),
+                ],
+            })
+                .select("userId developerName status featured analytics")
+                .lean()
+            : [];
+
+        const companyOwners = new Map<string, string[]>();
+        const statsByBuilderId = new Map<string, any>();
+
+        for (const builder of builders as any[]) {
+            const id = String(builder._id);
+            const key = normalizedBuilderName(builder.company);
+            statsByBuilderId.set(id, {
+                projects: 0,
+                activeProjects: 0,
+                featuredProjects: 0,
+                totalViews: 0,
+                phoneClicks: 0,
+                favorites: 0,
+            });
+
+            if (key) {
+                companyOwners.set(key, [...(companyOwners.get(key) ?? []), id]);
+            }
+        }
+
+        for (const property of relatedProperties as any[]) {
+            const matchedBuilders = new Set<string>();
+            const ownerId = String(property.userId ?? "");
+
+            if (statsByBuilderId.has(ownerId)) {
+                matchedBuilders.add(ownerId);
+            }
+
+            for (const builderId of companyOwners.get(
+                normalizedBuilderName(property.developerName),
+            ) ?? []) {
+                matchedBuilders.add(builderId);
+            }
+
+            for (const builderId of matchedBuilders) {
+                const stats = statsByBuilderId.get(builderId);
+                stats.projects += 1;
+                stats.activeProjects += property.status === "active" ? 1 : 0;
+                stats.featuredProjects += property.featured === true ? 1 : 0;
+                stats.totalViews += property.analytics?.views ?? 0;
+                stats.phoneClicks += property.analytics?.phoneClicks ?? 0;
+                stats.favorites += property.analytics?.favoritesCount ?? 0;
+            }
+        }
 
         const buildersWithStats = builders
             .map((builder: any) => {

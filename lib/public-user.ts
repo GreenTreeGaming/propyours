@@ -9,6 +9,7 @@ type PublicUserInput = {
     role?: unknown;
     bio?: unknown;
     company?: unknown;
+    companyWebsite?: unknown;
     city?: unknown;
     reraNumber?: unknown;
 
@@ -83,6 +84,11 @@ export function toPublicUserProfile(
         company: stringOrEmpty(
             user.company,
         ),
+
+        companyWebsite:
+            user.role === "Builder"
+                ? stringOrEmpty(user.companyWebsite)
+                : "",
 
         city: stringOrEmpty(
             user.city,

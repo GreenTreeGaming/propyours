@@ -10,6 +10,7 @@ type Props = {
     propertyId?: string;
     propertyIds?: string[];
     searchFilters?: unknown;
+    searchQuery?: string;
     onSuccess?: () => void;
 };
 
@@ -20,7 +21,7 @@ async function postJson(url: string, body: unknown) {
     return payload;
 }
 
-export default function VerifiedEnquiryForm({ variant, propertyId, propertyIds = [], searchFilters = null, onSuccess }: Props) {
+export default function VerifiedEnquiryForm({ variant, propertyId, propertyIds = [], searchFilters = null, searchQuery = "", onSuccess }: Props) {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
@@ -44,7 +45,7 @@ export default function VerifiedEnquiryForm({ variant, propertyId, propertyIds =
 
     async function saveLead(verificationToken: string) {
         const payload = isBubby
-            ? await postJson("/api/bubby/lead", { name: name.trim(), email: email.trim(), mobile: phone.trim(), verificationToken, propertyIds, searchFilters, consent: true })
+            ? await postJson("/api/bubby/lead", { name: name.trim(), email: email.trim(), mobile: phone.trim(), verificationToken, propertyIds, searchFilters, searchQuery, consent: true })
             : await postJson(`/api/property/${propertyId}/contact-request`, { name: name.trim(), email: email.trim(), phone: phone.trim(), verificationToken, consent: true });
         if (!isBubby) setOwner(payload.owner ?? null);
         setStage("done"); onSuccess?.();
