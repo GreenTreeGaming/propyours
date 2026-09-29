@@ -1198,7 +1198,7 @@ export default function PublicProfilePage() {
                                     {profile.company || profile.name}
                                 </h1>
 
-                                {profile.role === "Agent" &&
+                                {(profile.role === "Agent" || profile.role === "Builder") &&
                                 profile.reraNumber ? (
                                     <div className="mt-3">
         <span
@@ -1746,7 +1746,7 @@ function ProfileContactCard({
                         />
                     ) : null}
 
-                    {profile.role === "Agent" &&
+                    {(profile.role === "Agent" || profile.role === "Builder") &&
                     profile.reraNumber ? (
                         <ProfileDetail
                             icon={BadgeCheck}

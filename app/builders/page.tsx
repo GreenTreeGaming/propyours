@@ -331,6 +331,7 @@ interface Builder {
   city?: string;
   bio?: string;
   phone?: string;
+  reraNumber?: string;
   projects: number;
   activeProjects: number;
   featuredProjects: number;
@@ -581,6 +582,13 @@ function BuilderCard({
             {builder.city || "Tamil Nadu"}, India
           </span>
           </div>
+
+          {builder.reraNumber ? (
+              <div className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.09em] text-emerald-700">
+                <BadgeCheck size={12} aria-hidden="true" />
+                RERA: {builder.reraNumber}
+              </div>
+          ) : null}
 
           <p className="mt-4 line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-slate-600">
             {getBuilderDescription(builder)}
@@ -1267,6 +1275,13 @@ function BuildersPage() {
                           <MapPin size={16} aria-hidden="true" />
                           {spotlightBuilder.city || "Tamil Nadu"}, India
                         </div>
+
+                        {spotlightBuilder.reraNumber ? (
+                            <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-200">
+                              <BadgeCheck size={13} aria-hidden="true" />
+                              RERA: {spotlightBuilder.reraNumber}
+                            </div>
+                        ) : null}
 
                         <p className="mt-6 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
                           {getBuilderDescription(spotlightBuilder)}

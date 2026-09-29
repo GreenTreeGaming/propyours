@@ -6,6 +6,7 @@ import Property from "@/models/Property";
 import User from "@/models/User";
 import { getPublicPropertyFilter } from "@/lib/property-filters";
 import { toPublicUserProfile } from "@/lib/public-user";
+import { syncPropyoursZeroBrokerageListings } from "@/lib/propyours-listings";
 import {
     getAuthenticatedUser,
     isAuthError,
@@ -418,6 +419,7 @@ export async function GET(
 ) {
     try {
         await connectDB();
+        await syncPropyoursZeroBrokerageListings();
 
         const { id } = await params;
 
@@ -1085,6 +1087,11 @@ export async function PUT(
                         .slice(0, 150)
                     : undefined,
 
+            reraNumber:
+                typeof body.reraNumber === "string"
+                    ? body.reraNumber.trim().slice(0, 100)
+                    : undefined,
+
             condition:
                 body.condition ===
                 "ready_to_occupy" ||
@@ -1128,6 +1135,16 @@ export async function PUT(
             body.priceType,
             negotiable:
             body.negotiable,
+            zeroCommission:
+                typeof body.zeroCommission === "boolean"
+                    ? body.zeroCommission
+                    : property.zeroCommission === true,
+            commissionType:
+                (typeof body.zeroCommission === "boolean"
+                    ? body.zeroCommission
+                    : property.zeroCommission === true)
+                    ? "zero"
+                    : "applicable",
             bedrooms: isLand
                 ? null
                 : body.bedrooms,

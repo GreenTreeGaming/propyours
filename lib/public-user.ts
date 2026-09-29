@@ -95,7 +95,7 @@ export function toPublicUserProfile(
         ),
 
         reraNumber:
-            user.role === "Agent"
+            user.role === "Agent" || user.role === "Builder"
                 ? stringOrEmpty(
                     user.reraNumber,
                 )

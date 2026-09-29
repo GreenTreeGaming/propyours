@@ -50,6 +50,7 @@ export async function GET(
                 "bio",
                 "company",
                 "companyWebsite",
+                "reraNumber",
                 "address",
                 "city",
                 "favorites",

@@ -79,7 +79,7 @@ export async function GET(
         const user =
             await User.findById(id)
                 .select(
-                    "name role bio company companyWebsite address city plan",
+                    "name role bio company companyWebsite reraNumber address city plan",
                 )
                 .lean();
 

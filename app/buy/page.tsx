@@ -508,10 +508,9 @@ function PropertyCard({
             aria-hidden="true"
         />
 
-        Zero Commission
+        Zero Brokerage
     </span>
-                ) : property.commissionType ===
-                "applicable" ? (
+                ) : (
                     <span
                         className="
             inline-flex
@@ -531,9 +530,9 @@ function PropertyCard({
             shadow-sm
         "
                     >
-        Commission Applicable
+        Brokerage Applies
     </span>
-                ) : null}
+                )}
 
                 {badge ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] text-white shadow-lg shadow-primary/20">
@@ -949,11 +948,11 @@ function FilterPanel({
               className="text-emerald-600"
               aria-hidden="true"
           />
-          Zero Commission
+          Zero Brokerage
         </span>
 
         <span className="mt-1 block text-xs leading-5 text-slate-500">
-          Show only properties with no commission.
+          Show only properties with no brokerage.
         </span>
       </span>
               </button>
@@ -1642,7 +1641,7 @@ function BuyPageContent() {
           label:
               listingFilter ===
               "zero-commission"
-                  ? "Zero Commission"
+                  ? "Zero Brokerage"
                   : "Featured only",
           remove: () =>
               setListingFilter("all"),
@@ -1858,7 +1857,7 @@ function BuyPageContent() {
                         setShowSuggestions(true);
                       }}
                       onFocus={() => setShowSuggestions(true)}
-                      placeholder="Search locality, city or property type"
+                      placeholder="Search project, 4BHK, locality, amenity or builder"
                       className="h-14 w-full rounded-xl border border-white/10 bg-white pl-12 pr-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-teal-300 focus:ring-4 focus:ring-teal-400/15"
                       aria-label="Search properties"
                   />

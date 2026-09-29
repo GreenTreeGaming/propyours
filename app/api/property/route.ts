@@ -12,6 +12,7 @@ import {
 
 import Property from "@/models/Property";
 import { screenPropertyImages } from "@/lib/public-property-images";
+import { syncPropyoursZeroBrokerageListings } from "@/lib/propyours-listings";
 
 type SortDirection = 1 | -1;
 
@@ -91,6 +92,213 @@ function createSearchMatch(
             ),
         $options: "i",
     };
+}
+
+const KEYWORD_TEXT_FIELDS = [
+    "projectName",
+    "developerName",
+    "description",
+    "address",
+    "locality",
+    "city",
+    "state",
+    "landmark",
+    "propertyType",
+    "commercialType",
+    "ownershipType",
+    "amenities",
+    "dimensions",
+] as const;
+
+const SEARCH_STOP_WORDS = new Set([
+    "a",
+    "all",
+    "and",
+    "any",
+    "for",
+    "find",
+    "in",
+    "me",
+    "of",
+    "property",
+    "properties",
+    "show",
+    "the",
+    "with",
+]);
+
+function textKeywordCondition(value: string) {
+    const searchMatch = createSearchMatch(value);
+
+    return {
+        $or: KEYWORD_TEXT_FIELDS.map((field) => ({
+            [field]: searchMatch,
+        })),
+    };
+}
+
+function buildKeywordCondition(value: string): Record<string, unknown> | null {
+    let remaining = value.trim().toLowerCase();
+    const clauses: Record<string, unknown>[] = [];
+
+    const bhkMatch = remaining.match(
+        /\b(\d{1,2})\s*\+?\s*(?:bhk|bed(?:room)?s?)\b/i,
+    );
+
+    if (bhkMatch) {
+        const bedrooms = Number.parseInt(bhkMatch[1], 10);
+        const range = bhkMatch[0].includes("+")
+            ? { $gte: bedrooms }
+            : bedrooms;
+
+        clauses.push({
+            $or: [
+                { bedrooms: range },
+                { "unitConfigurations.bedrooms": range },
+            ],
+        });
+        remaining = remaining.replace(bhkMatch[0], " ");
+    }
+
+    const bathroomMatch = remaining.match(
+        /\b(\d{1,2})\s*(?:t|bath(?:room)?s?|washrooms?)\b/i,
+    );
+
+    if (bathroomMatch) {
+        const bathrooms = Number.parseInt(bathroomMatch[1], 10);
+        clauses.push({
+            $or: [
+                { bathrooms },
+                { "unitConfigurations.toilets": bathrooms },
+            ],
+        });
+        remaining = remaining.replace(bathroomMatch[0], " ");
+    }
+
+    const floorMatch = remaining.match(/\b(\d{1,3})\s*floors?\b/i);
+
+    if (floorMatch) {
+        clauses.push({ floors: Number.parseInt(floorMatch[1], 10) });
+        remaining = remaining.replace(floorMatch[0], " ");
+    }
+
+    const budgetMatch = remaining.match(
+        /\b(?:under|below|up\s*to|maximum|max)\s*₹?\s*(\d+(?:\.\d+)?)\s*(crores?|cr|lakhs?|lacs?|lac|l)\b/i,
+    );
+
+    if (budgetMatch) {
+        const amount = Number.parseFloat(budgetMatch[1]);
+        const unit = budgetMatch[2].toLowerCase();
+        const multiplier =
+            unit.startsWith("cr") || unit.startsWith("crore")
+                ? 10_000_000
+                : 100_000;
+        const maximumPrice = amount * multiplier;
+
+        clauses.push({
+            $or: [
+                { price: { $lte: maximumPrice } },
+                { "unitConfigurations.price": { $lte: maximumPrice } },
+            ],
+        });
+        remaining = remaining.replace(budgetMatch[0], " ");
+    }
+
+    const areaMatch = remaining.match(
+        /\b(\d+(?:\.\d+)?)\s*(sq\s*ft|sqft|sq\s*yd|sqyd|sq\s*m|sqm|acre|ground|cent|kanal|marla)\b/i,
+    );
+
+    if (areaMatch) {
+        const size = Number.parseFloat(areaMatch[1]);
+        const unitAliases: Record<string, string> = {
+            "sq ft": "sqft",
+            sqft: "sqft",
+            "sq yd": "sqyd",
+            sqyd: "sqyd",
+            "sq m": "sqm",
+            sqm: "sqm",
+        };
+        const rawUnit = areaMatch[2].toLowerCase().replace(/\s+/g, " ");
+        const sizeUnit = unitAliases[rawUnit] ?? rawUnit;
+
+        clauses.push({
+            $or: [
+                { size, sizeUnit },
+                {
+                    unitConfigurations: {
+                        $elemMatch: { size, sizeUnit },
+                    },
+                },
+                {
+                    plotSizes: {
+                        $elemMatch: { size, sizeUnit },
+                    },
+                },
+            ],
+        });
+        remaining = remaining.replace(areaMatch[0], " ");
+    }
+
+    const structuredPhrases: Array<{
+        pattern: RegExp;
+        condition: Record<string, unknown>;
+    }> = [
+        {
+            pattern: /\bzero\s+(?:brokerage|commission)\b/i,
+            condition: {
+                $or: [
+                    { zeroCommission: true },
+                    { commissionType: "zero" },
+                ],
+            },
+        },
+        {
+            pattern: /\bunder\s+construction\b/i,
+            condition: { condition: "under_construction" },
+        },
+        {
+            pattern: /\bready\s+(?:to\s+occupy|possession)\b/i,
+            condition: { condition: "ready_to_occupy" },
+        },
+        {
+            pattern: /\bnegotiable\b/i,
+            condition: { negotiable: true },
+        },
+        {
+            pattern: /\b(?:rent|rental)\b/i,
+            condition: { purpose: "Rent" },
+        },
+        {
+            pattern: /\b(?:sale|sell|buy)\b/i,
+            condition: { purpose: { $in: ["Sell", "Buy"] } },
+        },
+    ];
+
+    for (const phrase of structuredPhrases) {
+        if (phrase.pattern.test(remaining)) {
+            clauses.push(phrase.condition);
+            remaining = remaining.replace(phrase.pattern, " ");
+        }
+    }
+
+    const tokens = remaining
+        .split(/[^a-z0-9]+/i)
+        .map((token) => token.trim())
+        .filter(
+            (token) =>
+                token.length > 1 &&
+                !SEARCH_STOP_WORDS.has(token),
+        );
+
+    for (const token of tokens) {
+        clauses.push(textKeywordCondition(token));
+    }
+
+    if (clauses.length === 0) {
+        return null;
+    }
+
+    return clauses.length === 1 ? clauses[0] : { $and: clauses };
 }
 
 function getSortStage(
@@ -247,36 +455,11 @@ function buildPropertyMatch(
     }
 
     if (query.location) {
-        const searchMatch =
-            createSearchMatch(
-                query.location,
-            );
+        const keywordCondition = buildKeywordCondition(query.location);
 
-        conditions.push({
-            $or: [
-                {
-                    address: searchMatch,
-                },
-                {
-                    locality: searchMatch,
-                },
-                {
-                    city: searchMatch,
-                },
-                {
-                    projectName:
-                    searchMatch,
-                },
-                {
-                    propertyType:
-                    searchMatch,
-                },
-                {
-                    commercialType:
-                    searchMatch,
-                },
-            ],
-        });
+        if (keywordCondition) {
+            conditions.push(keywordCondition);
+        }
     }
 
     if (
@@ -427,6 +610,7 @@ export async function GET(
         const query = validation.data;
 
         await connectDB();
+        await syncPropyoursZeroBrokerageListings();
 
         const now = new Date();
 

@@ -160,6 +160,12 @@ const PropertySchema =
                 maxlength: 150,
             },
 
+            reraNumber: {
+                type: String,
+                trim: true,
+                maxlength: 100,
+            },
+
             size: {
                 type: Number,
                 required: true,

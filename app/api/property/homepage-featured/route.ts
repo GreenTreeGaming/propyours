@@ -12,12 +12,14 @@ import {
 
 import Property from "@/models/Property";
 import { screenPropertyImages } from "@/lib/public-property-images";
+import { syncPropyoursZeroBrokerageListings } from "@/lib/propyours-listings";
 
 const HOMEPAGE_PROPERTY_LIMIT = 4;
 
 export async function GET() {
     try {
         await connectDB();
+        await syncPropyoursZeroBrokerageListings();
 
         const now = new Date();
 

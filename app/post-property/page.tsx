@@ -55,6 +55,7 @@ import { UploadDropzone } from "@/lib/uploadthing";
 import { preparePropertyImages } from "@/lib/prepare-property-image";
 import MapPinPicker from "@/components/MapPinPicker";
 import NegotiabilityToggle from "@/components/NegotiabilityToggle";
+import BrokerageChoice from "@/components/BrokerageChoice";
 import { validMapPoint } from "@/lib/map-locations";
 import {
     PLAN_CATALOG,
@@ -203,6 +204,7 @@ interface PropertyForm {
     landmark: string;
     developerName: string;
     projectName: string;
+    reraNumber: string;
     uds: string;
     size: string;
     sizeUnit: string;
@@ -378,6 +380,7 @@ const DEFAULT_FORM: PropertyForm = {
     landmark: "",
     developerName: "",
     projectName: "",
+    reraNumber: "",
     uds: "",
     unitConfigurations: [],
     plotSizes: [],
@@ -1622,6 +1625,9 @@ export default function PostPropertyPage() {
                         projectName:
                             form.projectName.trim(),
 
+                        reraNumber:
+                            form.reraNumber.trim(),
+
                         uds: optionalNumber(form.uds),
 
                         size: Number(form.size),
@@ -2686,6 +2692,25 @@ export default function PostPropertyPage() {
                                                         </label>
 
                                                         <label>
+                                                            <FieldLabel hint="Optional">
+                                                                RERA No.
+                                                            </FieldLabel>
+
+                                                            <input
+                                                                value={form.reraNumber}
+                                                                maxLength={100}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        reraNumber:
+                                                                        event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="e.g. TN/29/Building/0123/2026"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                        </label>
+
+                                                        <label>
                                                             <FieldLabel>Nearby landmark</FieldLabel>
                                                             <input
                                                                 value={form.landmark}
@@ -3503,46 +3528,14 @@ export default function PostPropertyPage() {
 
                                                             <div className="sm:col-span-2">
                                                                 <FieldLabel>
-                                                                    Commission preference
+                                                                    Brokerage preference
                                                                 </FieldLabel>
-
-                                                                <button
-                                                                    type="button"
-                                                                    aria-pressed={form.zeroCommission}
-                                                                    onClick={() =>
-                                                                        updateForm({
-                                                                            zeroCommission:
-                                                                                !form.zeroCommission,
-                                                                        })
+                                                                <BrokerageChoice
+                                                                    zeroBrokerage={form.zeroCommission}
+                                                                    onChange={(zeroCommission) =>
+                                                                        updateForm({ zeroCommission })
                                                                     }
-                                                                    className="flex w-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-primary/40 hover:bg-teal-50/30"
-                                                                >
-        <span
-            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                form.zeroCommission
-                    ? "border-primary bg-primary text-white"
-                    : "border-slate-300 bg-white text-transparent"
-            }`}
-        >
-            <Check
-                size={13}
-                strokeWidth={3}
-                aria-hidden="true"
-            />
-        </span>
-
-                                                                    <span>
-            <span className="block text-sm font-black text-slate-950">
-                Zero Commission
-            </span>
-
-            <span className="mt-1 block text-xs leading-5 text-slate-500">
-                Check this if no agent or
-                brokerage commission applies
-                to this property.
-            </span>
-        </span>
-                                                                </button>
+                                                                />
                                                             </div>
                                                         </div>
                                                     </div>
@@ -4405,6 +4398,10 @@ export default function PostPropertyPage() {
                                                                 label="Ownership"
                                                                 value={form.ownershipType}
                                                             />
+                                                            <ReviewRow
+                                                                label="RERA No."
+                                                                value={form.reraNumber || "Not provided"}
+                                                            />
                                                             {form.category !== "land" ? (
                                                             <ReviewRow
                                                                 label="Total floors"
@@ -4446,6 +4443,14 @@ export default function PostPropertyPage() {
                                                                     form.negotiable
                                                                         ? "Negotiable"
                                                                         : "Fixed price"
+                                                                }
+                                                            />
+                                                            <ReviewRow
+                                                                label="Brokerage"
+                                                                value={
+                                                                    form.zeroCommission
+                                                                        ? "Zero Brokerage"
+                                                                        : "Brokerage Applies"
                                                                 }
                                                             />
                                                             <ReviewRow

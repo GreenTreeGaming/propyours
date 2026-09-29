@@ -59,6 +59,8 @@ interface Property {
   imageReviewStatus?: "pending" | "approved" | "rejected";
   promotedUntil?: string;
   negotiable?: boolean;
+  zeroCommission?: boolean;
+  commissionType?: "zero" | "applicable";
 
   planSnapshot?: {
     homepageFeatured?: boolean;
@@ -368,10 +370,17 @@ export default function HomePage() {
   ]);
 
   const localities = useMemo(
-      () =>
-          TAMIL_NADU_LOCATIONS[
-              city as keyof typeof TAMIL_NADU_LOCATIONS
-              ] ?? [],
+      () => {
+        const values = city
+            ? TAMIL_NADU_LOCATIONS[
+                city as keyof typeof TAMIL_NADU_LOCATIONS
+                ] ?? []
+            : Object.values(TAMIL_NADU_LOCATIONS).flat();
+
+        return Array.from(
+            new Set(values.filter((item) => item.toLowerCase() !== "all")),
+        ).sort((first, second) => first.localeCompare(second));
+      },
       [city],
   );
 
@@ -435,9 +444,15 @@ export default function HomePage() {
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const searchesAllLocations =
+        locality.trim().toLowerCase() === "all";
+
     navigateToResults({
-      city,
-      location: locality,
+      city: searchesAllLocations ? "" : city,
+      location:
+          searchesAllLocations
+              ? ""
+              : locality.trim(),
       type:
           propertyType === "All Property Types"
               ? ""
@@ -1050,6 +1065,7 @@ export default function HomePage() {
                   className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                   aria-label="Select city"
               >
+                <option value="">All Tamil Nadu</option>
                 {TAMIL_NADU_CITIES.map((item) => (
                     <option key={item} value={item}>
                       {item}
@@ -1082,7 +1098,7 @@ export default function HomePage() {
                   value={locality}
                   onChange={(event) => setLocality(event.target.value)}
                   list="homepage-localities"
-                  placeholder={`Search in ${city}`}
+                  placeholder={city ? `Search in ${city}` : "Search any locality"}
                   className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
                   aria-label="Search locality"
               />
@@ -1488,6 +1504,20 @@ export default function HomePage() {
                           <span className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-xs font-bold text-white backdrop-blur">
                   {spotlightProperty.propertyType}
                 </span>
+
+                          <span
+                              className={`rounded-full border px-3 py-2 text-xs font-black shadow-lg backdrop-blur ${
+                                  spotlightProperty.commissionType === "zero" ||
+                                  spotlightProperty.zeroCommission
+                                      ? "border-emerald-200/60 bg-emerald-50/95 text-emerald-800"
+                                      : "border-amber-200/60 bg-amber-50/95 text-amber-800"
+                              }`}
+                          >
+                            {spotlightProperty.commissionType === "zero" ||
+                            spotlightProperty.zeroCommission
+                                ? "Zero Brokerage"
+                                : "Brokerage Applies"}
+                          </span>
                         </div>
 
                         <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition group-hover:bg-primary">
@@ -1634,6 +1664,20 @@ export default function HomePage() {
                                           <PriceNegotiabilityBadge
                                               negotiable={property.negotiable}
                                           />
+
+                                          <span
+                                              className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                                  property.commissionType === "zero" ||
+                                                  property.zeroCommission
+                                                      ? "bg-emerald-50 text-emerald-700"
+                                                      : "bg-amber-50 text-amber-700"
+                                              }`}
+                                          >
+                                            {property.commissionType === "zero" ||
+                                            property.zeroCommission
+                                                ? "Zero Brokerage"
+                                                : "Brokerage Applies"}
+                                          </span>
 
                                           {property.propertyType === "Plot" ? (
                                               property.size ? (

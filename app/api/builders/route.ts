@@ -31,7 +31,7 @@ export async function GET() {
         await connectDB();
 
         const builders = await User.find({ role: "Builder" })
-            .select("name role bio company companyWebsite address city plan")
+            .select("name role bio company companyWebsite reraNumber address city plan")
             .lean();
 
         const builderIds = builders.map((builder: any) => builder._id);

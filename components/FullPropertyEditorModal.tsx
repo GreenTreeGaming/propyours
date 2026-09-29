@@ -35,6 +35,7 @@ import { UploadDropzone } from "@/lib/uploadthing";
 import { preparePropertyImages } from "@/lib/prepare-property-image";
 import MapPinPicker from "@/components/MapPinPicker";
 import NegotiabilityToggle from "@/components/NegotiabilityToggle";
+import BrokerageChoice from "@/components/BrokerageChoice";
 import { validMapPoint } from "@/lib/map-locations";
 import {
     AMENITY_CATEGORIES,
@@ -66,6 +67,7 @@ export interface PropertyEditorProperty {
     landmark?: string;
     developerName?: string;
     projectName?: string;
+    reraNumber?: string;
 
     condition?:
         | "ready_to_occupy"
@@ -101,6 +103,8 @@ export interface PropertyEditorProperty {
     price: number;
     priceType?: string;
     negotiable?: boolean;
+    zeroCommission?: boolean;
+    commissionType?: "zero" | "applicable";
     bedrooms?: number | null;
     bathrooms?: number | null;
     floors?: number | null;
@@ -179,6 +183,7 @@ interface EditorForm {
     landmark: string;
     developerName: string;
     projectName: string;
+    reraNumber: string;
     uds: string;
     unitConfigurations: UnitConfigurationForm[];
     plotSizes: Array<{ id: string; size: string; sizeUnit: string }>;
@@ -189,6 +194,7 @@ interface EditorForm {
     price: string;
     priceType: string;
     negotiable: boolean;
+    zeroCommission: boolean;
     bedrooms: string;
     bathrooms: string;
     floors: string;
@@ -403,6 +409,8 @@ function createEditorForm(
 
         projectName:
             property.projectName || "",
+        reraNumber:
+            property.reraNumber || "",
 
         uds:
             property.uds === null ||
@@ -473,6 +481,10 @@ function createEditorForm(
         priceType: property.priceType || "Total",
         negotiable:
             property.negotiable ?? true,
+        zeroCommission:
+            property.commissionType === "zero" ||
+            (property.commissionType == null &&
+                property.zeroCommission === true),
         bedrooms:
             property.bedrooms === null ||
             property.bedrooms === undefined
@@ -1412,6 +1424,9 @@ export default function FullPropertyEditorModal({
                 projectName:
                     form.projectName.trim(),
 
+                reraNumber:
+                    form.reraNumber.trim(),
+
                 condition:
                 form.condition,
 
@@ -1486,6 +1501,8 @@ export default function FullPropertyEditorModal({
                 priceType: form.priceType,
                 negotiable:
                 form.negotiable,
+                zeroCommission:
+                form.zeroCommission,
                 bedrooms: isLand
                     ? null
                     : toOptionalNumber(
@@ -2174,6 +2191,25 @@ export default function FullPropertyEditorModal({
                                                             </p>
                                                         </label>
 
+                                                        <label className="sm:col-span-2">
+                                                            <FieldLabel hint="Optional">
+                                                                RERA No.
+                                                            </FieldLabel>
+
+                                                            <input
+                                                                value={form.reraNumber}
+                                                                maxLength={100}
+                                                                onChange={(event) =>
+                                                                    updateForm({
+                                                                        reraNumber:
+                                                                        event.target.value,
+                                                                    })
+                                                                }
+                                                                placeholder="e.g. TN/29/Building/0123/2026"
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                            />
+                                                        </label>
+
                                                         <label>
                                                             <FieldLabel>
                                                                 Nearby landmark
@@ -2495,6 +2531,18 @@ export default function FullPropertyEditorModal({
                                                                     value={form.negotiable}
                                                                     onChange={(negotiable) =>
                                                                         updateForm({ negotiable })
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            <div className="sm:col-span-2">
+                                                                <FieldLabel>
+                                                                    Brokerage preference
+                                                                </FieldLabel>
+                                                                <BrokerageChoice
+                                                                    zeroBrokerage={form.zeroCommission}
+                                                                    onChange={(zeroCommission) =>
+                                                                        updateForm({ zeroCommission })
                                                                     }
                                                                 />
                                                             </div>
@@ -3829,6 +3877,10 @@ export default function FullPropertyEditorModal({
                                                                     form.ownershipType
                                                                 }
                                                             />
+                                                            <ReviewRow
+                                                                label="RERA No."
+                                                                value={form.reraNumber || "Not provided"}
+                                                            />
 
                                                             <ReviewRow
                                                                 label="UDS"
@@ -3858,6 +3910,14 @@ export default function FullPropertyEditorModal({
                                                                     form.negotiable
                                                                         ? "Negotiable"
                                                                         : "Fixed price"
+                                                                }
+                                                            />
+                                                            <ReviewRow
+                                                                label="Brokerage"
+                                                                value={
+                                                                    form.zeroCommission
+                                                                        ? "Zero Brokerage"
+                                                                        : "Brokerage Applies"
                                                                 }
                                                             />
                                                             {form.unitConfigurations.length > 0 ? (

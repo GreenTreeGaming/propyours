@@ -3,6 +3,7 @@
 import {
     Activity,
     ArrowLeft,
+    BadgeCheck,
     BadgeIndianRupee,
     Building2,
     CalendarDays,
@@ -102,6 +103,7 @@ type UserDetail = {
         bio?: string;
         company?: string;
         companyWebsite?: string;
+        reraNumber?: string;
         address?: string;
         city?: string;
         favoritesCount: number;
@@ -597,6 +599,7 @@ function OverviewTab({
         role: user.role,
         company: user.company ?? "",
         companyWebsite: user.companyWebsite ?? "",
+        reraNumber: user.reraNumber ?? "",
         city: user.city ?? "",
         address: user.address ?? "",
         bio: user.bio ?? "",
@@ -618,6 +621,11 @@ function OverviewTab({
             label: "Company",
             value: user.company || "Not provided",
             icon: Building2,
+        },
+        {
+            label: "RERA No.",
+            value: user.reraNumber || "Not provided",
+            icon: BadgeCheck,
         },
         {
             label: "City",
@@ -694,6 +702,15 @@ function OverviewTab({
                             onChange={(event) => setProfile((current) => ({ ...current, companyWebsite: event.target.value }))}
                             className="admin-input"
                             placeholder="https://example.com"
+                        />
+                    </Field>
+                    <Field label="RERA No. (optional)">
+                        <input
+                            value={profile.reraNumber}
+                            maxLength={100}
+                            onChange={(event) => setProfile((current) => ({ ...current, reraNumber: event.target.value }))}
+                            className="admin-input"
+                            placeholder="e.g. TN/29/Building/0123/2026"
                         />
                     </Field>
                     <Field label="City">

@@ -786,6 +786,11 @@ export async function POST(
                         150,
                     ),
 
+                    reraNumber: cleanText(
+                        body.reraNumber,
+                        100,
+                    ),
+
                     condition:
                         body.condition ===
                         "under_construction"

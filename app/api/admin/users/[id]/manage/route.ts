@@ -56,6 +56,7 @@ const actionSchema =
                             "Company website must use http or https.",
                         ),
                 ]),
+                reraNumber: z.string().trim().max(100),
                 city: z.string().trim().max(100),
                 address: z.string().trim().max(300),
                 bio: z.string().trim().max(1200),
@@ -242,7 +243,7 @@ export async function PATCH(
     const target =
         await User.findById(id)
             .select(
-                "name email role bio company companyWebsite address city plan +tokenVersion",
+                "name email role bio company companyWebsite reraNumber address city plan +tokenVersion",
             );
 
     if (!target) {
@@ -290,6 +291,7 @@ export async function PATCH(
             role: target.role,
             company: target.company ?? "",
             companyWebsite: target.companyWebsite ?? "",
+            reraNumber: target.reraNumber ?? "",
             city: target.city ?? "",
             address: target.address ?? "",
             bio: target.bio ?? "",
@@ -299,6 +301,7 @@ export async function PATCH(
         target.role = action.role;
         target.company = action.company || undefined;
         target.companyWebsite = action.companyWebsite || undefined;
+        target.reraNumber = action.reraNumber || undefined;
         target.city = action.city || undefined;
         target.address = action.address || undefined;
         target.bio = action.bio || undefined;

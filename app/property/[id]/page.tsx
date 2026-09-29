@@ -165,6 +165,7 @@ interface PropertyRecord {
     amenities?: string[];
     promotedUntil?: string;
     projectName?: string;
+    reraNumber?: string;
     listingExpiresAt?: string;
     featured?: boolean;
     zeroCommission?: boolean;
@@ -638,14 +639,11 @@ function getListingBadges(
         property.zeroCommission
     ) {
         badges.push(
-            "Zero Commission",
+            "Zero Brokerage",
         );
-    } else if (
-        property.commissionType ===
-        "applicable"
-    ) {
+    } else {
         badges.push(
-            "Commission Applicable",
+            "Brokerage Applies",
         );
     }
 
@@ -1012,6 +1010,13 @@ function getFactRows(
         rows.push({
             label: "Developer / Builder",
             value: property.developerName,
+        });
+    }
+
+    if (property.reraNumber) {
+        rows.push({
+            label: "RERA No.",
+            value: property.reraNumber,
         });
     }
 
@@ -3132,11 +3137,11 @@ function ListingBadge({
         label === "Promoted";
 
     const isZeroCommission =
-        label === "Zero Commission";
+        label === "Zero Brokerage";
 
     const isCommissionApplicable =
         label ===
-        "Commission Applicable";
+        "Brokerage Applies";
 
     if (isZeroCommission) {
         return (
