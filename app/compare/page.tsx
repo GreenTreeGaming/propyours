@@ -52,6 +52,81 @@ function formatPrice(
     )}`;
 }
 
+const MONTH_NAMES = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+function formatBedrooms(property: any): string {
+    const bedrooms = Array.from(
+        new Set(
+            (property.unitConfigurations ?? [])
+                .map((unit: any) => unit.bedrooms)
+                .filter((value: unknown) => typeof value === "number"),
+        ),
+    ) as number[];
+
+    if (bedrooms.length > 0) {
+        return bedrooms
+            .sort((a, b) => a - b)
+            .map((value) => value === 0 ? "Studio" : `${value} BHK`)
+            .join(", ");
+    }
+
+    return property.bedrooms === 0
+        ? "Studio"
+        : property.bedrooms
+            ? `${property.bedrooms} BHK`
+            : "N/A";
+}
+
+function formatBathrooms(property: any): string {
+    const toilets = Array.from(
+        new Set(
+            (property.unitConfigurations ?? [])
+                .map((unit: any) => unit.toilets)
+                .filter((value: unknown) => typeof value === "number"),
+        ),
+    ) as number[];
+
+    if (toilets.length > 0) {
+        return toilets
+            .sort((a, b) => a - b)
+            .map((value) => `${value}T`)
+            .join(", ");
+    }
+
+    return property.bathrooms
+        ? `${property.bathrooms}`
+        : "N/A";
+}
+
+function formatHandover(property: any): string {
+    if (property.condition === "ready_to_occupy") {
+        return "Ready to occupy";
+    }
+
+    if (
+        property.condition === "under_construction" &&
+        property.expectedCompletionMonth &&
+        property.expectedCompletionYear
+    ) {
+        return `${MONTH_NAMES[property.expectedCompletionMonth - 1]} ${property.expectedCompletionYear}`;
+    }
+
+    return "N/A";
+}
+
 export default function ComparePage() {
     const { compareList, removeFromCompare, clearCompare } = useCompare();
 
@@ -77,7 +152,13 @@ export default function ComparePage() {
     }
 
     const attributes: Attribute[] = [
-        { label: "Price", key: "price", icon: CircleDollarSign, format: (v: any) => `₹${v.toLocaleString()}` },
+        {
+            label: "Price",
+            key: "price",
+            icon: CircleDollarSign,
+            format: (value: number, property: any) =>
+                formatPrice(getPropertyDisplayPrice(property) ?? value),
+        },
         {
             label: "Price flexibility",
             key: "negotiable",
@@ -97,11 +178,19 @@ export default function ComparePage() {
         { label: "Location", key: "locality", icon: MapPin, format: (v: any, p: any) => `${v}, ${p.city}` },
         { label: "Property Type", key: "propertyType", icon: Home },
         { label: "Total Area", key: "size", icon: Maximize, format: (v: any, p: any) => `${v} ${p.sizeUnit}` },
-        { label: "Price per Unit", key: "pricePerUnit", icon: CircleDollarSign, format: (v: any, p: any) => `₹${Math.round(p.price / p.size).toLocaleString()} / ${p.sizeUnit}` },
-        { label: "Bedrooms", key: "bedrooms", icon: Info, format: (v: any) => v === 0 ? "Studio" : v || "N/A" },
-        { label: "Bathrooms", key: "bathrooms", icon: Info },
+        { label: "Bedrooms", key: "bedrooms", icon: Info, format: (_v: any, property: any) => formatBedrooms(property) },
+        { label: "Bathrooms / Toilets", key: "bathrooms", icon: Info, format: (_v: any, property: any) => formatBathrooms(property) },
+        { label: "Approval", key: "approvalType", icon: Check },
+        {
+            label: "No. of floors",
+            key: "floors",
+            icon: Layers,
+            format: (value: number | null | undefined) =>
+                value === null || value === undefined ? "N/A" : String(value),
+        },
+        { label: "Handing Over", key: "condition", icon: Home, format: (_v: any, property: any) => formatHandover(property) },
         { label: "Ownership", key: "ownershipType", icon: ShieldCheck },
-        { label: "Amenities", key: "amenities", icon: Check, format: (v: any) => v?.join(", ") || "Parking, Security, Power Backup" }
+        { label: "Amenities", key: "amenities", icon: Check, format: (v: any) => v?.join(", ") || "N/A" }
     ];
 
     if (compareList.length === 0) {

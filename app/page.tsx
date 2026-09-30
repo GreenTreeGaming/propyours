@@ -25,10 +25,7 @@ import {
   Store,
   Trees,
 } from "lucide-react";
-import {
-  TAMIL_NADU_CITIES,
-  TAMIL_NADU_LOCATIONS,
-} from "@/lib/locations";
+import { useLocationOptions } from "@/lib/use-location-options";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import AuthorisedPartners from "@/components/AuthorisedPartners";
 import {
@@ -262,6 +259,7 @@ const BUBBY_DEMO_PROPERTIES = [
 
 export default function HomePage() {
   const router = useRouter();
+  const { districtCityTowns, villageAreas } = useLocationOptions();
 
   const [mode, setMode] = useState<SearchMode>("Buy");
   const [city, setCity] = useState("Chennai");
@@ -370,18 +368,8 @@ export default function HomePage() {
   ]);
 
   const localities = useMemo(
-      () => {
-        const values = city
-            ? TAMIL_NADU_LOCATIONS[
-                city as keyof typeof TAMIL_NADU_LOCATIONS
-                ] ?? []
-            : Object.values(TAMIL_NADU_LOCATIONS).flat();
-
-        return Array.from(
-            new Set(values.filter((item) => item.toLowerCase() !== "all")),
-        ).sort((first, second) => first.localeCompare(second));
-      },
-      [city],
+      () => villageAreas.filter((item) => item.toLowerCase() !== "all"),
+      [villageAreas],
   );
 
   useEffect(() => {
@@ -1046,7 +1034,7 @@ export default function HomePage() {
                   {/* City */}
                   <label className="min-w-0 lg:col-span-2">
             <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
-              City
+              District / City / Town
             </span>
 
                     <span className="relative block">
@@ -1063,10 +1051,10 @@ export default function HomePage() {
                     setLocality("");
                   }}
                   className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-bold text-slate-900 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                  aria-label="Select city"
+                  aria-label="Select district, city or town"
               >
-                <option value="">All Tamil Nadu</option>
-                {TAMIL_NADU_CITIES.map((item) => (
+                <option value="">Any District / City / Town</option>
+                {districtCityTowns.map((item) => (
                     <option key={item} value={item}>
                       {item}
                     </option>
@@ -1084,7 +1072,7 @@ export default function HomePage() {
                   {/* Locality */}
                   <label className="min-w-0 lg:col-span-2">
             <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
-              Locality
+              Village / Area
             </span>
 
                     <span className="relative block">
@@ -1096,14 +1084,21 @@ export default function HomePage() {
 
               <input
                   value={locality}
-                  onChange={(event) => setLocality(event.target.value)}
+                  onChange={(event) =>
+                      setLocality(
+                          event.target.value === "Any Village / Area"
+                              ? ""
+                              : event.target.value,
+                      )
+                  }
                   list="homepage-localities"
-                  placeholder={city ? `Search in ${city}` : "Search any locality"}
+                  placeholder="Any Village / Area"
                   className="h-14 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
-                  aria-label="Search locality"
+                  aria-label="Search village or area"
               />
 
               <datalist id="homepage-localities">
+                <option value="Any Village / Area" />
                 {localities.map((item) => (
                     <option key={item} value={item} />
                 ))}

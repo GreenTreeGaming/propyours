@@ -791,6 +791,20 @@ export async function POST(
                         100,
                     ),
 
+                    approvalType: [
+                        "CMDA",
+                        "DTCP",
+                        "Panchayat",
+                        "Municipality",
+                        "Unapproved",
+                    ].includes(
+                        typeof body.approvalType === "string"
+                            ? body.approvalType
+                            : "",
+                    )
+                        ? body.approvalType
+                        : undefined,
+
                     condition:
                         body.condition ===
                         "under_construction"

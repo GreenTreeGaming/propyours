@@ -78,6 +78,7 @@ interface DashboardUser {
     role?: string;
     bio?: string;
     company?: string;
+    reraNumber?: string;
     address?: string;
     city?: string;
     createdAt?: string;
@@ -129,6 +130,7 @@ interface ProfileForm {
     email: string;
     bio: string;
     company: string;
+    reraNumber: string;
     address: string;
     city: string;
 }
@@ -569,6 +571,7 @@ export default function DashboardPage() {
         email: "",
         bio: "",
         company: "",
+        reraNumber: "",
         address: "",
         city: "",
     });
@@ -610,6 +613,7 @@ export default function DashboardPage() {
             email: nextUser.email || "",
             bio: nextUser.bio || "",
             company: nextUser.company || "",
+            reraNumber: nextUser.reraNumber || "",
             address: nextUser.address || "",
             city: nextUser.city || "",
         });
@@ -834,6 +838,7 @@ export default function DashboardPage() {
                     name,
                     bio: profile.bio.trim(),
                     company: profile.company.trim(),
+                    reraNumber: profile.reraNumber.trim(),
                     address: profile.address.trim(),
                     city: profile.city.trim(),
                 }),
@@ -1698,6 +1703,23 @@ export default function DashboardPage() {
                                                         className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
                                                     />
                                                 </SimpleField>
+
+                                                {user.role === "Agent" || user.role === "Builder" ? (
+                                                    <FieldLabel label="RERA No. (optional)" icon={BadgeCheck}>
+                                                        <input
+                                                            value={profile.reraNumber}
+                                                            maxLength={100}
+                                                            onChange={(event) =>
+                                                                setProfile((current) => ({
+                                                                    ...current,
+                                                                    reraNumber: event.target.value,
+                                                                }))
+                                                            }
+                                                            placeholder="e.g. TN/29/Building/0123/2026"
+                                                            className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-bold outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10"
+                                                        />
+                                                    </FieldLabel>
+                                                ) : null}
 
                                                 <FieldLabel label="City" icon={MapPin}>
                                                     <input

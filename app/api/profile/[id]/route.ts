@@ -11,8 +11,9 @@ import {
 
 import User from "@/models/User";
 import Property from "@/models/Property";
+import DeveloperProfile from "@/models/DeveloperProfile";
 import { screenPropertyImages } from "@/lib/public-property-images";
-import { getBuilderPropertyAssociation } from "@/lib/builder-properties";
+import { exactBuilderNameRegex, getBuilderPropertyAssociation } from "@/lib/builder-properties";
 
 const BUILDER_PLAN_RANK: Record<
     string,
@@ -76,23 +77,40 @@ export async function GET(
             );
         }
 
-        const user =
+        let user: any =
             await User.findById(id)
                 .select(
                     "name role bio company companyWebsite reraNumber address city plan",
                 )
                 .lean();
 
-        if (!user) {
-            return NextResponse.json(
-                {
-                    error:
-                        "User not found",
-                },
-                {
-                    status: 404,
-                },
+        let propertyAssociation: Record<string, unknown>;
+
+        if (user) {
+            propertyAssociation = getBuilderPropertyAssociation(
+                new mongoose.Types.ObjectId(id),
+                user.role === "Builder" ? user.company : "",
             );
+        } else {
+            const developerProfile: any = await DeveloperProfile.findById(id).lean();
+            const nameExpression = exactBuilderNameRegex(developerProfile?.name);
+
+            if (!developerProfile || !nameExpression) {
+                return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+            }
+
+            user = {
+                _id: developerProfile._id,
+                name: developerProfile.name,
+                role: "Builder",
+                company: developerProfile.name,
+                bio: developerProfile.bio ?? "",
+                companyWebsite: developerProfile.companyWebsite ?? "",
+                reraNumber: developerProfile.reraNumber ?? "",
+                address: developerProfile.address ?? "",
+                city: developerProfile.city ?? "",
+            };
+            propertyAssociation = { developerName: nameExpression };
         }
 
         const now = new Date();
@@ -104,12 +122,7 @@ export async function GET(
                         getPublicPropertyFilter(
                             {
                                 $and: [
-                                    getBuilderPropertyAssociation(
-                                        new mongoose.Types.ObjectId(id),
-                                        (user as any).role === "Builder"
-                                            ? (user as any).company
-                                            : "",
-                                    ),
+                                    propertyAssociation,
                                 ],
                             },
                         ),
@@ -271,6 +284,10 @@ export async function GET(
                     favorites: 0,
                 },
             );
+
+        if (!user.city && properties[0]?.city) {
+            user.city = properties[0].city;
+        }
 
         const hasActiveBuilderPlan =
             isActiveBuilderPlan(

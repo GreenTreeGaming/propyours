@@ -17,6 +17,7 @@ import Link from "next/link";
 import ImageReviewQueue from "@/components/admin/ImageReviewQueue";
 import ContactInbox from "@/components/admin/ContactInbox";
 import BubbyLeadInbox from "@/components/admin/BubbyLeadInbox";
+import DeveloperProfileManager from "@/components/admin/DeveloperProfileManager";
 import {
     type FormEvent,
     useEffect,
@@ -334,6 +335,7 @@ export default function AdminDashboardClient({
             <ImageReviewQueue />
             <BubbyLeadInbox />
             <ContactInbox />
+            <DeveloperProfileManager />
             <section className="overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10 sm:p-8">
                 <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
                     <div>

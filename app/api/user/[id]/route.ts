@@ -22,6 +22,7 @@ type UpdateAccountBody = {
     email?: unknown;
     bio?: unknown;
     company?: unknown;
+    reraNumber?: unknown;
     address?: unknown;
     city?: unknown;
     oldPassword?: unknown;
@@ -192,6 +193,7 @@ export async function PUT(
         const name = cleanOptionalString(body.name, 100);
         const bio = cleanOptionalString(body.bio, 1_000);
         const company = cleanOptionalString(body.company, 150);
+        const reraNumber = cleanOptionalString(body.reraNumber, 100);
         const address = cleanOptionalString(body.address, 300);
         const city = cleanOptionalString(body.city, 100);
 
@@ -234,6 +236,13 @@ export async function PUT(
 
         if (company !== undefined) {
             updateData.company = company;
+        }
+
+        if (
+            reraNumber !== undefined &&
+            (user.role === "Agent" || user.role === "Builder")
+        ) {
+            updateData.reraNumber = reraNumber;
         }
 
         if (address !== undefined) {

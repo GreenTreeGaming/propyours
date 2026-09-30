@@ -176,6 +176,14 @@ export const OWNERSHIP_TYPES = [
     "Power of Attorney",
 ] as const;
 
+export const APPROVAL_TYPES = [
+    "CMDA",
+    "DTCP",
+    "Panchayat",
+    "Municipality",
+    "Unapproved",
+] as const;
+
 export const PRICE_TYPES = [
     "Total",
     "Per Sq Ft",

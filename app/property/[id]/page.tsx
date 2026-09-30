@@ -166,6 +166,7 @@ interface PropertyRecord {
     promotedUntil?: string;
     projectName?: string;
     reraNumber?: string;
+    approvalType?: string;
     listingExpiresAt?: string;
     featured?: boolean;
     zeroCommission?: boolean;
@@ -920,7 +921,7 @@ function getPrimaryDetails(
             undefined
         ) {
             details.push({
-                label: "Total floors",
+                label: "No. of floors",
                 value: String(
                     property.floors,
                 ),
@@ -950,7 +951,7 @@ function getPrimaryDetails(
         undefined
     ) {
         details.push({
-            label: "Total floors",
+            label: "No. of floors",
             value: String(
                 property.floors,
             ),
@@ -1020,9 +1021,16 @@ function getFactRows(
         });
     }
 
+    if (property.approvalType) {
+        rows.push({
+            label: "Approval",
+            value: property.approvalType,
+        });
+    }
+
     if (property.condition) {
         rows.push({
-            label: "Condition",
+            label: "Handing Over",
             value:
                 property.condition ===
                 "under_construction"
@@ -1044,7 +1052,7 @@ function getFactRows(
         if (completionDate) {
             rows.push({
                 label:
-                    "Expected completion",
+                    "Handing over date",
                 value:
                 completionDate,
             });
@@ -1975,6 +1983,11 @@ export default function PropertyDetailsPage() {
                 ),
 
             availableBHKs,
+            unitConfigurations:
+                property.unitConfigurations?.map((configuration) => ({
+                    bedrooms: configuration.bedrooms,
+                    toilets: configuration.toilets,
+                })) ?? [],
             negotiable:
             property.negotiable,
             size:
@@ -1991,6 +2004,11 @@ export default function PropertyDetailsPage() {
             bathrooms:
                 property.bathrooms ??
                 undefined,
+            floors: property.floors,
+            approvalType: property.approvalType,
+            condition: property.condition,
+            expectedCompletionMonth: property.expectedCompletionMonth,
+            expectedCompletionYear: property.expectedCompletionYear,
             locality:
             property.locality,
             city: property.city,

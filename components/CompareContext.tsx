@@ -12,6 +12,10 @@ type CompareProperty = {
     startingPrice?: number;
     hasUnitConfigurations?: boolean;
     availableBHKs?: number[];
+    unitConfigurations?: Array<{
+        bedrooms: number;
+        toilets?: number | null;
+    }>;
 
     negotiable?: boolean;
     size: number;
@@ -19,6 +23,11 @@ type CompareProperty = {
     propertyType: string;
     bedrooms?: number;
     bathrooms?: number;
+    floors?: number | null;
+    approvalType?: string;
+    condition?: "ready_to_occupy" | "under_construction";
+    expectedCompletionMonth?: number | null;
+    expectedCompletionYear?: number | null;
     locality?: string;
     city?: string;
     amenities?: string[];

@@ -1092,6 +1092,20 @@ export async function PUT(
                     ? body.reraNumber.trim().slice(0, 100)
                     : undefined,
 
+            approvalType: [
+                "CMDA",
+                "DTCP",
+                "Panchayat",
+                "Municipality",
+                "Unapproved",
+            ].includes(
+                typeof body.approvalType === "string"
+                    ? body.approvalType
+                    : "",
+            )
+                ? body.approvalType
+                : null,
+
             condition:
                 body.condition ===
                 "ready_to_occupy" ||

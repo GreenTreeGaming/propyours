@@ -39,15 +39,15 @@ import BrokerageChoice from "@/components/BrokerageChoice";
 import { validMapPoint } from "@/lib/map-locations";
 import {
     AMENITY_CATEGORIES,
+    APPROVAL_TYPES,
     OWNERSHIP_TYPES,
     PRICE_TYPES,
     PROPERTY_PURPOSES,
     PROPERTY_TYPES,
     SIZE_UNITS,
-    TAMIL_NADU_CITIES,
-    getTamilNaduLocalities,
     isLandPropertyType,
 } from "@/lib/property-form-options";
+import { useLocationOptions } from "@/lib/use-location-options";
 import type { PlanDefinition } from "@/lib/plan-catalog";
 import {
     getPropertyDisplayTitle,
@@ -68,6 +68,7 @@ export interface PropertyEditorProperty {
     developerName?: string;
     projectName?: string;
     reraNumber?: string;
+    approvalType?: string;
 
     condition?:
         | "ready_to_occupy"
@@ -184,6 +185,7 @@ interface EditorForm {
     developerName: string;
     projectName: string;
     reraNumber: string;
+    approvalType: string;
     uds: string;
     unitConfigurations: UnitConfigurationForm[];
     plotSizes: Array<{ id: string; size: string; sizeUnit: string }>;
@@ -411,6 +413,8 @@ function createEditorForm(
             property.projectName || "",
         reraNumber:
             property.reraNumber || "",
+        approvalType:
+            property.approvalType || "",
 
         uds:
             property.uds === null ||
@@ -718,6 +722,8 @@ export default function FullPropertyEditorModal({
                                                     onClose,
                                                     onSaved,
                                                 }: FullPropertyEditorModalProps) {
+    const { districtCityTowns, villageAreas } =
+        useLocationOptions();
     const [activeStep, setActiveStep] =
         useState<StepId>("basics");
     const [form, setForm] =
@@ -794,36 +800,32 @@ export default function FullPropertyEditorModal({
     const cityOptions = useMemo(() => {
         if (
             !form?.city ||
-            TAMIL_NADU_CITIES.includes(
+            districtCityTowns.includes(
                 form.city,
             )
         ) {
-            return TAMIL_NADU_CITIES;
+            return districtCityTowns;
         }
 
         return [
             form.city,
-            ...TAMIL_NADU_CITIES,
+            ...districtCityTowns,
         ];
-    }, [form?.city]);
+    }, [districtCityTowns, form?.city]);
 
     const localityOptions = useMemo(() => {
-        if (!form?.city) {
-            return [];
-        }
-
-        const values =
-            getTamilNaduLocalities(form.city);
+        const values = villageAreas;
+        const selectedLocality = form?.locality;
 
         if (
-            !form.locality ||
-            values.includes(form.locality)
+            !selectedLocality ||
+            values.includes(selectedLocality)
         ) {
             return values;
         }
 
-        return [form.locality, ...values];
-    }, [form?.city, form?.locality]);
+        return [selectedLocality, ...values];
+    }, [form?.locality, villageAreas]);
 
     const isLand = form
         ? isLandPropertyType(
@@ -1427,6 +1429,9 @@ export default function FullPropertyEditorModal({
                 reraNumber:
                     form.reraNumber.trim(),
 
+                approvalType:
+                    form.approvalType || null,
+
                 condition:
                 form.condition,
 
@@ -1993,7 +1998,7 @@ export default function FullPropertyEditorModal({
                                                 <SectionHeading
                                                     eyebrow="Location & size"
                                                     title="Use structured Tamil Nadu location fields"
-                                                    description="City and locality are selected from the same location data used elsewhere in the product."
+                                                    description="Districts, cities, towns, villages and areas use the shared Tamil Nadu location directory."
                                                     icon={MapPin}
                                                 />
 
@@ -2022,14 +2027,14 @@ export default function FullPropertyEditorModal({
                                                             <FieldLabel
                                                                 required
                                                             >
-                                                                City
+                                                                District / City / Town
                                                             </FieldLabel>
 
                                                             <SelectField
                                                                 value={
                                                                     form.city
                                                                 }
-                                                                ariaLabel="City"
+                                                                ariaLabel="District, city or town"
                                                                 onChange={(
                                                                     city,
                                                                 ) =>
@@ -2043,7 +2048,7 @@ export default function FullPropertyEditorModal({
                                                                 }
                                                             >
                                                                 <option value="">
-                                                                    Select city
+                                                                    Select district, city or town
                                                                 </option>
                                                                 {cityOptions.map(
                                                                     (city) => (
@@ -2074,49 +2079,32 @@ export default function FullPropertyEditorModal({
                                                             <FieldLabel
                                                                 required
                                                             >
-                                                                Locality / area
+                                                                Village / Area
                                                             </FieldLabel>
 
-                                                            <SelectField
+                                                            <input
                                                                 value={
                                                                     form.locality
                                                                 }
-                                                                ariaLabel="Locality or area"
+                                                                aria-label="Village or area"
+                                                                list="edit-property-village-areas"
                                                                 disabled={
                                                                     !form.city
                                                                 }
-                                                                onChange={(
-                                                                    locality,
-                                                                ) =>
+                                                                onChange={(event) =>
                                                                     updateForm({
-                                                                        locality,
+                                                                        locality: event.target.value,
                                                                     })
                                                                 }
-                                                            >
-                                                                <option value="">
-                                                                    {form.city
-                                                                        ? "Select locality"
-                                                                        : "Select city first"}
-                                                                </option>
-                                                                {localityOptions.map(
-                                                                    (
-                                                                        locality,
-                                                                    ) => (
-                                                                        <option
-                                                                            key={
-                                                                                locality
-                                                                            }
-                                                                            value={
-                                                                                locality
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                locality
-                                                                            }
-                                                                        </option>
-                                                                    ),
-                                                                )}
-                                                            </SelectField>
+                                                                placeholder={form.city ? "Search any village or area" : "Select district, city or town first"}
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                                                            />
+
+                                                            <datalist id="edit-property-village-areas">
+                                                                {localityOptions.map((locality) => (
+                                                                    <option key={locality} value={locality} />
+                                                                ))}
+                                                            </datalist>
 
                                                             {errors.locality ? (
                                                                 <ErrorText>
@@ -2268,6 +2256,83 @@ export default function FullPropertyEditorModal({
                                                                 )}
                                                             </SelectField>
                                                         </label>
+
+                                                        <label>
+                                                            <FieldLabel hint="Optional">
+                                                                Approval
+                                                            </FieldLabel>
+                                                            <SelectField
+                                                                value={form.approvalType}
+                                                                ariaLabel="Approval"
+                                                                onChange={(approvalType) =>
+                                                                    updateForm({ approvalType })
+                                                                }
+                                                            >
+                                                                <option value="">Select approval</option>
+                                                                {APPROVAL_TYPES.map((approval) => (
+                                                                    <option key={approval} value={approval}>
+                                                                        {approval}
+                                                                    </option>
+                                                                ))}
+                                                            </SelectField>
+                                                        </label>
+
+                                                        {!isLand && form.propertyType !== "Commercial" ? (
+                                                            <div className="sm:col-span-2">
+                                                                <FieldLabel>
+                                                                    Handing Over
+                                                                </FieldLabel>
+                                                                <div className="grid gap-3 sm:grid-cols-3">
+                                                                    <SelectField
+                                                                        value={form.condition}
+                                                                        ariaLabel="Handing over status"
+                                                                        onChange={(condition) =>
+                                                                            updateForm({
+                                                                                condition: condition as EditorForm["condition"],
+                                                                                ...(condition === "ready_to_occupy"
+                                                                                    ? {
+                                                                                        expectedCompletionMonth: "",
+                                                                                        expectedCompletionYear: "",
+                                                                                    }
+                                                                                    : {}),
+                                                                            })
+                                                                        }
+                                                                    >
+                                                                        <option value="ready_to_occupy">Ready to occupy</option>
+                                                                        <option value="under_construction">Under construction</option>
+                                                                    </SelectField>
+
+                                                                    {form.condition === "under_construction" ? (
+                                                                        <>
+                                                                            <input
+                                                                                type="number"
+                                                                                min="1"
+                                                                                max="12"
+                                                                                value={form.expectedCompletionMonth}
+                                                                                onChange={(event) =>
+                                                                                    updateForm({ expectedCompletionMonth: event.target.value })
+                                                                                }
+                                                                                placeholder="Month (1–12)"
+                                                                                aria-label="Handing over month"
+                                                                                className="h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                            />
+                                                                            <input
+                                                                                type="number"
+                                                                                min={new Date().getFullYear()}
+                                                                                max="2200"
+                                                                                value={form.expectedCompletionYear}
+                                                                                onChange={(event) =>
+                                                                                    updateForm({ expectedCompletionYear: event.target.value })
+                                                                                }
+                                                                                placeholder="Year"
+                                                                                aria-label="Handing over year"
+                                                                                className="h-13 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10"
+                                                                            />
+                                                                        </>
+                                                                    ) : null}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
                                                     </div>
 
                                                     <div className="mt-6 border-t border-slate-100 pt-6">
@@ -3040,7 +3105,7 @@ export default function FullPropertyEditorModal({
 
                                                             <label>
                                                                 <FieldLabel>
-                                                                    Total floors
+                                                                    No. of floors
                                                                 </FieldLabel>
 
                                                                 <input
@@ -3839,6 +3904,18 @@ export default function FullPropertyEditorModal({
                                                                     "No description"
                                                                 }
                                                             />
+                                                            {!isLand && form.propertyType !== "Commercial" ? (
+                                                                <ReviewRow
+                                                                    label="Handing Over"
+                                                                    value={
+                                                                        form.condition === "ready_to_occupy"
+                                                                            ? "Ready to occupy"
+                                                                            : form.expectedCompletionMonth && form.expectedCompletionYear
+                                                                                ? `${form.expectedCompletionMonth}/${form.expectedCompletionYear}`
+                                                                                : "Under construction"
+                                                                    }
+                                                                />
+                                                            ) : null}
                                                         </ReviewCard>
 
                                                         <ReviewCard
@@ -3880,6 +3957,10 @@ export default function FullPropertyEditorModal({
                                                             <ReviewRow
                                                                 label="RERA No."
                                                                 value={form.reraNumber || "Not provided"}
+                                                            />
+                                                            <ReviewRow
+                                                                label="Approval"
+                                                                value={form.approvalType || "Not provided"}
                                                             />
 
                                                             <ReviewRow

@@ -56,6 +56,7 @@ import { preparePropertyImages } from "@/lib/prepare-property-image";
 import MapPinPicker from "@/components/MapPinPicker";
 import NegotiabilityToggle from "@/components/NegotiabilityToggle";
 import BrokerageChoice from "@/components/BrokerageChoice";
+import { useLocationOptions } from "@/lib/use-location-options";
 import { validMapPoint } from "@/lib/map-locations";
 import {
     PLAN_CATALOG,
@@ -66,6 +67,7 @@ import {
     getStoredUser,
 } from "@/lib/browser-user";
 import {
+    APPROVAL_TYPES,
     COMMERCIAL_TYPE_GROUPS,
     LAND_PROPERTY_TYPES,
     OWNERSHIP_TYPES,
@@ -74,9 +76,7 @@ import {
     PROPERTY_PURPOSES,
     RESIDENTIAL_PROPERTY_TYPES,
     SIZE_UNITS,
-    TAMIL_NADU_CITIES,
     getAmenityCategories,
-    getTamilNaduLocalities,
     isCommercialPropertyType,
     isLandPropertyType,
     type PropertyCategory,
@@ -205,6 +205,7 @@ interface PropertyForm {
     developerName: string;
     projectName: string;
     reraNumber: string;
+    approvalType: string;
     uds: string;
     size: string;
     sizeUnit: string;
@@ -381,6 +382,7 @@ const DEFAULT_FORM: PropertyForm = {
     developerName: "",
     projectName: "",
     reraNumber: "",
+    approvalType: "",
     uds: "",
     unitConfigurations: [],
     plotSizes: [],
@@ -788,6 +790,7 @@ function ReviewRow({
 
 export default function PostPropertyPage() {
     const router = useRouter();
+    const { districtCityTowns, villageAreas } = useLocationOptions();
     const [user, setUser] = useState<StoredUser | null>(null);
     const [form, setForm] = useState<PropertyForm>(loadInitialForm);
     const [activeStep, setActiveStep] =
@@ -884,10 +887,10 @@ export default function PostPropertyPage() {
 
     const localityOptions = useMemo(
         () =>
-            form.city
-                ? getTamilNaduLocalities(form.city)
-                : [],
-        [form.city],
+            form.locality && !villageAreas.includes(form.locality)
+                ? [form.locality, ...villageAreas]
+                : villageAreas,
+        [form.locality, villageAreas],
     );
 
     const applicablePurposes = useMemo(
@@ -1628,6 +1631,9 @@ export default function PostPropertyPage() {
                         reraNumber:
                             form.reraNumber.trim(),
 
+                        approvalType:
+                            form.approvalType || null,
+
                         uds: optionalNumber(form.uds),
 
                         size: Number(form.size),
@@ -2276,7 +2282,7 @@ export default function PostPropertyPage() {
                                                             "under_construction" ? (
                                                                 <div className="mt-5">
                                                                     <FieldLabel required>
-                                                                        Expected Completion Date
+                                                                        Handing Over
                                                                     </FieldLabel>
 
                                                                     <div className="grid gap-3 sm:grid-cols-2">
@@ -2292,7 +2298,7 @@ export default function PostPropertyPage() {
                                                                                     value,
                                                                                 })
                                                                             }
-                                                                            ariaLabel="Expected completion month"
+                                                                            ariaLabel="Handing over month"
                                                                         >
                                                                             <option value="">
                                                                                 Select month
@@ -2330,7 +2336,7 @@ export default function PostPropertyPage() {
                                                                                     value,
                                                                                 })
                                                                             }
-                                                                            ariaLabel="Expected completion year"
+                                                                            ariaLabel="Handing over year"
                                                                         >
                                                                             <option value="">
                                                                                 Select year
@@ -2544,7 +2550,7 @@ export default function PostPropertyPage() {
                                                 <SectionHeading
                                                     eyebrow="Location & area"
                                                     title="Make the property easy to locate"
-                                                    description="Use structured Tamil Nadu city and locality data, then add the exact address and area."
+                                                    description="Choose a Tamil Nadu district, city or town and its village or area, then add the exact address."
                                                     icon={MapPin}
                                                 />
 
@@ -2565,10 +2571,10 @@ export default function PostPropertyPage() {
                                                         </label>
 
                                                         <label>
-                                                            <FieldLabel required>City</FieldLabel>
+                                                            <FieldLabel required>District / City / Town</FieldLabel>
                                                             <SelectField
                                                                 value={form.city}
-                                                                ariaLabel="City"
+                                                                ariaLabel="District, city or town"
                                                                 onChange={(city) =>
                                                                     updateForm({
                                                                         city,
@@ -2578,8 +2584,8 @@ export default function PostPropertyPage() {
                                                                     })
                                                                 }
                                                             >
-                                                                <option value="">Select city</option>
-                                                                {TAMIL_NADU_CITIES.map((city) => (
+                                                                <option value="">Select district, city or town</option>
+                                                                {districtCityTowns.map((city) => (
                                                                     <option key={city} value={city}>
                                                                         {city}
                                                                     </option>
@@ -2592,30 +2598,27 @@ export default function PostPropertyPage() {
 
                                                         <label>
                                                             <FieldLabel required>
-                                                                Locality / area
+                                                                Village / Area
                                                             </FieldLabel>
-                                                            <SelectField
+                                                            <input
                                                                 value={form.locality}
                                                                 disabled={!form.city}
-                                                                ariaLabel="Locality or area"
-                                                                onChange={(locality) =>
-                                                                    updateForm({ locality })
+                                                                aria-label="Village or area"
+                                                                list="post-property-village-areas"
+                                                                onChange={(event) =>
+                                                                    updateForm({ locality: event.target.value })
                                                                 }
-                                                            >
-                                                                <option value="">
-                                                                    {form.city
-                                                                        ? "Select locality"
-                                                                        : "Select city first"}
-                                                                </option>
+                                                                placeholder={form.city ? "Search village or area" : "Select district, city or town first"}
+                                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                            />
+                                                            <datalist id="post-property-village-areas">
                                                                 {localityOptions.map((locality) => (
                                                                     <option
                                                                         key={locality}
                                                                         value={locality}
-                                                                    >
-                                                                        {locality}
-                                                                    </option>
+                                                                    />
                                                                 ))}
-                                                            </SelectField>
+                                                            </datalist>
                                                             {errors.locality ? (
                                                                 <ErrorText>
                                                                     {errors.locality}
@@ -2740,6 +2743,26 @@ export default function PostPropertyPage() {
                                                                 ))}
                                                             </SelectField>
                                                         </label>
+
+                                                        <label>
+                                                            <FieldLabel hint="Optional">
+                                                                Approval
+                                                            </FieldLabel>
+                                                            <SelectField
+                                                                value={form.approvalType}
+                                                                ariaLabel="Approval"
+                                                                onChange={(approvalType) =>
+                                                                    updateForm({ approvalType })
+                                                                }
+                                                            >
+                                                                <option value="">Select approval</option>
+                                                                {APPROVAL_TYPES.map((approval) => (
+                                                                    <option key={approval} value={approval}>
+                                                                        {approval}
+                                                                    </option>
+                                                                ))}
+                                                            </SelectField>
+                                                        </label>
                                                     </div>
                                                 </div>
 
@@ -2768,9 +2791,7 @@ export default function PostPropertyPage() {
                                                     <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
                                                         <label className="lg:col-span-2">
                                                             <FieldLabel required>
-                                                                {form.propertyType === "Plot"
-                                                                    ? "Plot size"
-                                                                    : "Total area"}
+                                                                Total area
                                                             </FieldLabel>
 
                                                             <div className="grid grid-cols-[minmax(0,1fr)_130px] gap-2">
@@ -3282,7 +3303,7 @@ export default function PostPropertyPage() {
                                                             <div className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
                                                                 <label>
                                                                     <FieldLabel>
-                                                                        Total floors
+                                                                        No. of floors
                                                                     </FieldLabel>
 
                                                                     <input
@@ -4277,7 +4298,7 @@ export default function PostPropertyPage() {
                                                             {form.category === "residential" ? (
                                                                 <>
                                                                     <ReviewRow
-                                                                        label="Condition"
+                                                                        label="Handing Over"
                                                                         value={
                                                                             form.condition ===
                                                                             "under_construction"
@@ -4289,7 +4310,7 @@ export default function PostPropertyPage() {
                                                                     {form.condition ===
                                                                     "under_construction" ? (
                                                                         <ReviewRow
-                                                                            label="Expected completion"
+                                                                            label="Handing over date"
                                                                             value={
                                                                                 COMPLETION_MONTHS.find(
                                                                                     (month) =>
@@ -4402,9 +4423,13 @@ export default function PostPropertyPage() {
                                                                 label="RERA No."
                                                                 value={form.reraNumber || "Not provided"}
                                                             />
+                                                            <ReviewRow
+                                                                label="Approval"
+                                                                value={form.approvalType || "Not provided"}
+                                                            />
                                                             {form.category !== "land" ? (
                                                             <ReviewRow
-                                                                label="Total floors"
+                                                                label="No. of floors"
                                                                     value={
                                                                         form.floors
                                                                             ? form.floors

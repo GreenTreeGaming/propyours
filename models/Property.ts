@@ -166,6 +166,18 @@ const PropertySchema =
                 maxlength: 100,
             },
 
+            approvalType: {
+                type: String,
+                enum: [
+                    "CMDA",
+                    "DTCP",
+                    "Panchayat",
+                    "Municipality",
+                    "Unapproved",
+                ],
+                required: false,
+            },
+
             size: {
                 type: Number,
                 required: true,
