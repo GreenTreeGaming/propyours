@@ -14,7 +14,7 @@ import Property from "@/models/Property";
 import { screenPropertyImages } from "@/lib/public-property-images";
 import { syncPropyoursZeroBrokerageListings } from "@/lib/propyours-listings";
 
-const HOMEPAGE_PROPERTY_LIMIT = 4;
+const HOMEPAGE_PROPERTY_LIMIT = 30;
 
 export async function GET() {
     try {
@@ -27,7 +27,16 @@ export async function GET() {
             await Property.aggregate([
                 {
                     $match:
-                        getPublicPropertyFilter(),
+                        getPublicPropertyFilter({
+                            $and: [{
+                                $or: [
+                                    { ownerFeatured: true },
+                                    { "planSnapshot.homepageFeatured": true },
+                                    { featured: true },
+                                    { promotedUntil: { $gt: now } },
+                                ],
+                            }],
+                        }),
                 },
 
                 {
@@ -77,7 +86,13 @@ export async function GET() {
                                     },
                                 },
 
-                                "$price",
+                                {
+                                    $cond: [
+                                        { $gt: [{ $size: { $ifNull: ["$plotSizes", []] } }, 0] },
+                                        { $min: { $map: { input: "$plotSizes", as: "plot", in: { $ifNull: ["$$plot.totalPrice", "$price"] } } } },
+                                        "$price",
+                                    ],
+                                },
                             ],
                         },
 
@@ -91,6 +106,13 @@ export async function GET() {
                                         ],
                                     },
                                 },
+                                0,
+                            ],
+                        },
+
+                        hasPlotPricing: {
+                            $gt: [
+                                { $size: { $filter: { input: { $ifNull: ["$plotSizes", []] }, as: "plot", cond: { $gt: [{ $ifNull: ["$$plot.totalPrice", 0] }, 0] } } } },
                                 0,
                             ],
                         },
@@ -148,6 +170,7 @@ export async function GET() {
 
                 {
                     $sort: {
+                        ownerFeatured: -1,
                         isHomepageFeatured: -1,
                         isPromoted: -1,
                         visibilityRank: -1,

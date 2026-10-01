@@ -57,6 +57,9 @@ const UnitConfigurationSchema =
 const PlotSizeSchema = new mongoose.Schema({
     size: { type: Number, required: true, min: 0.01 },
     sizeUnit: { type: String, enum: ["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"], default: "sqft" },
+    dimensions: { type: String, trim: true, maxlength: 100, default: "" },
+    totalPrice: { type: Number, min: 1, default: null },
+    pricePerSqFt: { type: Number, min: 0.01, default: null },
 }, { _id: true });
 
 const PropertySchema =
@@ -300,6 +303,12 @@ const PropertySchema =
             featured: {
                 type: Boolean,
                 default: false,
+            },
+
+            ownerFeatured: {
+                type: Boolean,
+                default: false,
+                index: true,
             },
 
             zeroCommission: {

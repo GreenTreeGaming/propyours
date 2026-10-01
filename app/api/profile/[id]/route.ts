@@ -189,7 +189,13 @@ export async function GET(
                                     },
                                 },
 
-                                "$price",
+                                {
+                                    $cond: [
+                                        { $gt: [{ $size: { $ifNull: ["$plotSizes", []] } }, 0] },
+                                        { $min: { $map: { input: "$plotSizes", as: "plot", in: { $ifNull: ["$$plot.totalPrice", "$price"] } } } },
+                                        "$price",
+                                    ],
+                                },
                             ],
                         },
 
@@ -204,6 +210,13 @@ export async function GET(
                                             ],
                                     },
                                 },
+                                0,
+                            ],
+                        },
+
+                        hasPlotPricing: {
+                            $gt: [
+                                { $size: { $filter: { input: { $ifNull: ["$plotSizes", []] }, as: "plot", cond: { $gt: [{ $ifNull: ["$$plot.totalPrice", 0] }, 0] } } } },
                                 0,
                             ],
                         },

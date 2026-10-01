@@ -41,6 +41,7 @@ import {
     Rocket,
     Search,
     Sparkles,
+    Star,
     Square,
     Trash2,
     TrendingUp,
@@ -129,6 +130,7 @@ interface ManagedProperty extends PropertyEditorProperty {
 
     status?: "active" | "sold" | "inactive";
     featured?: boolean;
+    ownerFeatured?: boolean;
     listingExpiresAt?: string;
     promotedUntil?: string;
     analytics?: PropertyAnalytics;
@@ -609,7 +611,9 @@ function PropertyCard({
                           viewMode,
                           planSummary,
                           promotionPending,
+                          featurePending,
                           onPromote,
+                          onFeature,
                           onEdit,
                           onDelete,
                           onAnalytics,
@@ -618,9 +622,11 @@ function PropertyCard({
     viewMode: ViewMode;
     planSummary: PlanSummary | null;
     promotionPending: boolean;
+    featurePending: boolean;
     onPromote: (
         property: ManagedProperty,
     ) => void;
+    onFeature: (property: ManagedProperty) => void;
     onEdit: (
         property: ManagedProperty,
     ) => void;
@@ -980,6 +986,17 @@ function PropertyCard({
                         </div>
                     </div>
 
+                    <button
+                        type="button"
+                        disabled={featurePending || property.status !== "active"}
+                        onClick={() => onFeature(property)}
+                        aria-pressed={property.ownerFeatured === true}
+                        className={`mb-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border text-xs font-black transition ${property.ownerFeatured ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50"} disabled:cursor-not-allowed disabled:opacity-50`}
+                    >
+                        {featurePending ? <Loader2 size={15} className="animate-spin" /> : <Star size={15} fill={property.ownerFeatured ? "currentColor" : "none"} />}
+                        {property.ownerFeatured ? "Featured on homepage" : "Feature on homepage"}
+                    </button>
+
                     <div className="mt-auto grid grid-cols-[0.85fr_1.25fr_0.8fr_0.95fr] gap-2 border-t border-slate-100 pt-5">
                         <Link
                             href={`/property/${property._id}`}
@@ -1129,6 +1146,8 @@ export default function ManagePropertiesPage() {
         useState(false);
 
     const [promotionPendingId, setPromotionPendingId] =
+        useState<string | null>(null);
+    const [featurePendingId, setFeaturePendingId] =
         useState<string | null>(null);
     const [toast, setToast] =
         useState<ToastMessage | null>(null);
@@ -1660,6 +1679,26 @@ export default function ManagePropertiesPage() {
             );
         } finally {
             setPromotionPendingId(null);
+        }
+    }
+
+    async function handleFeature(property: ManagedProperty) {
+        setFeaturePendingId(property._id);
+        try {
+            const response = await fetch(`/api/property/${property._id}/feature`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ featured: !property.ownerFeatured }),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || "Unable to update homepage feature selection.");
+            setProperties((current) => current.map((item) => item._id === property._id ? { ...item, ownerFeatured: payload.property.ownerFeatured } : item));
+            showToast("success", payload.property.ownerFeatured ? "Property added to the homepage featured selection." : "Property removed from the homepage featured selection.");
+        } catch (error) {
+            showToast("error", error instanceof Error ? error.message : "Unable to update homepage feature selection.");
+        } finally {
+            setFeaturePendingId(null);
         }
     }
 
@@ -2305,9 +2344,11 @@ export default function ManagePropertiesPage() {
                                                 promotionPendingId ===
                                                 property._id
                                             }
+                                            featurePending={featurePendingId === property._id}
                                             onPromote={
                                                 handlePromote
                                             }
+                                            onFeature={handleFeature}
                                             onEdit={setEditProperty}
                                             onDelete={(
                                                 item,

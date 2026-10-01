@@ -28,6 +28,7 @@ import {
     PROPERTY_TYPES,
     isCommercialType,
 } from "@/lib/property-form-options";
+import { resolvePlotPricing } from "@/lib/plot-pricing";
 
 function cleanStringArray(
     value: unknown,
@@ -116,7 +117,13 @@ interface SanitizedUnitConfiguration {
     price: number;
 }
 
-interface SanitizedPlotSize { size: number; sizeUnit: (typeof ALLOWED_SIZE_UNITS)[number] }
+interface SanitizedPlotSize {
+    size: number;
+    sizeUnit: (typeof ALLOWED_SIZE_UNITS)[number];
+    dimensions: string;
+    totalPrice: number;
+    pricePerSqFt: number;
+}
 
 function parsePlotSizes(value: unknown): { success: true; plots: SanitizedPlotSize[] } | { success: false; error: string } {
     if (!Array.isArray(value)) return { success: false, error: "Plot sizes must be an array." };
@@ -126,7 +133,20 @@ function parsePlotSizes(value: unknown): { success: true; plots: SanitizedPlotSi
         const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : null;
         const size = record?.size, sizeUnit = record?.sizeUnit;
         if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !(ALLOWED_SIZE_UNITS as readonly string[]).includes(sizeUnit)) return { success: false, error: "Every plot size must have a valid area and unit." };
-        plots.push({ size, sizeUnit: sizeUnit as SanitizedPlotSize["sizeUnit"] });
+        const pricing = resolvePlotPricing({
+            size,
+            sizeUnit,
+            totalPrice: typeof record?.totalPrice === "number" ? record.totalPrice : null,
+            pricePerSqFt: typeof record?.pricePerSqFt === "number" ? record.pricePerSqFt : null,
+        });
+        if (pricing.totalPrice === null || pricing.pricePerSqFt === null) return { success: false, error: "Enter a total price or price per sq ft for every available plot size." };
+        plots.push({
+            size,
+            sizeUnit: sizeUnit as SanitizedPlotSize["sizeUnit"],
+            dimensions: typeof record?.dimensions === "string" ? record.dimensions.trim().slice(0, 100) : "",
+            totalPrice: pricing.totalPrice,
+            pricePerSqFt: pricing.pricePerSqFt,
+        });
     }
     return { success: true, plots };
 }
@@ -805,6 +825,7 @@ export async function PUT(
             const parsedPlots = parsePlotSizes(body.plotSizes);
             if (!parsedPlots.success) return NextResponse.json({ error: parsedPlots.error }, { status: 400 });
             plotSizes = parsedPlots.plots;
+            if (plotSizes.length === 0) return NextResponse.json({ error: "Add at least one available plot size with pricing." }, { status: 400 });
         }
 
         const unitPrices =
@@ -821,13 +842,19 @@ export async function PUT(
                         price > 0,
                 );
 
+        const plotPrices = (plotSizes ?? property.plotSizes ?? [])
+            .map((plot: { totalPrice?: number | null }) => plot.totalPrice)
+            .filter((price: unknown): price is number => typeof price === "number" && Number.isFinite(price) && price > 0);
+
         const requestedPrice =
             typeof body.price === "number"
                 ? body.price
                 : property.price;
 
         const effectivePrice =
-            !isLand &&
+            isLand && plotPrices.length > 0
+                ? Math.min(...plotPrices)
+                : !isLand &&
             !isCommercial &&
             unitPrices.length > 0
                 ? Math.min(...unitPrices)
@@ -1145,8 +1172,7 @@ export async function PUT(
             ownershipType:
             body.ownershipType,
             price: effectivePrice,
-            priceType:
-            body.priceType,
+            priceType: isLand ? "Total" : body.priceType,
             negotiable:
             body.negotiable,
             zeroCommission:

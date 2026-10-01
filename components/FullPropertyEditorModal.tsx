@@ -37,6 +37,7 @@ import MapPinPicker from "@/components/MapPinPicker";
 import NegotiabilityToggle from "@/components/NegotiabilityToggle";
 import BrokerageChoice from "@/components/BrokerageChoice";
 import { validMapPoint } from "@/lib/map-locations";
+import { areaInSquareFeet, plotStartingPrice, resolvePlotPricing } from "@/lib/plot-pricing";
 import {
     AMENITY_CATEGORIES,
     APPROVAL_TYPES,
@@ -95,7 +96,7 @@ export interface PropertyEditorProperty {
         uds?: number | null;
         price: number;
     }>;
-    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string }>;
+    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string; dimensions?: string; totalPrice?: number | null; pricePerSqFt?: number | null }>;
 
     size: number;
     sizeUnit?: string;
@@ -188,7 +189,7 @@ interface EditorForm {
     approvalType: string;
     uds: string;
     unitConfigurations: UnitConfigurationForm[];
-    plotSizes: Array<{ id: string; size: string; sizeUnit: string }>;
+    plotSizes: Array<{ id: string; size: string; sizeUnit: string; dimensions: string; totalPrice: string; pricePerSqFt: string }>;
     size: string;
     sizeUnit: string;
     dimensions: string;
@@ -468,7 +469,19 @@ function createEditorForm(
                     };
                 },
             ) ?? [],
-        plotSizes: property.plotSizes?.map((plot, index) => ({ id: plot._id ?? `plot-${index}`, size: String(plot.size), sizeUnit: plot.sizeUnit || "sqft" })) ?? [],
+        plotSizes: property.plotSizes?.map((plot, index) => {
+            const totalPrice = plot.totalPrice ?? null;
+            let pricePerSqFt = plot.pricePerSqFt ?? null;
+            if (!totalPrice && !pricePerSqFt && property.price > 0) {
+                if (property.priceType === "Per Sq Ft") pricePerSqFt = property.price;
+                else {
+                    const overallArea = areaInSquareFeet(property.size, property.sizeUnit || "sqft");
+                    if (Number.isFinite(overallArea) && overallArea > 0) pricePerSqFt = property.price / overallArea;
+                }
+            }
+            const pricing = resolvePlotPricing({ size: plot.size, sizeUnit: plot.sizeUnit || "sqft", totalPrice, pricePerSqFt });
+            return { id: plot._id ?? `plot-${index}`, size: String(plot.size), sizeUnit: plot.sizeUnit || "sqft", dimensions: plot.dimensions || "", totalPrice: pricing.totalPrice ? String(pricing.totalPrice) : "", pricePerSqFt: pricing.pricePerSqFt ? String(pricing.pricePerSqFt) : "" };
+        }) ?? [],
 
         size:
             property.size === undefined
@@ -925,10 +938,10 @@ export default function FullPropertyEditorModal({
     }
 
     function addPlotSize() {
-        setForm((current) => current ? { ...current, plotSizes: [...current.plotSizes, { id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, size: "", sizeUnit: "sqft" }] } : current);
+        setForm((current) => current ? { ...current, plotSizes: [...current.plotSizes, { id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, size: "", sizeUnit: "sqft", dimensions: "", totalPrice: "", pricePerSqFt: "" }] } : current);
     }
 
-    function updatePlotSize(id: string, patch: { size?: string; sizeUnit?: string }) {
+    function updatePlotSize(id: string, patch: Partial<EditorForm["plotSizes"][number]>) {
         setForm((current) => current ? { ...current, plotSizes: current.plotSizes.map((plot) => plot.id === id ? { ...plot, ...patch } : plot) } : current);
     }
 
@@ -1162,18 +1175,21 @@ export default function FullPropertyEditorModal({
                     "UDS must be between 0% and 100%.";
             }
 
-            if (isLand && form.plotSizes.some((plot) => !plot.size.trim() || !Number.isFinite(Number(plot.size)) || Number(plot.size) <= 0)) {
-                nextErrors.plotSizes = "Enter a valid area for every available plot size.";
+            if (isLand && form.plotSizes.length === 0) {
+                nextErrors.plotSizes = "Add at least one available plot size with pricing.";
+            } else if (isLand && form.plotSizes.some((plot) => {
+                const total = Number(plot.totalPrice), rate = Number(plot.pricePerSqFt);
+                return !plot.size.trim() || !Number.isFinite(Number(plot.size)) || Number(plot.size) <= 0 || ((!Number.isFinite(total) || total <= 0) && (!Number.isFinite(rate) || rate <= 0));
+            })) {
+                nextErrors.plotSizes = "Enter an area and either a total price or price per sq ft for every plot size.";
             }
         }
 
         if (step === "pricing") {
             const price = Number(form.price);
+            const hasPlotPrice = isLand && plotStartingPrice(form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) }))) !== null;
 
-            if (
-                !Number.isFinite(price) ||
-                price <= 0
-            ) {
+            if (!hasPlotPrice && (!Number.isFinite(price) || price <= 0)) {
                 nextErrors.price =
                     "Enter a valid asking price.";
             }
@@ -1496,14 +1512,17 @@ export default function FullPropertyEditorModal({
                             }),
                         ),
 
-                plotSizes: isLand ? form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit })) : [],
+                plotSizes: isLand ? form.plotSizes.map((plot) => {
+                    const pricing = resolvePlotPricing({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) });
+                    return { size: Number(plot.size), sizeUnit: plot.sizeUnit, dimensions: plot.dimensions.trim(), totalPrice: pricing.totalPrice, pricePerSqFt: pricing.pricePerSqFt };
+                }) : [],
 
                 dimensions:
                     form.dimensions.trim(),
                 ownershipType:
                 form.ownershipType,
-                price: Number(form.price),
-                priceType: form.priceType,
+                price: isLand ? plotStartingPrice(form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) }))) ?? Number(form.price) : Number(form.price),
+                priceType: isLand ? "Total" : form.priceType,
                 negotiable:
                 form.negotiable,
                 zeroCommission:
@@ -2490,7 +2509,27 @@ export default function FullPropertyEditorModal({
                                                                 />
                                                             </label>
                                                         </div>
-                                                        {isLand ? <div className="mt-8 border-t border-slate-100 pt-6"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h4 className="text-sm font-black text-slate-950">Available plot sizes</h4><p className="mt-1 text-xs text-slate-500">Add the plot areas offered in this listing.</p></div><button type="button" onClick={addPlotSize} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary"><Plus size={15} /> Add plot size</button></div><div className="mt-4 space-y-3">{form.plotSizes.map((plot, index) => <div key={plot.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_150px_40px] sm:items-end"><label><FieldLabel required>Plot {index + 1} area</FieldLabel><input type="number" min="0.01" step="any" value={plot.size} onChange={(event) => updatePlotSize(plot.id, { size: event.target.value })} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label><label><FieldLabel required>Unit</FieldLabel><SelectField value={plot.sizeUnit} ariaLabel={`Plot ${index + 1} unit`} onChange={(sizeUnit) => updatePlotSize(plot.id, { sizeUnit })}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label><button type="button" onClick={() => removePlotSize(plot.id)} aria-label={`Remove plot size ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500"><Trash2 size={15} /></button></div>)}</div>{errors.plotSizes ? <ErrorText>{errors.plotSizes}</ErrorText> : null}</div> : null}
+                                                        {isLand ? (
+                                                            <div className="mt-8 border-t border-slate-100 pt-6">
+                                                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h4 className="text-sm font-black text-slate-950">Available plot sizes</h4><p className="mt-1 text-xs text-slate-500">Add dimensions and either total price or price per sq ft for each plot.</p></div><button type="button" onClick={addPlotSize} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 text-xs font-black text-primary"><Plus size={15} /> Add plot size</button></div>
+                                                                <div className="mt-4 space-y-3">
+                                                                    {form.plotSizes.map((plot, index) => (
+                                                                        <div key={plot.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-[1fr_130px_1fr_1fr_1fr_40px] xl:items-end">
+                                                                            <label><FieldLabel required>Plot {index + 1} area</FieldLabel><input type="number" min="0.01" step="any" value={plot.size} onChange={(event) => updatePlotSize(plot.id, { size: event.target.value })} className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label>
+                                                                            <label><FieldLabel required>Unit</FieldLabel><SelectField value={plot.sizeUnit} ariaLabel={`Plot ${index + 1} unit`} onChange={(sizeUnit) => updatePlotSize(plot.id, { sizeUnit })}>{SIZE_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</SelectField></label>
+                                                                            <label><FieldLabel>Dimensions</FieldLabel><input value={plot.dimensions} onChange={(event) => updatePlotSize(plot.id, { dimensions: event.target.value })} placeholder="e.g. 30 × 40" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label>
+                                                                            <label><FieldLabel required>Total price</FieldLabel><input type="number" min="1" value={plot.totalPrice} onChange={(event) => updatePlotSize(plot.id, { totalPrice: event.target.value, pricePerSqFt: "" })} placeholder="₹ total" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label>
+                                                                            <label><FieldLabel required>Price / sq ft</FieldLabel><input type="number" min="0.01" step="any" value={plot.pricePerSqFt} onChange={(event) => updatePlotSize(plot.id, { pricePerSqFt: event.target.value, totalPrice: "" })} placeholder="₹ rate" className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold outline-none focus:border-primary" /></label>
+                                                                            <button type="button" onClick={() => removePlotSize(plot.id)} aria-label={`Remove plot size ${index + 1}`} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500"><Trash2 size={15} /></button>
+                                                                            <p className="text-xs font-semibold text-slate-500 md:col-span-2 xl:col-span-6">
+                                                                                {(() => { const pricing = resolvePlotPricing({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) }); return pricing.totalPrice && pricing.pricePerSqFt ? `Calculated pricing: ${formatPrice(String(pricing.totalPrice))} total · ₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(pricing.pricePerSqFt)}/sq ft` : "Enter either price field. The other is calculated automatically."; })()}
+                                                                            </p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                {errors.plotSizes ? <ErrorText>{errors.plotSizes}</ErrorText> : null}
+                                                            </div>
+                                                        ) : null}
                                                     </div>
                                                 </div>
                                             </div>
@@ -2509,7 +2548,13 @@ export default function FullPropertyEditorModal({
                                                 <div className="grid gap-6 lg:grid-cols-12">
                                                     <div className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:col-span-7">
                                                         <div className="grid gap-5 sm:grid-cols-2">
-                                                            <label className="sm:col-span-2">
+                                                            {isLand ? (
+                                                                <div className="sm:col-span-2 rounded-2xl border border-teal-100 bg-teal-50 p-4">
+                                                                    <p className="text-sm font-black text-slate-950">Plot starting price</p>
+                                                                    <p className="mt-1 text-xs leading-5 text-slate-600">Calculated from the lowest priced plot size.</p>
+                                                                    <p className="mt-3 text-xl font-black text-primary">{formatPrice(String(plotStartingPrice(form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) }))) ?? 0))} onwards</p>
+                                                                </div>
+                                                            ) : <label className="sm:col-span-2">
                                                                 <FieldLabel
                                                                     required
                                                                 >
@@ -2549,9 +2594,9 @@ export default function FullPropertyEditorModal({
                                                                         }
                                                                     </ErrorText>
                                                                 ) : null}
-                                                            </label>
+                                                            </label>}
 
-                                                            <label>
+                                                            {!isLand ? <label>
                                                                 <FieldLabel>
                                                                     Price type
                                                                 </FieldLabel>
@@ -2586,7 +2631,7 @@ export default function FullPropertyEditorModal({
                                                                         ),
                                                                     )}
                                                                 </SelectField>
-                                                            </label>
+                                                            </label> : null}
 
                                                             <div>
                                                                 <FieldLabel>
@@ -2626,12 +2671,12 @@ export default function FullPropertyEditorModal({
                                                             </p>
                                                             <p className="mt-4 text-4xl font-black tracking-tight">
                                                                 {formatPrice(
-                                                                    form.price,
+                                                                    isLand ? String(plotStartingPrice(form.plotSizes.map((plot) => ({ size: Number(plot.size), sizeUnit: plot.sizeUnit, totalPrice: Number(plot.totalPrice), pricePerSqFt: Number(plot.pricePerSqFt) }))) ?? 0) : form.price,
                                                                 )}
                                                             </p>
                                                             <p className="mt-2 text-sm text-slate-400">
                                                                 {
-                                                                    form.priceType
+                                                                    isLand ? "Starting total" : form.priceType
                                                                 }
                                                                 {form.negotiable
                                                                     ? " · Negotiable"

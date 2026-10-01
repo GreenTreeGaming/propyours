@@ -67,6 +67,8 @@ interface Property {
   price: number | null;
   startingPrice?: number | null;
   hasUnitConfigurations?: boolean;
+  hasPlotPricing?: boolean;
+  plotSizes?: Array<{ size: number; sizeUnit: string; totalPrice?: number | null; pricePerSqFt?: number | null }>;
   priceLocked?: boolean;
   projectName?: string;
   priceType?: "Total" | "Per Sq Ft";
@@ -686,7 +688,7 @@ function PropertyCard({
                               <>
                                 {formatPrice(displayPrice)}
 
-                                {property.hasUnitConfigurations ? (
+                                {property.hasUnitConfigurations || property.hasPlotPricing ? (
                                     <span className="ml-1 text-sm font-bold text-slate-500">
             onwards
           </span>

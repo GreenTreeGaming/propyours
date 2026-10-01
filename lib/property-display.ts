@@ -1,7 +1,16 @@
+import { plotStartingPrice } from "@/lib/plot-pricing";
+
 export interface PropertyDisplayData {
     price?: number | null;
     startingPrice?: number | null;
     hasUnitConfigurations?: boolean;
+    hasPlotPricing?: boolean;
+    plotSizes?: Array<{
+        size: number;
+        sizeUnit: string;
+        totalPrice?: number | null;
+        pricePerSqFt?: number | null;
+    }>;
 
     bedrooms?: number | null;
     availableBHKs?: number[];
@@ -16,7 +25,7 @@ export function getPropertyDisplayPrice(
     property: PropertyDisplayData,
 ): number | null {
     if (
-        property.hasUnitConfigurations &&
+        (property.hasUnitConfigurations || property.hasPlotPricing) &&
         typeof property.startingPrice ===
         "number" &&
         Number.isFinite(
@@ -24,6 +33,11 @@ export function getPropertyDisplayPrice(
         )
     ) {
         return property.startingPrice;
+    }
+
+    const plotPrice = plotStartingPrice(property.plotSizes);
+    if (plotPrice !== null) {
+        return plotPrice;
     }
 
     if (

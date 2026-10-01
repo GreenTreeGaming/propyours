@@ -2,10 +2,10 @@
 
 import {
     Building2,
+    Bot,
     ExternalLink,
     LayoutDashboard,
     Menu,
-    ShieldCheck,
     Users,
     X,
 } from "lucide-react";
@@ -47,6 +47,18 @@ export default function AdminShell({
             href: `${dashboardUrl}#accounts`,
             icon: Users,
             active: pathname.includes("/dashboard/users/"),
+        },
+        {
+            label: "Leads",
+            href: `${dashboardUrl}#leads`,
+            icon: Bot,
+            active: false,
+        },
+        {
+            label: "Developer profiles",
+            href: `${dashboardUrl}#developer-profiles`,
+            icon: Building2,
+            active: false,
         },
     ];
 

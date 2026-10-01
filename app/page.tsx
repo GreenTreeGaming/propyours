@@ -16,20 +16,15 @@ import {
   Eye,
   PhoneCall,
   Scale,
-  Home,
-  Landmark,
   MapPin,
   Search,
-  ShieldCheck,
   Sparkles,
   Store,
-  Trees,
 } from "lucide-react";
 import { useLocationOptions } from "@/lib/use-location-options";
 import PriceNegotiabilityBadge from "@/components/PriceNegotiabilityBadge";
 import AuthorisedPartners from "@/components/AuthorisedPartners";
 import {
-  getPropertyBHKLabel,
   getPropertyDisplayPrice,
   getPropertyDisplayTitle,
 } from "@/lib/property-display";
@@ -45,6 +40,9 @@ interface Property {
   price: number;
   startingPrice?: number;
   hasUnitConfigurations?: boolean;
+  hasPlotPricing?: boolean;
+  ownerFeatured?: boolean;
+  plotSizes?: Array<{ size: number; sizeUnit: string; totalPrice?: number | null; pricePerSqFt?: number | null }>;
 
   bedrooms?: number;
   size?: number;
@@ -173,29 +171,6 @@ function formatPrice(
   return `₹${price.toLocaleString(
       "en-IN",
   )}`;
-}
-
-function getPropertyBadge(property: Property): string | null {
-  if (
-      property.promotedUntil &&
-      new Date(property.promotedUntil).getTime() > Date.now()
-  ) {
-    return "Featured";
-  }
-
-  if (property.planSnapshot?.badgeLevel === "premium") {
-    return "Premium";
-  }
-
-  if (property.planSnapshot?.badgeLevel === "verified") {
-    return "Verified";
-  }
-
-  if (property.planSnapshot?.homepageFeatured) {
-    return "Featured";
-  }
-
-  return null;
 }
 
 type BubbyDemoMessage = {
@@ -456,13 +431,16 @@ export default function HomePage() {
     });
   }
 
-  const curatedProperties = useMemo(
-      () => curateHomepageProperties(featuredProperties, 5),
-      [featuredProperties],
-  );
-
-  const spotlightProperty = curatedProperties[0];
-  const supportingProperties = curatedProperties.slice(1, 5);
+  const featuredGroups = useMemo(() => {
+    const ranked = [...featuredProperties].sort((first, second) =>
+        Number(second.ownerFeatured === true) - Number(first.ownerFeatured === true) ||
+        getHomepagePriority(second) - getHomepagePriority(first));
+    return [
+      { title: "Featured villas", description: "Independent villas selected by owners across Tamil Nadu.", href: "/buy?type=Villa", properties: ranked.filter((property) => property.propertyType === "Villa").slice(0, 5) },
+      { title: "Featured apartments", description: "Apartment projects with clear pricing and availability.", href: "/buy?type=Apartment", properties: ranked.filter((property) => property.propertyType === "Apartment").slice(0, 5) },
+      { title: "Featured plots", description: "Residential plots and agricultural land with available sizes.", href: "/buy?type=Plot", properties: ranked.filter((property) => ["Plot", "Agricultural Land"].includes(property.propertyType)).slice(0, 5) },
+    ];
+  }, [featuredProperties]);
 
   function getHomepagePriority(property: Property): number {
     let score = 0;
@@ -495,51 +473,6 @@ export default function HomePage() {
     }
 
     return score;
-  }
-
-  function curateHomepageProperties(
-      properties: Property[],
-      limit = 5,
-  ): Property[] {
-    const sortedProperties = [...properties].sort(
-        (first, second) =>
-            getHomepagePriority(second) - getHomepagePriority(first),
-    );
-
-    const selected: Property[] = [];
-    const selectedIds = new Set<string>();
-    const selectedTypes = new Set<string>();
-
-    // Prefer variety across property types.
-    for (const property of sortedProperties) {
-      if (selected.length >= limit) {
-        break;
-      }
-
-      if (selectedTypes.has(property.propertyType)) {
-        continue;
-      }
-
-      selected.push(property);
-      selectedIds.add(property._id);
-      selectedTypes.add(property.propertyType);
-    }
-
-    // Fill any remaining slots with the next highest-priority properties.
-    for (const property of sortedProperties) {
-      if (selected.length >= limit) {
-        break;
-      }
-
-      if (selectedIds.has(property._id)) {
-        continue;
-      }
-
-      selected.push(property);
-      selectedIds.add(property._id);
-    }
-
-    return selected;
   }
 
   return (
@@ -1419,367 +1352,60 @@ export default function HomePage() {
 
         <section className="relative bg-white">
           <div className="mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-6 lg:px-8 lg:pb-24 lg:pt-20">
-            {/* Header */}
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-primary">
-  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-50">
-    <BadgeCheck size={15} aria-hidden="true" />
-  </span>
-
-                  Featured property picks
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-50"><BadgeCheck size={15} aria-hidden="true" /></span>
+                  Featured properties
                 </div>
-
-                <h2 className="mt-4 max-w-2xl font-heading text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
-                  Properties worth seeing before you continue.
-                </h2>
-
-                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
-                  Explore selected apartments, houses, plots, land and commercial
-                  properties from across Tamil Nadu.
-                </p>
+                <h2 className="mt-4 max-w-2xl font-heading text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">Explore featured homes by category.</h2>
+                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">Browse owner-selected villas, apartments and plots without mixing property types.</p>
               </div>
-
-              <Link
-                  href="/buy"
-                  className="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-primary shadow-sm transition hover:border-primary hover:bg-teal-50"
-              >
-                View all properties
-                <ArrowRight size={17} aria-hidden="true" />
-              </Link>
+              <Link href="/buy" className="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-primary shadow-sm transition hover:border-primary hover:bg-teal-50">View all properties <ArrowRight size={17} aria-hidden="true" /></Link>
             </div>
 
-            <div className="mt-12">
-              {loading ? (
-                  <div className="grid gap-5 lg:grid-cols-12">
-                    <div className="min-h-[560px] animate-pulse rounded-[2rem] bg-slate-200 lg:col-span-7" />
+            <div className="mt-12 space-y-14">
+              {featuredGroups.map((group) => (
+                <section key={group.title} aria-labelledby={group.title.replaceAll(" ", "-").toLowerCase()}>
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <span className="inline-flex rounded-full bg-teal-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-primary">Featured</span>
+                      <h3 id={group.title.replaceAll(" ", "-").toLowerCase()} className="mt-3 text-2xl font-black tracking-tight text-slate-950">{group.title}</h3>
+                      <p className="mt-1 text-sm text-slate-500">{group.description}</p>
+                    </div>
+                    <Link href={group.href} className="hidden items-center gap-2 text-sm font-black text-primary sm:inline-flex">View all properties <ArrowRight size={16} aria-hidden="true" /></Link>
+                  </div>
 
-                    <div className="grid grid-flow-col auto-cols-[82%] gap-4 overflow-hidden sm:auto-cols-[48%] lg:col-span-5 lg:grid-flow-row lg:grid-cols-2 lg:grid-rows-2">
-                      {Array.from({ length: 4 }).map((_, index) => (
-                          <div
-                              key={index}
-                              className="min-h-[270px] animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
-                          />
+                  {loading ? (
+                    <div className="mt-6 flex gap-4 overflow-hidden">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-80 w-[82%] shrink-0 animate-pulse rounded-2xl bg-slate-100 sm:w-[46%] lg:w-[30%] xl:w-[23%]" />)}</div>
+                  ) : group.properties.length ? (
+                    <div className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:thin] [scrollbar-color:#0f766e_#e2e8f0]">
+                      {group.properties.map((property) => (
+                        <Link key={property._id} href={`/property/${property._id}?enquire=1`} className="group w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)] sm:w-[46%] lg:w-[30%] xl:w-[23%]">
+                          <div className="relative h-48 overflow-hidden bg-slate-100">
+                            <Image src={property.images?.[0] ?? "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800"} alt={property.address} fill sizes="(max-width:640px) 82vw,(max-width:1024px) 46vw,25vw" className="object-cover transition duration-500 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-primary shadow-sm">Featured</span>
+                            <span className="absolute bottom-3 left-3 rounded-full border border-white/20 bg-slate-950/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur">{property.propertyType}</span>
+                            {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") ? <span className="absolute bottom-3 right-3 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900">Image under screening</span> : null}
+                          </div>
+                          <div className="p-5">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-primary"><MapPin size={13} aria-hidden="true" /><span className="truncate">{property.locality ? `${property.locality}, ${property.city}` : property.city}</span></div>
+                            <h4 className="mt-2 line-clamp-1 text-lg font-black text-slate-950 group-hover:text-primary">{getPropertyDisplayTitle(property)}</h4>
+                            <div className="mt-4 flex items-end justify-between gap-3 border-t border-slate-100 pt-4">
+                              <div><p className="text-xl font-black text-slate-950">{formatPrice(getPropertyDisplayPrice(property))} <span className="text-xs font-bold text-slate-500">{property.hasUnitConfigurations || property.hasPlotPricing ? "onwards" : ""}</span></p><PriceNegotiabilityBadge negotiable={property.negotiable} className="mt-2" /></div>
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white"><ArrowRight size={17} aria-hidden="true" /></span>
+                            </div>
+                          </div>
+                        </Link>
                       ))}
                     </div>
-                  </div>
-              ) : spotlightProperty ? (
-                  <div className="grid gap-5 lg:grid-cols-12">
-                    {/* Featured property */}
-                    <Link
-                        href={`/property/${spotlightProperty._id}?enquire=1`}
-                        className="group relative min-h-[500px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 shadow-[0_35px_90px_rgba(0,0,0,0.35)] sm:min-h-[560px] lg:col-span-7"
-                    >
-                      <Image
-                          src={
-                              spotlightProperty.images?.[0] ??
-                              "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=85&w=1400"
-                          }
-                          alt={spotlightProperty.address}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 58vw"
-                          className="object-cover transition duration-700 group-hover:scale-105"
-                      />
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-slate-950/5" />
-                      {(spotlightProperty.imageReviewStatus === "pending" || spotlightProperty.imageReviewStatus === "rejected") && <span className="absolute bottom-5 left-5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">Image under screening</span>}
-
-                      {/* Main-card badges */}
-                      <div className="absolute inset-x-0 top-0 flex flex-wrap items-start justify-between gap-3 p-5 sm:p-6">
-                        <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/90 px-3 py-2 text-xs font-black text-slate-900 shadow-lg backdrop-blur">
-                  <ShieldCheck
-                      size={14}
-                      className="text-emerald-600"
-                      aria-hidden="true"
-                  />
-                  Spotlight
-                </span>
-
-                          <span className="rounded-full border border-white/20 bg-slate-950/45 px-3 py-2 text-xs font-bold text-white backdrop-blur">
-                  {spotlightProperty.propertyType}
-                </span>
-
-                          <span
-                              className={`rounded-full border px-3 py-2 text-xs font-black shadow-lg backdrop-blur ${
-                                  spotlightProperty.commissionType === "zero" ||
-                                  spotlightProperty.zeroCommission
-                                      ? "border-emerald-200/60 bg-emerald-50/95 text-emerald-800"
-                                      : "border-amber-200/60 bg-amber-50/95 text-amber-800"
-                              }`}
-                          >
-                            {spotlightProperty.commissionType === "zero" ||
-                            spotlightProperty.zeroCommission
-                                ? "Zero Brokerage"
-                                : "Brokerage Applies"}
-                          </span>
-                        </div>
-
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition group-hover:bg-primary">
-                <ArrowRight size={19} aria-hidden="true" />
-              </span>
-                      </div>
-
-                      {/* Main-card details */}
-                      <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-slate-950/55 px-3 py-2 text-sm font-bold text-white shadow-sm backdrop-blur-md">
-                          <MapPin
-                              size={16}
-                              className="shrink-0 text-teal-300"
-                              aria-hidden="true"
-                          />
-
-                          <span>
-        {spotlightProperty.locality
-            ? `${spotlightProperty.locality}, ${spotlightProperty.city}`
-            : spotlightProperty.city}
-    </span>
-                        </div>
-
-                        <h3 className="mt-3 max-w-xl text-2xl font-black leading-tight tracking-tight sm:text-3xl">
-                          {getPropertyDisplayTitle(
-                              spotlightProperty,
-                          )}
-                        </h3>
-
-                        <div className="mt-6 flex flex-col gap-5 border-t border-white/15 pt-5 sm:flex-row sm:items-end sm:justify-between">
-                          <div>
-                            <p className="text-3xl font-black">
-                              {formatPrice(
-                                  getPropertyDisplayPrice(
-                                      spotlightProperty,
-                                  ),
-                              )}
-
-                              {spotlightProperty.hasUnitConfigurations ? (
-                                  <span className="ml-2 text-base font-bold text-slate-300">
-            onwards
-        </span>
-                              ) : null}
-                            </p>
-
-                            <PriceNegotiabilityBadge
-                                negotiable={spotlightProperty.negotiable}
-                                className="mt-2"
-                            />
-
-                            <p className="mt-2 text-sm text-slate-300">
-                              {getPropertyBHKLabel(
-                                  spotlightProperty,
-                              )}
-                            </p>
-                          </div>
-
-                          <span className="inline-flex w-fit items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-black text-slate-950 transition group-hover:bg-teal-300">
-                  View property
-                  <ArrowRight size={17} aria-hidden="true" />
-                </span>
-                        </div>
-                      </div>
-                    </Link>
-
-                    {/* Four supporting properties */}
-                    <div className="min-w-0 lg:col-span-5">
-                      <div className="grid snap-x snap-mandatory grid-flow-col auto-cols-[84%] gap-4 overflow-x-auto pb-3 sm:auto-cols-[48%] lg:h-full lg:grid-flow-row lg:grid-cols-2 lg:grid-rows-2 lg:overflow-visible lg:pb-0">
-                        {supportingProperties.map((property, index) => {
-                          const badge = getPropertyBadge(property);
-
-                          return (
-                              <Link
-                                  key={property._id}
-                                  href={`/property/${property._id}?enquire=1`}
-                                  className="group flex h-full min-h-0 snap-start flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-teal-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.11)]">
-                                <div className="relative h-36 shrink-0 overflow-hidden bg-slate-800 sm:h-40 lg:h-[42%]">
-                                  <Image
-                                      src={
-                                          property.images?.[0] ??
-                                          "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800"
-                                      }
-                                      alt={property.address}
-                                      fill
-                                      sizes="(max-width: 640px) 84vw, (max-width: 1024px) 48vw, 20vw"
-                                      className="object-cover transition duration-500 group-hover:scale-105"
-                                  />
-
-                                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-transparent" />
-                                  {(property.imageReviewStatus === "pending" || property.imageReviewStatus === "rejected") && <span className="absolute bottom-3 right-3 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900">Image under screening</span>}
-
-                                  <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-slate-950/55 text-xs font-black text-white backdrop-blur">
-                        {String(index + 2).padStart(2, "0")}
-                      </span>
-
-                                  {badge ? (
-                                      <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-wide text-primary shadow backdrop-blur">
-                          {badge}
-                        </span>
-                                  ) : null}
-
-                                  <span className="absolute bottom-3 left-3 max-w-[calc(100%-24px)] truncate rounded-full border border-white/15 bg-slate-950/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur">
-                        {property.propertyType}
-                      </span>
-                                </div>
-
-                                <div className="flex min-h-0 flex-1 flex-col p-4">
-                                  <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                                    <MapPin
-                                        size={13}
-                                        className="shrink-0"
-                                        aria-hidden="true"
-                                    />
-
-                                    <span className="truncate">
-            {property.locality
-                ? `${property.locality}, ${property.city}`
-                : property.city}
-        </span>
-                                  </div>
-
-                                  <h3 className="mt-2 min-h-6 shrink-0 line-clamp-1 text-base font-black leading-6 text-slate-950 transition group-hover:text-primary">
-                                    {getPropertyDisplayTitle(property)}
-                                  </h3>
-
-                                  <div className="mt-3 border-t border-slate-100 pt-3">
-                                    <div className="flex items-end justify-between gap-3">
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-baseline gap-x-1.5">
-                                          <p className="text-xl font-black tracking-tight text-slate-950">
-                                            {formatPrice(
-                                                getPropertyDisplayPrice(property),
-                                            )}
-                                          </p>
-
-                                          {property.hasUnitConfigurations ? (
-                                              <span className="text-sm font-bold text-slate-500">
-                            onwards
-                        </span>
-                                          ) : null}
-                                        </div>
-
-                                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                                          <PriceNegotiabilityBadge
-                                              negotiable={property.negotiable}
-                                          />
-
-                                          <span
-                                              className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                                                  property.commissionType === "zero" ||
-                                                  property.zeroCommission
-                                                      ? "bg-emerald-50 text-emerald-700"
-                                                      : "bg-amber-50 text-amber-700"
-                                              }`}
-                                          >
-                                            {property.commissionType === "zero" ||
-                                            property.zeroCommission
-                                                ? "Zero Brokerage"
-                                                : "Brokerage Applies"}
-                                          </span>
-
-                                          {property.propertyType === "Plot" ? (
-                                              property.size ? (
-                                                  <span className="truncate text-xs font-semibold text-slate-500">
-            {new Intl.NumberFormat(
-                "en-IN",
-                {
-                  maximumFractionDigits: 2,
-                },
-            ).format(property.size)}{" "}
-                                                    {property.sizeUnit}
-        </span>
-                                              ) : null
-                                          ) : getPropertyBHKLabel(property) ? (
-                                              <span className="truncate text-xs font-semibold text-slate-500">
-        {getPropertyBHKLabel(
-            property,
-        )}
-    </span>
-                                          ) : null}
-                                        </div>
-                                      </div>
-
-                                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-50 text-primary transition group-hover:bg-primary group-hover:text-white">
-                <ArrowRight
-                    size={17}
-                    aria-hidden="true"
-                />
-            </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </Link>
-                          );
-                        })}
-
-                        {/* Fill empty space if the API returns fewer than five */}
-                        {supportingProperties.length < 4 ? (
-                            <Link
-                                href="/buy"
-                                className="group flex min-h-[280px] snap-start flex-col justify-between rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 transition hover:border-primary hover:bg-teal-50"
-                            >
-  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
-    <Building2 size={21} aria-hidden="true" />
-  </span>
-
-                              <div className="mt-10">
-                                <h3 className="font-black text-slate-950">
-                                  Explore more properties
-                                </h3>
-
-                                <p className="mt-2 text-sm leading-6 text-slate-500">
-                                  Browse every available listing across Tamil Nadu.
-                                </p>
-
-                                <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-primary">
-      Browse all
-      <ArrowRight
-          size={16}
-          className="transition group-hover:translate-x-1"
-          aria-hidden="true"
-      />
-    </span>
-                              </div>
-                            </Link>
-                        ) : null}
-                      </div>
-
-                      <p className="mt-3 text-center text-xs font-semibold text-slate-500 lg:hidden">
-                        Swipe to explore more properties
-                      </p>
-                    </div>
-                  </div>
-              ) : (
-                  <div className="rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center">
-                    <Building2
-                        size={36}
-                        className="mx-auto text-primary"
-                        aria-hidden="true"
-                    />
-
-                    <h3 className="mt-5 text-xl font-black text-slate-950">
-                      Featured properties will appear here
-                    </h3>
-
-                    <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">
-                      Browse current listings or publish a property to make it available
-                      to buyers.
-                    </p>
-
-                    <div className="mt-7 flex flex-wrap justify-center gap-3">
-                      <Link
-                          href="/buy"
-                          className="rounded-xl bg-primary px-5 py-3 text-sm font-black text-white"
-                      >
-                        Browse properties
-                      </Link>
-
-                      <Link
-                          href="/post-property"
-                          className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 transition hover:border-primary hover:text-primary"
-                      >
-                        List a property
-                      </Link>
-                    </div>
-                  </div>
-              )}
+                  ) : (
+                    <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center"><p className="font-black text-slate-800">No featured {group.title.replace("Featured ", "").toLowerCase()} yet</p><Link href={group.href} className="mt-3 inline-flex items-center gap-2 text-sm font-black text-primary">Browse all properties <ArrowRight size={15} /></Link></div>
+                  )}
+                  <Link href={group.href} className="mt-3 inline-flex items-center gap-2 text-sm font-black text-primary sm:hidden">View all properties <ArrowRight size={16} aria-hidden="true" /></Link>
+                </section>
+              ))}
             </div>
           </div>
         </section>

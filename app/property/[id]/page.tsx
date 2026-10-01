@@ -127,7 +127,7 @@ interface PropertyRecord {
         uds?: number | null;
         price: number;
     }>;
-    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string }>;
+    plotSizes?: Array<{ _id?: string; size: number; sizeUnit: string; dimensions?: string; totalPrice?: number | null; pricePerSqFt?: number | null }>;
     bedrooms?: number | null;
     locality?: string;
     city?: string;
@@ -1117,7 +1117,13 @@ function getFactRows(
     if (property.plotSizes?.length) {
         rows.push({
             label: "Available plot sizes",
-            value: property.plotSizes.map((plot) => `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(plot.size)} ${SIZE_UNITS.find((unit) => unit.value === plot.sizeUnit)?.label ?? plot.sizeUnit}`).join(", "),
+            value: property.plotSizes.map((plot) => {
+                const area = `${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(plot.size)} ${SIZE_UNITS.find((unit) => unit.value === plot.sizeUnit)?.label ?? plot.sizeUnit}`;
+                const dimensions = plot.dimensions ? ` · ${plot.dimensions}` : "";
+                const price = plot.totalPrice ? ` · ${formatPrice(plot.totalPrice)}` : "";
+                const rate = plot.pricePerSqFt ? ` · ₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(plot.pricePerSqFt)}/sq ft` : "";
+                return `${area}${dimensions}${price}${rate}`;
+            }).join(", "),
         });
     }
 
@@ -1629,9 +1635,14 @@ export default function PropertyDetailsPage() {
                     price > 0,
             ) ?? [];
 
+    const plotPrices =
+        property?.plotSizes
+            ?.map((plot) => plot.totalPrice)
+            .filter((price): price is number => typeof price === "number" && Number.isFinite(price) && price > 0) ?? [];
+
     const minimumUnitPrice =
-        unitPrices.length > 0
-            ? Math.min(...unitPrices)
+        unitPrices.length > 0 || plotPrices.length > 0
+            ? Math.min(...unitPrices, ...plotPrices)
             : null;
 
     const availableBHKs =
@@ -2362,9 +2373,7 @@ export default function PropertyDetailsPage() {
                                         <>
                                             <p className="mt-3 text-4xl font-black tracking-[-0.04em] text-white lg:text-5xl">
                                                 {minimumUnitPrice !== null
-                                                    ? `From ${formatPrice(
-                                                        minimumUnitPrice,
-                                                    )}`
+                                                    ? `${formatPrice(minimumUnitPrice)} onwards`
                                                     : formatPrice(
                                                         property.price,
                                                     )}
@@ -3590,9 +3599,7 @@ function MobileContactBar({ property, minimumUnitPrice, onPhone }: { property: P
                     ) : (
                         <p className="truncate text-lg font-black text-slate-950">
                             {minimumUnitPrice !== null
-                                ? `From ${formatPrice(
-                                    minimumUnitPrice,
-                                )}`
+                                ? `${formatPrice(minimumUnitPrice)} onwards`
                                 : formatPrice(
                                     property.price,
                                 )}

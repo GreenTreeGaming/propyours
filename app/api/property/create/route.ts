@@ -22,6 +22,7 @@ import {
     PROPERTY_TYPES,
     isCommercialType,
 } from "@/lib/property-form-options";
+import { areaInSquareFeet, resolvePlotPricing } from "@/lib/plot-pricing";
 
 function cleanStringArray(
     value: unknown,
@@ -706,19 +707,42 @@ export async function POST(
                 );
 
         const rawPlotSizes = isLand && Array.isArray(body.plotSizes) ? body.plotSizes : [];
+        if (isLand && rawPlotSizes.length === 0) return NextResponse.json({ error: "Add at least one available plot size with pricing." }, { status: 400 });
         if (rawPlotSizes.length > 50) return NextResponse.json({ error: "A listing can have at most 50 plot sizes." }, { status: 400 });
-        const plotSizes: Array<{ size: number; sizeUnit: string }> = [];
+        const plotSizes: Array<{ size: number; sizeUnit: string; dimensions: string; totalPrice: number | null; pricePerSqFt: number | null }> = [];
         for (const item of rawPlotSizes) {
             const record = typeof item === "object" && item !== null ? item as Record<string, unknown> : null;
             const size = record?.size, sizeUnit = record?.sizeUnit;
             if (typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof sizeUnit !== "string" || !["sqft", "sqyd", "sqm", "acre", "kanal", "marla", "ground", "cent"].includes(sizeUnit)) {
                 return NextResponse.json({ error: "Every plot size must have a valid area and unit." }, { status: 400 });
             }
-            plotSizes.push({ size, sizeUnit });
+            const dimensions = cleanText(record?.dimensions, 100);
+            const listingPrice = typeof body.price === "number" && body.price > 0 ? body.price : null;
+            const totalPrice = typeof record?.totalPrice === "number" ? record.totalPrice : null;
+            let pricePerSqFt = typeof record?.pricePerSqFt === "number" ? record.pricePerSqFt : null;
+
+            if ((!totalPrice || totalPrice <= 0) && (!pricePerSqFt || pricePerSqFt <= 0) && listingPrice) {
+                if (body.priceType === "Per Sq Ft") {
+                    pricePerSqFt = listingPrice;
+                } else {
+                    const overallArea = areaInSquareFeet(Number(body.size), String(body.sizeUnit));
+                    if (Number.isFinite(overallArea) && overallArea > 0) pricePerSqFt = listingPrice / overallArea;
+                }
+            }
+
+            const pricing = resolvePlotPricing({ size, sizeUnit, totalPrice, pricePerSqFt });
+            if (pricing.totalPrice === null || pricing.pricePerSqFt === null) {
+                return NextResponse.json({ error: "Enter a total price or price per sq ft for every available plot size." }, { status: 400 });
+            }
+            plotSizes.push({ size, sizeUnit, dimensions, totalPrice: pricing.totalPrice, pricePerSqFt: pricing.pricePerSqFt });
         }
 
+        const plotPrices = plotSizes.map((plot) => plot.totalPrice).filter((price): price is number => typeof price === "number" && price > 0);
+
         const effectivePrice =
-            !isLand &&
+            isLand && plotPrices.length > 0
+                ? Math.min(...plotPrices)
+                : !isLand &&
             !isCommercial &&
             unitPrices.length > 0
                 ? Math.min(...unitPrices)
@@ -841,7 +865,7 @@ export async function POST(
                 ownershipType:
                 body.ownershipType,
                     price: effectivePrice,
-                    priceType: body.priceType,
+                    priceType: isLand ? "Total" : body.priceType,
 
                     negotiable:
                         typeof body.negotiable === "boolean"
